@@ -11,7 +11,13 @@
       "attester": "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
       "upgradable": true
     },
-    "treasury_vault": null
+    "treasury_vault": {
+      "package_hash": "a90b082d863c5977c6e54654fec10e523a38760529e664a87e9e8a8e887ffd7b",
+      "contract_hash": "61a3b6d6216d5f3d81a524b453fc55e5837d724e8d7dbc99f5646622844ad0bf",
+      "deploy_tx": "bcbe32d84d682956e48868d4f8871572fb051d53d254b89d0a38c5901952f2a0",
+      "agent": "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
+      "upgradable": true
+    }
   },
   "external": {
     "wcspr": {

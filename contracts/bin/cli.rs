@@ -1,4 +1,5 @@
 use contracts::attestation_registry::{AttestationRegistry, AttestationRegistryInitArgs};
+use contracts::treasury_vault::{TreasuryVault, TreasuryVaultInitArgs};
 use odra::host::{HostEnv, InstallConfig};
 use odra_cli::{
     deploy::DeployScript, DeployedContractsContainer, DeployerExt, OdraCli,
@@ -12,13 +13,21 @@ impl DeployScript for ProofYieldDeployScript {
         env: &HostEnv,
         container: &mut DeployedContractsContainer,
     ) -> Result<(), odra_cli::deploy::Error> {
-        let attester = env.get_account(0);
+        let account = env.get_account(0);
         // upgradable from day 1 — cannot be retrofitted
-        let _registry = AttestationRegistry::load_or_deploy_with_cfg(
+        AttestationRegistry::load_or_deploy_with_cfg(
             env,
             None,
-            AttestationRegistryInitArgs { attester },
+            AttestationRegistryInitArgs { attester: account },
             InstallConfig::upgradable::<AttestationRegistry>(),
+            container,
+            800_000_000_000,
+        )?;
+        TreasuryVault::load_or_deploy_with_cfg(
+            env,
+            None,
+            TreasuryVaultInitArgs { agent: account },
+            InstallConfig::upgradable::<TreasuryVault>(),
             container,
             800_000_000_000,
         )?;
@@ -32,6 +41,7 @@ pub fn main() {
         .about("ProofYield contracts CLI")
         .deploy(ProofYieldDeployScript)
         .contract::<AttestationRegistry>()
+        .contract::<TreasuryVault>()
         .build()
         .run();
 }

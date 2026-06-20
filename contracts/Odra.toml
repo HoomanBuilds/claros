@@ -1,2 +1,5 @@
 [[contracts]]
 fqn = "attestation_registry::AttestationRegistry"
+
+[[contracts]]
+fqn = "treasury_vault::TreasuryVault"

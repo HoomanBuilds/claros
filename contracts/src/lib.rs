@@ -3,3 +3,4 @@
 extern crate alloc;
 
 pub mod attestation_registry;
+pub mod treasury_vault;
