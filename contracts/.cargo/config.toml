@@ -1,0 +1,6 @@
+# Casper's execution engine rejects newer WASM features that recent Rust emits
+# by default (bulk-memory, sign-ext, etc.). Disable them for the contract build.
+# Without this, `cargo odra test -b casper` / deploys fail with:
+#   "Wasm preprocessing error: Bulk memory operations are not supported"
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "target-feature=-bulk-memory,-reference-types,-multivalue,-sign-ext,-nontrapping-fptoint"]

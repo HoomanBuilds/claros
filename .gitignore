@@ -1,0 +1,32 @@
+# planning & reference (local only — never committed)
+docs/
+inspiration/
+
+# secrets & keys
+keys/
+**/*.pem
+**/*.secret_key
+.env
+**/.env
+!**/.env.example
+
+# node (each project is standalone — ignore all node_modules/dist)
+**/node_modules/
+**/dist/
+**/.next/
+**/build/
+**/out/
+*.log
+npm-debug.log*
+
+# rust / odra
+contracts/target/
+contracts/wasm/
+contracts/.builder*
+
+# os / editor / local tooling
+.DS_Store
+*.swp
+.idea/
+.vscode/
+.claude/settings.local.json
