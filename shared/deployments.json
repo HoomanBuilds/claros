@@ -1,0 +1,25 @@
+{
+  "network": "casper-test",
+  "rpc": "https://node.testnet.casper.network/rpc",
+  "deployer_account_hash": "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
+  "deployer_public_key": "020362ef3cb7536f7eac9a1d30a8d0fbdf7ed3384717b5365751005ebf1826c7b1f6",
+  "contracts": {
+    "attestation_registry": {
+      "package_hash": "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc",
+      "contract_hash": "5b4c6c945c83796667d8090001af7fb7d5307b24bb50011007661b6dc7869173",
+      "deploy_tx": "ed0820135e92d66bd5aae307402b698fb8b95e2c5c586df95def17c40bb490fd",
+      "attester": "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
+      "upgradable": true
+    },
+    "treasury_vault": null
+  },
+  "external": {
+    "wcspr": {
+      "package_hash": "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e"
+    },
+    "wiselending_scspr": {
+      "package_hash": "baa50d1500aa5361c497c06b40f2822ebb0b5fce5b1c3a037ea628cb68d920f3",
+      "stake_entry_point": "stake"
+    }
+  }
+}

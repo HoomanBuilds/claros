@@ -1,0 +1,31 @@
+[package]
+name = "odra-casper-rpc-client"
+description = "RPC Client for the Casper Node."
+
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+readme = { workspace = true }
+repository = { workspace = true }
+version = { workspace = true }
+
+[dependencies]
+odra-core = { workspace = true }
+
+casper-client = { workspace = true }
+casper-types = { workspace = true, features = ["std-fs-io"] }
+
+base16 = { workspace = true }
+bytes = { workspace = true }
+dotenv = { workspace = true }
+futures-util = { workspace = true }
+itertools = { workspace = true }
+prettycli = { workspace = true }
+project-root = { workspace = true }
+rand = { workspace = true, features = ["default"] }
+reqwest = { workspace = true, features = ["stream"] }
+serde_json = { workspace = true, features = ["raw_value"] }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["rt"] }
+toml = { workspace = true }

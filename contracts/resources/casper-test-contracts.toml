@@ -1,0 +1,6 @@
+last_updated = "2026-06-26T05:58:31Z"
+
+[[contracts]]
+name = "AttestationRegistry"
+package_name = "AttestationRegistry"
+package_hash = "hash-236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc"
