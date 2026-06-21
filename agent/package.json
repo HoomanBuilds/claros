@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "attest-once": "tsx src/attest-once.ts",
+    "reinvest-once": "tsx src/reinvest-once.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
