@@ -3,6 +3,10 @@
   "rpc": "https://node.testnet.casper.network/rpc",
   "deployer_account_hash": "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
   "deployer_public_key": "020362ef3cb7536f7eac9a1d30a8d0fbdf7ed3384717b5365751005ebf1826c7b1f6",
+  "facilitator_account_hash": "account-hash-ecf70a7f27090ff4422b501b73d305c8dc14c2b386c7dd2992ad96c5ad35a246",
+  "facilitator_public_key": "0202c2240d9e83e01a017b3278d552eb1ea75cf6602dd30e23d19038c57692e4d2bd",
+  "consumer_account_hash": "account-hash-8ab01b8ebb6d877e4ae2ebfe1628ff09e3be425073eb899c5b141fbb33bb1efc",
+  "consumer_public_key": "02029e90b70d826e00a9bad0d58ac7500cc612284bce5e5b0fc8240a5b73ee9aca2c",
   "contracts": {
     "attestation_registry": {
       "package_hash": "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc",
