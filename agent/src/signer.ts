@@ -9,8 +9,10 @@ const {
   PublicKey,
   ContractCallBuilder,
   NativeDelegateBuilder,
+  SessionBuilder,
   Args,
   CLValue,
+  CLTypeUInt8,
   RpcClient,
   HttpHandler,
 } = casper;
@@ -54,6 +56,39 @@ export async function delegate(
   const tx = new NativeDelegateBuilder()
     .validator(PublicKey.fromHex(validatorHex))
     .amount(amountMotes)
+    .chainName(CHAIN)
+    .payment(gasMotes, 1)
+    .from(key.publicKey)
+    .build();
+  tx.sign(key);
+  const res = await rpc.putTransaction(tx);
+  return res.transactionHash.toHex();
+}
+
+// Call a payable contract entry point that takes native CSPR, via the
+// cargo-purse session proxy (the proxy creates a purse, funds it with
+// attached_value, and forwards to package_hash::entry_point).
+export async function callWithValue(
+  proxyWasm: Uint8Array,
+  packageHashHex: string,
+  entryPoint: string,
+  amountMotes: string,
+  gasMotes: number,
+  innerArgsBytes: Uint8Array = new Uint8Array([0, 0, 0, 0]),
+): Promise<string> {
+  const args = Args.fromMap({
+    package_hash: CLValue.newCLByteArray(Uint8Array.from(Buffer.from(packageHashHex, 'hex'))),
+    entry_point: CLValue.newCLString(entryPoint),
+    args: CLValue.newCLList(
+      CLTypeUInt8,
+      Array.from(innerArgsBytes, (b) => CLValue.newCLUint8(b)),
+    ),
+    amount: CLValue.newCLUInt512(amountMotes),
+    attached_value: CLValue.newCLUInt512(amountMotes),
+  });
+  const tx = new SessionBuilder()
+    .wasm(proxyWasm)
+    .runtimeArgs(args)
     .chainName(CHAIN)
     .payment(gasMotes, 1)
     .from(key.publicKey)

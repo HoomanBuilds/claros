@@ -7,6 +7,7 @@
     "attest-once": "tsx src/attest-once.ts",
     "reinvest-once": "tsx src/reinvest-once.ts",
     "delegate-once": "tsx src/delegate-once.ts",
+    "stake-once": "tsx src/stake-once.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
