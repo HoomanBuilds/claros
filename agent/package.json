@@ -8,11 +8,13 @@
     "reinvest-once": "tsx src/reinvest-once.ts",
     "delegate-once": "tsx src/delegate-once.ts",
     "stake-once": "tsx src/stake-once.ts",
+    "cycle": "tsx src/cycle.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "casper-js-sdk": "5.0.12",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "openai": "^6.45.0"
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
