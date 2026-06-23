@@ -14,7 +14,7 @@ const SYSTEM = `You are ProofYield, an autonomous oracle + treasury agent on Cas
 Each cycle, for the given parking asset:
 1. Call read_revenue and read_attestation_history.
 2. ANOMALY CHECK: if the revenue is outside the typical range or looks unverifiable, do NOT attest — explain why. Otherwise call attest with the EXACT period, amount, and source_hash from read_revenue.
-3. Call read_treasury and read_venue_state.
+3. Call read_treasury, read_x402_earnings, and read_venue_state. You earn WCSPR income by selling the feed via x402; count it as part of your treasury.
 4. TREASURY DECISION: decide whether to reinvest. Only act if you have at least the 500 CSPR stake minimum liquid. Prefer WiseLending stake (CSPR->sCSPR, growing yield); native delegation is the fallback. Restraint is valid: if conditions do not clearly warrant moving capital this cycle, HOLD. Keep any amount conservative (representative testnet sizing, e.g. 500 CSPR).
 5. If you reinvest: call reinvest(action, amount_cspr), then record_reinvest with a one-sentence justification. If you HOLD: call record_reinvest with venue="hold", amount_in=0, amount_out=0, and your reasoning.
 6. Finish with a short summary of what you did and why.
@@ -25,6 +25,7 @@ const toolSchemas: ChatCompletionTool[] = [
   { type: 'function', function: { name: 'read_revenue', description: 'Fetch the latest parking revenue reading for an asset (period, amount in cents, provenance source_hash).', parameters: { type: 'object', properties: { asset_id: { type: 'string' } }, required: ['asset_id'] } } },
   { type: 'function', function: { name: 'read_attestation_history', description: 'Typical revenue range for the asset, to anomaly-check a new reading.', parameters: { type: 'object', properties: { asset_id: { type: 'string' } }, required: ['asset_id'] } } },
   { type: 'function', function: { name: 'read_treasury', description: 'The agent treasury: liquid CSPR and sCSPR holdings.', parameters: { type: 'object', properties: {} } } },
+  { type: 'function', function: { name: 'read_x402_earnings', description: 'WCSPR income the agent has earned by selling the oracle feed via x402.', parameters: { type: 'object', properties: {} } } },
   { type: 'function', function: { name: 'read_venue_state', description: 'Available DeFi venues for reinvesting (WiseLending stake, native delegation).', parameters: { type: 'object', properties: {} } } },
   { type: 'function', function: { name: 'attest', description: 'Attest a revenue figure on-chain (only for clean, non-anomalous data).', parameters: { type: 'object', properties: { asset_id: { type: 'string' }, period: { type: 'number' }, amount: { type: 'number' }, source_hash: { type: 'string' } }, required: ['asset_id', 'period', 'amount', 'source_hash'] } } },
   { type: 'function', function: { name: 'reinvest', description: 'Move treasury capital into a venue, or hold.', parameters: { type: 'object', properties: { action: { type: 'string', enum: ['stake', 'delegate', 'hold'] }, amount_cspr: { type: 'number' } }, required: ['action', 'amount_cspr'] } } },
@@ -35,6 +36,7 @@ const dispatch: Record<string, (a: any) => Promise<unknown>> = {
   read_revenue: (a) => tools.readRevenue(a.asset_id),
   read_attestation_history: (a) => tools.readAttestationHistory(a.asset_id),
   read_treasury: () => tools.readTreasury(),
+  read_x402_earnings: () => tools.readX402Earnings(),
   read_venue_state: () => tools.readVenueState(),
   attest: (a) => tools.attest(a.asset_id, a.period, a.amount, a.source_hash),
   reinvest: (a) => tools.reinvest(a.action, a.amount_cspr),

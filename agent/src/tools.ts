@@ -75,6 +75,20 @@ export async function readVenueState() {
   };
 }
 
+export async function readX402Earnings() {
+  const base = process.env.CSPR_CLOUD_BASE!;
+  const wcspr = process.env.WCSPR_PACKAGE_HASH!;
+  const agentHash = process.env.AGENT_ACCOUNT_HASH!;
+  const r = await fetch(`${base}/accounts/${agentHash}/ft-token-ownership?contract_package_hash=${wcspr}`, {
+    headers: { Authorization: process.env.CSPR_CLOUD_API_KEY! },
+  });
+  const motes = BigInt(((await r.json()) as any)?.data?.[0]?.balance ?? '0');
+  return {
+    wcspr_earned: motesToCspr(motes),
+    note: 'WCSPR income earned by selling the oracle feed via x402; treat as treasury available to reinvest',
+  };
+}
+
 export async function attest(asset_id: string, period: number, amount: number, source_hash: string) {
   const args = Args.fromMap({
     asset_id: CLValue.newCLString(asset_id),
