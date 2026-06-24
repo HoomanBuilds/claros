@@ -43,7 +43,7 @@ const dispatch: Record<string, (a: any) => Promise<unknown>> = {
   record_reinvest: (a) => tools.recordReinvest(a.venue, a.amount_in, a.amount_out, a.reasoning),
 };
 
-const asset = process.argv[2] ?? 'sd-parking-101';
+const asset = process.argv[2] ?? 'OP-1';
 const messages: ChatCompletionMessageParam[] = [
   { role: 'system', content: SYSTEM },
   { role: 'user', content: `Run one autonomous cycle for asset "${asset}". Decide and act.` },

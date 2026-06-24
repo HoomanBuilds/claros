@@ -1,7 +1,7 @@
 import 'dotenv/config';
-import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { callContract, callWithValue, delegate, Args, CLValue } from './signer.js';
+import { latestRevenue, assetHistory } from './sandiego.js';
 
 const RPC = process.env.CASPER_NODE_RPC!;
 const REGISTRY = process.env.ATTESTATION_REGISTRY_PACKAGE_HASH!;
@@ -33,28 +33,18 @@ async function balanceOfUref(uref: string): Promise<bigint> {
 const motesToCspr = (m: bigint) => Number(m) / 1e9;
 
 export async function readRevenue(assetId: string) {
-  const url = process.env.SAN_DIEGO_API_URL;
-  const period = Number(new Date().toISOString().slice(0, 10).replace(/-/g, ''));
-  let amount: number;
-  let raw: string;
-  if (url) {
-    const rows = (await (await fetch(url)).json()) as Array<Record<string, string>>;
-    const row = rows[0];
-    amount = Math.round(parseFloat(row.trans_amt ?? row.amount ?? '0') * 100);
-    raw = JSON.stringify(row);
-  } else {
-    amount = 40000 + (period % 17) * 1300 + Math.floor((Date.now() / 3.6e6) % 800);
-    raw = JSON.stringify({ source: 'representative', asset_id: assetId, period, amount });
-  }
-  const source_hash = createHash('sha256').update(raw).digest('hex').slice(0, 32);
-  return { asset_id: assetId, period, amount, source_hash };
+  const r = await latestRevenue(assetId);
+  return { asset_id: r.asset_id, period: r.period, amount: r.amount_cents, source_hash: r.source_hash };
 }
 
 export async function readAttestationHistory(assetId: string) {
+  const h = await assetHistory(assetId);
   return {
     asset_id: assetId,
-    typical_range_cents: { min: 30000, max: 70000 },
-    note: 'flag amounts far outside the typical San Diego daily parking range as anomalous; do not attest those',
+    typical_range_cents: { min: h.min_cents, max: h.max_cents },
+    avg_cents: h.avg_cents,
+    observed_days: h.days,
+    note: 'real per-day revenue range (cents) for this San Diego meter across the year; flag readings far outside this range as anomalous',
   };
 }
 

@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import cors from "cors";
 import { config } from "dotenv";
 import express from "express";
@@ -7,6 +5,8 @@ import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import { ExactCasperScheme } from "@make-software/casper-x402/exact/server";
 import { FacilitatorConfig, HTTPFacilitatorClient } from "@x402/core/server";
 import { AssetAmount, Network } from "@x402/core/types";
+
+import { latestRevenue } from "./sandiego.js";
 
 config();
 
@@ -47,22 +47,24 @@ function parseEnv(): Env {
 const cfg = parseEnv();
 const chainID = cfg.chainID as Network;
 
-// The paid product: the oracle's latest attested parking-revenue reading, stamped
-// with the on-chain registry provenance so the buyer can independently verify it.
-function latestFeed(assetId: string) {
-  const period = Number(new Date().toISOString().slice(0, 10).replace(/-/g, ""));
-  const amount = 40000 + (period % 17) * 1300 + Math.floor((Date.now() / 3.6e6) % 800);
-  const raw = JSON.stringify({ source: "representative", asset_id: assetId, period, amount });
-  const sourceHash = createHash("sha256").update(raw).digest("hex").slice(0, 32);
+// The paid product: the oracle's latest real San Diego parking-revenue reading,
+// stamped with on-chain registry provenance so the buyer can independently verify
+// it. source_hash is the same canonical digest the agent attests on-chain.
+async function latestFeed(assetId: string) {
+  const r = await latestRevenue(assetId);
   return {
-    asset_id: assetId,
-    period,
-    amount_cents: amount,
-    source_hash: sourceHash,
+    asset_id: r.asset_id,
+    period: r.period,
+    amount_cents: r.amount_cents,
+    txn_count: r.txn_count,
+    latest_date: r.latest_date,
+    source_hash: r.source_hash,
     provenance: {
       network: chainID,
       registry_package_hash: cfg.registryPackage,
       attester: "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
+      source: "City of San Diego — parking-meter daily transactions",
+      source_url: r.source_url,
       verify: `https://testnet.cspr.live/contract-package/${cfg.registryPackage}`,
     },
     served_at: new Date().toISOString(),
@@ -115,9 +117,13 @@ app.use(
   ),
 );
 
-app.get("/oracle/feed", (req, res) => {
-  const assetId = (req.query.asset_id as string) || "sd-parking-101";
-  res.json(latestFeed(assetId));
+app.get("/oracle/feed", async (req, res) => {
+  const assetId = (req.query.asset_id as string) || "OP-1";
+  try {
+    res.json(await latestFeed(assetId));
+  } catch (err) {
+    res.status(502).json({ error: err instanceof Error ? err.message : "feed unavailable" });
+  }
 });
 
 app.get("/health", (_req, res) => res.json({ status: "ok", service: "proofyield-oracle" }));
