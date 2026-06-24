@@ -9,6 +9,7 @@
     "delegate-once": "tsx src/delegate-once.ts",
     "stake-once": "tsx src/stake-once.ts",
     "cycle": "tsx src/cycle.ts",
+    "loop": "tsx src/loop.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

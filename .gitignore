@@ -30,3 +30,6 @@ contracts/.builder*
 .idea/
 .vscode/
 .claude/settings.local.json
+
+# autonomous heartbeat runtime state
+**/.cycle-state.json
