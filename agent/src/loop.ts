@@ -44,6 +44,6 @@ async function tick(): Promise<void> {
   }
 }
 
-console.log(`ProofYield heartbeat: assets=[${ASSETS.join(', ')}], interval=${INTERVAL_MS}ms${DRY_RUN ? ' (DRY RUN)' : ''}`);
+console.log(`Claros heartbeat: assets=[${ASSETS.join(', ')}], interval=${INTERVAL_MS}ms${DRY_RUN ? ' (DRY RUN)' : ''}`);
 await tick();
 setInterval(tick, INTERVAL_MS);

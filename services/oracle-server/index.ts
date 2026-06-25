@@ -109,7 +109,7 @@ app.use(
     {
       "GET /oracle/feed": {
         accepts: [{ scheme: "exact", price: "$0.001", network: chainID, payTo: cfg.payeeAddress }],
-        description: "ProofYield: latest attested parking-revenue reading for an asset",
+        description: "Claros: latest attested parking-revenue reading for an asset",
         mimeType: "application/json",
       },
     },
@@ -126,6 +126,6 @@ app.get("/oracle/feed", async (req, res) => {
   }
 });
 
-app.get("/health", (_req, res) => res.json({ status: "ok", service: "proofyield-oracle" }));
+app.get("/health", (_req, res) => res.json({ status: "ok", service: "claros-oracle" }));
 
 app.listen(cfg.port, () => console.log(`Oracle feed server listening at http://localhost:${cfg.port}`));

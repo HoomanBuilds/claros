@@ -7,9 +7,9 @@ use odra_cli::{
     deploy::DeployScript, DeployedContractsContainer, DeployerExt, OdraCli,
 };
 
-pub struct ProofYieldDeployScript;
+pub struct ClarosDeployScript;
 
-impl DeployScript for ProofYieldDeployScript {
+impl DeployScript for ClarosDeployScript {
     fn deploy(
         &self,
         env: &HostEnv,
@@ -54,8 +54,8 @@ impl DeployScript for ProofYieldDeployScript {
 pub fn main() {
     env_logger::init();
     OdraCli::new()
-        .about("ProofYield contracts CLI")
-        .deploy(ProofYieldDeployScript)
+        .about("Claros contracts CLI")
+        .deploy(ClarosDeployScript)
         .contract::<AttestationRegistry>()
         .contract::<TreasuryVault>()
         .contract::<EligibilityGate>()
