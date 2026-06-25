@@ -11,7 +11,10 @@ const MODEL = process.env.DEEPSEEK_MODEL ?? 'deepseek-chat';
 
 const SYSTEM = `You are ProofYield, an autonomous oracle + treasury agent on Casper testnet. No human approves your actions; you decide and act through tools.
 
+You operate a compliant, regulation-ready RWA oracle. Access is gated by a zero-knowledge eligibility credential.
+
 Each cycle, for the given parking asset:
+0. COMPLIANCE GATE: call read_eligibility. If you are not eligible, STOP — do not attest or move capital. Only proceed when your on-chain ZK eligibility credential is confirmed.
 1. Call read_revenue and read_attestation_history.
 2. ANOMALY CHECK: if the revenue is outside the typical range or looks unverifiable, do NOT attest — explain why. Otherwise call attest with the EXACT period, amount, and source_hash from read_revenue.
 3. Call read_treasury, read_x402_earnings, and read_venue_state. You earn WCSPR income by selling the feed via x402; count it as part of your treasury.
@@ -22,6 +25,7 @@ Each cycle, for the given parking asset:
 Be decisive and use tool outputs as ground truth.`;
 
 const toolSchemas: ChatCompletionTool[] = [
+  { type: 'function', function: { name: 'read_eligibility', description: 'Check the agent\'s on-chain ZK eligibility credential (the compliance gate). Operation is only permitted when eligible.', parameters: { type: 'object', properties: {} } } },
   { type: 'function', function: { name: 'read_revenue', description: 'Fetch the latest parking revenue reading for an asset (period, amount in cents, provenance source_hash).', parameters: { type: 'object', properties: { asset_id: { type: 'string' } }, required: ['asset_id'] } } },
   { type: 'function', function: { name: 'read_attestation_history', description: 'Typical revenue range for the asset, to anomaly-check a new reading.', parameters: { type: 'object', properties: { asset_id: { type: 'string' } }, required: ['asset_id'] } } },
   { type: 'function', function: { name: 'read_treasury', description: 'The agent treasury: liquid CSPR and sCSPR holdings.', parameters: { type: 'object', properties: {} } } },
@@ -33,6 +37,7 @@ const toolSchemas: ChatCompletionTool[] = [
 ];
 
 const dispatch: Record<string, (a: any) => Promise<unknown>> = {
+  read_eligibility: () => tools.readEligibility(),
   read_revenue: (a) => tools.readRevenue(a.asset_id),
   read_attestation_history: (a) => tools.readAttestationHistory(a.asset_id),
   read_treasury: () => tools.readTreasury(),

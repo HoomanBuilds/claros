@@ -65,6 +65,23 @@ export async function readVenueState() {
   };
 }
 
+export async function readEligibility() {
+  const gate = process.env.ELIGIBILITY_GATE_PACKAGE_HASH!;
+  const tx = process.env.ELIGIBILITY_VERIFY_TX;
+  if (!tx) return { eligible: false, note: 'no eligibility credential on record' };
+  const r = await rpc('info_get_transaction', { transaction_hash: { Version1: tx } });
+  const er = r?.execution_info?.execution_result?.Version2;
+  const eligible = !!er && !er.error_message;
+  return {
+    eligible,
+    gate_package: gate,
+    credential_tx: tx,
+    note: eligible
+      ? 'agent holds a ZK-verified allowlist-eligibility credential, granted on-chain (Groth16/BN254 verified by the EligibilityGate); cleared to operate the regulation-ready oracle'
+      : 'eligibility credential not confirmed on-chain',
+  };
+}
+
 export async function readX402Earnings() {
   const base = process.env.CSPR_CLOUD_BASE!;
   const wcspr = process.env.WCSPR_PACKAGE_HASH!;
