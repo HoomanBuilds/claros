@@ -1,5 +1,7 @@
 use contracts::attestation_registry::{AttestationRegistry, AttestationRegistryInitArgs};
+use contracts::eligibility_gate::{EligibilityGate, EligibilityGateInitArgs};
 use contracts::treasury_vault::{TreasuryVault, TreasuryVaultInitArgs};
+use odra::casper_types::U256;
 use odra::host::{HostEnv, InstallConfig};
 use odra_cli::{
     deploy::DeployScript, DeployedContractsContainer, DeployerExt, OdraCli,
@@ -31,6 +33,20 @@ impl DeployScript for ProofYieldDeployScript {
             container,
             800_000_000_000,
         )?;
+        // Allowlist root is computed off-chain (zk-gate/circuits/proof.json) and
+        // passed in so the deployed root matches the proof we submit.
+        let allowlist_root = std::env::var("ELIGIBILITY_ALLOWLIST_ROOT")
+            .ok()
+            .and_then(|s| U256::from_dec_str(&s).ok())
+            .unwrap_or_default();
+        EligibilityGate::load_or_deploy_with_cfg(
+            env,
+            None,
+            EligibilityGateInitArgs { allowlist_root },
+            InstallConfig::upgradable::<EligibilityGate>(),
+            container,
+            800_000_000_000,
+        )?;
         Ok(())
     }
 }
@@ -42,6 +58,7 @@ pub fn main() {
         .deploy(ProofYieldDeployScript)
         .contract::<AttestationRegistry>()
         .contract::<TreasuryVault>()
+        .contract::<EligibilityGate>()
         .build()
         .run();
 }

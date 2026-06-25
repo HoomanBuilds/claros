@@ -6,6 +6,14 @@ version = "0.1.0"
 [dependencies]
 odra = { version = "2.8.0", features = [], default-features = false }
 
+# Groth16 verifier for the eligibility ZK gate — forked from Shroud Protocol.
+ark-bn254 = { version = "0.4.0", default-features = false, features = ["curve"] }
+ark-ff = { version = "0.4.0", default-features = false }
+ark-groth16 = { version = "0.4.0", default-features = false }
+ark-snark = { version = "0.4.0", default-features = false }
+ark-serialize = { version = "0.4.0", default-features = false }
+ark-std = { version = "0.4.0", default-features = false }
+
 [dev-dependencies]
 odra-test = { version = "2.8.0", features = [], default-features = false }
 

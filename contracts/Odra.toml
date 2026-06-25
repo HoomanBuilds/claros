@@ -3,3 +3,6 @@ fqn = "attestation_registry::AttestationRegistry"
 
 [[contracts]]
 fqn = "treasury_vault::TreasuryVault"
+
+[[contracts]]
+fqn = "eligibility_gate::EligibilityGate"
