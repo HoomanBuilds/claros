@@ -21,6 +21,15 @@
       "deploy_tx": "bcbe32d84d682956e48868d4f8871572fb051d53d254b89d0a38c5901952f2a0",
       "agent": "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
       "upgradable": true
+    },
+    "eligibility_gate": {
+      "package_hash": "7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227",
+      "deploy_tx": "bb35956d60fbfe9b19fac18d9d72b921b4113c455c475b9b2e29d8e4aff7be88",
+      "verify_tx": "b3048a56044adb67796f7e94c9c0298700b5cf822b326fd71e8fe8370333a433",
+      "allowlist_root": "16331994690242190256441629756923135657650690078906869969179988007525570044228",
+      "owner": "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
+      "zk": "Groth16/BN254 (ark-groth16 in Odra), Circom 2.2 eligibility circuit, MiMC7 depth-20 Merkle allowlist",
+      "upgradable": true
     }
   },
   "external": {
