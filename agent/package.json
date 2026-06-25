@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "attest-once": "tsx src/attest-once.ts",
+    "attest-eia-once": "tsx src/attest-eia-once.ts",
+    "eia-feeds": "tsx src/eia-list.ts",
     "reinvest-once": "tsx src/reinvest-once.ts",
     "delegate-once": "tsx src/delegate-once.ts",
     "stake-once": "tsx src/stake-once.ts",

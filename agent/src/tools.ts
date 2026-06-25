@@ -2,6 +2,8 @@ import 'dotenv/config';
 import { readFileSync } from 'node:fs';
 import { callContract, callWithValue, delegate, Args, CLValue } from './signer.js';
 import { latestRevenue, assetHistory } from './sandiego.js';
+import { fetchLatest } from './eia.js';
+import { EIA_FEEDS, FEED_BY_ID } from './eia-feeds.js';
 
 const RPC = process.env.CASPER_NODE_RPC!;
 const REGISTRY = process.env.ATTESTATION_REGISTRY_PACKAGE_HASH!;
@@ -35,6 +37,25 @@ const motesToCspr = (m: bigint) => Number(m) / 1e9;
 export async function readRevenue(assetId: string) {
   const r = await latestRevenue(assetId);
   return { asset_id: r.asset_id, period: r.period, amount: r.amount_cents, source_hash: r.source_hash };
+}
+
+export function listEiaFeeds() {
+  return EIA_FEEDS.map(f => ({ asset_id: f.asset_id, unit: f.unit, route: f.route, frequency: f.frequency }));
+}
+
+export async function readEiaFeed(assetId: string) {
+  const feed = FEED_BY_ID[assetId];
+  if (!feed) throw new Error(`unknown EIA feed: ${assetId}`);
+  const r = await fetchLatest(feed, process.env.EIA_API_KEY!);
+  return {
+    asset_id: r.asset_id,
+    period: r.period,
+    amount: r.amount.toString(), // integer (value * 10^decimals); string to preserve U512 precision
+    value: r.value,
+    unit: r.unit,
+    source_hash: r.source_hash,
+    latest_date: r.latest_date,
+  };
 }
 
 export async function readAttestationHistory(assetId: string) {
