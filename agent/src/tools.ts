@@ -43,6 +43,31 @@ export function listEiaFeeds() {
   return EIA_FEEDS.map(f => ({ asset_id: f.asset_id, unit: f.unit, route: f.route, frequency: f.frequency }));
 }
 
+export async function registerFeed(
+  feedId: string,
+  decimals: number,
+  unit: string,
+  title: string,
+  source: string,
+  route: string,
+  frequency: string,
+  description: string,
+) {
+  const FEED_REGISTRY = process.env.FEED_REGISTRY_PACKAGE_HASH!;
+  const args = Args.fromMap({
+    feed_id: CLValue.newCLString(feedId),
+    decimals: CLValue.newCLUint8(decimals),
+    unit: CLValue.newCLString(unit),
+    title: CLValue.newCLString(title),
+    source: CLValue.newCLString(source),
+    route: CLValue.newCLString(route),
+    frequency: CLValue.newCLString(frequency),
+    description: CLValue.newCLString(description),
+  });
+  const tx = await callContract(FEED_REGISTRY, 'register_feed', args, 8_000_000_000);
+  return { tx, explorer: `https://testnet.cspr.live/transaction/${tx}` };
+}
+
 export async function readEiaFeed(assetId: string) {
   const feed = FEED_BY_ID[assetId];
   if (!feed) throw new Error(`unknown EIA feed: ${assetId}`);

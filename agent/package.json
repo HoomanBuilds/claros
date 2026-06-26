@@ -6,6 +6,8 @@
   "scripts": {
     "attest-once": "tsx src/attest-once.ts",
     "attest-eia-once": "tsx src/attest-eia-once.ts",
+    "register-eia-feed": "tsx src/register-eia-feed.ts",
+    "populate-feeds": "tsx src/populate-feeds.ts",
     "eia-feeds": "tsx src/eia-list.ts",
     "reinvest-once": "tsx src/reinvest-once.ts",
     "delegate-once": "tsx src/delegate-once.ts",
