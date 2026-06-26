@@ -41,3 +41,7 @@ zk-gate/circuits/*.ptau
 zk-gate/circuits/*.r1cs
 zk-gate/circuits/*.sym
 zk-gate/circuits/eligibility_0000.zkey
+
+# claros-oracle SDK build output
+sdk/dist/
+sdk/eia-catalog.json
