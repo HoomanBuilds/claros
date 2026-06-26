@@ -69,8 +69,19 @@ function sourceHash(f: EiaFeed, row: Record<string, any>, frequency: string, uni
 export async function fetchLatest(f: EiaFeed, apiKey: string): Promise<EiaReading> {
   const res = await fetch(buildUrl(f, apiKey));
   if (res.status === 429) throw new Error('EIA rate limit (429) — back off');
-  const body = (await res.json()) as any;
-  if (body?.error) throw new Error(`EIA ${body.error.code}: ${body.error.message}`);
+  if (!res.ok) throw new Error(`EIA HTTP ${res.status} for ${f.asset_id}`);
+  const text = await res.text();
+  if (!text) throw new Error(`EIA empty response for ${f.asset_id}`);
+  let body: any;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    throw new Error(`EIA non-JSON response for ${f.asset_id}`);
+  }
+  if (body?.error) {
+    const e = body.error;
+    throw new Error(`EIA error: ${typeof e === 'string' ? e : JSON.stringify(e)}`);
+  }
   const rows = body?.response?.data ?? [];
   if (rows.length === 0) throw new Error(`EIA: no data for ${f.asset_id}`);
   const row = rows[0];

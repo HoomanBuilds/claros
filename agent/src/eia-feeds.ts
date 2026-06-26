@@ -11,7 +11,7 @@ export const EIA_FEEDS: EiaFeed[] = [
   { asset_id: 'EIA.NG.PROD.MARKETED.MONTHLY', route: 'natural-gas/prod/sum', frequency: 'monthly', data_col: 'value', facets: { process: 'VGM', duoarea: 'NUS' }, unit: 'MMcf', decimals: 3 },
   { asset_id: 'EIA.NG.CONS.TOTAL.MONTHLY', route: 'natural-gas/cons/sum', frequency: 'monthly', data_col: 'value', facets: { process: 'VGT', duoarea: 'NUS' }, unit: 'MMcf', decimals: 3 },
   { asset_id: 'EIA.NG.RESERVES.DRY.ANNUAL', route: 'natural-gas/enr/dry', frequency: 'annual', data_col: 'value', facets: { duoarea: 'NUS' }, unit: 'Bcf', decimals: 3 },
-  { asset_id: 'EIA.NG.IMPORTS.TOTAL.MONTHLY', route: 'natural-gas/move/impc', frequency: 'monthly', data_col: 'value', facets: { duoarea: 'NUS' }, unit: 'MMcf', decimals: 3 },
+  { asset_id: 'EIA.NG.IMPORTS.TOTAL.MONTHLY', route: 'natural-gas/move/impc', frequency: 'monthly', data_col: 'value', facets: { process: 'IM0' }, unit: 'MMcf', decimals: 3 },
 
   // ── Petroleum ──
   { asset_id: 'EIA.PET.PRICE.WTI.DAILY', route: 'petroleum/pri/spt', frequency: 'daily', data_col: 'value', facets: { series: 'RWTC' }, unit: '$/bbl', decimals: 6 },
@@ -22,11 +22,10 @@ export const EIA_FEEDS: EiaFeed[] = [
   { asset_id: 'EIA.PET.PROD.CRUDE_FIELD.MONTHLY', route: 'petroleum/crd/crpdn', frequency: 'monthly', data_col: 'value', facets: { duoarea: 'NUS', process: 'FPF' }, unit: 'Mbbl/d', decimals: 3 },
   { asset_id: 'EIA.PET.RESERVES.CRUDE.ANNUAL', route: 'petroleum/crd/pres', frequency: 'annual', data_col: 'value', facets: { duoarea: 'NUS' }, unit: 'MMbbl', decimals: 3 },
   { asset_id: 'EIA.PET.SUPPLIED.PRODUCTS.WEEKLY', route: 'petroleum/cons/wpsup', frequency: 'weekly', data_col: 'value', facets: { series: 'WRPUPUS2' }, unit: 'Mbbl/d', decimals: 3 },
-  { asset_id: 'EIA.PET.IMPORTS.CRUDE_SAU.MONTHLY', route: 'crude-oil-imports', frequency: 'monthly', data_col: 'quantity', facets: { originId: 'SAU', destinationType: 'US' }, unit: 'Mbbl', decimals: 3 },
+  { asset_id: 'EIA.PET.IMPORTS.CRUDE_SAU.MONTHLY', route: 'crude-oil-imports', frequency: 'monthly', data_col: 'quantity', facets: { originId: 'CTY_SA' }, unit: 'Mbbl', decimals: 3 },
 
   // ── Electricity ──
   { asset_id: 'EIA.ELEC.DEMAND.US48.HOURLY', route: 'electricity/rto/region-data', frequency: 'hourly', data_col: 'value', facets: { respondent: 'US48', type: 'D' }, unit: 'MWh', decimals: 3 },
-  { asset_id: 'EIA.ELEC.INTERCHANGE.US48.HOURLY', route: 'electricity/rto/region-data', frequency: 'hourly', data_col: 'value', facets: { respondent: 'US48', type: 'TI' }, unit: 'MWh', decimals: 3 },
   { asset_id: 'EIA.ELEC.GEN_NG.US48.HOURLY', route: 'electricity/rto/fuel-type-data', frequency: 'hourly', data_col: 'value', facets: { respondent: 'US48', fueltype: 'NG' }, unit: 'MWh', decimals: 3 },
   { asset_id: 'EIA.ELEC.RETAIL.PRICE.US_ALL.MONTHLY', route: 'electricity/retail-sales', frequency: 'monthly', data_col: 'price', facets: { stateid: 'US', sectorid: 'ALL' }, unit: 'cents/kWh', decimals: 6 },
   { asset_id: 'EIA.ELEC.RETAIL.SALES.US_ALL.MONTHLY', route: 'electricity/retail-sales', frequency: 'monthly', data_col: 'sales', facets: { stateid: 'US', sectorid: 'ALL' }, unit: 'million kWh', decimals: 3 },
@@ -34,13 +33,13 @@ export const EIA_FEEDS: EiaFeed[] = [
   { asset_id: 'EIA.ELEC.RETAIL.CUSTOMERS.US_RES.MONTHLY', route: 'electricity/retail-sales', frequency: 'monthly', data_col: 'customers', facets: { stateid: 'US', sectorid: 'RES' }, unit: 'count', decimals: 0 },
 
   // ── Coal ──
-  { asset_id: 'EIA.COAL.PROD.US.ANNUAL', route: 'coal/aggregate-production', frequency: 'annual', data_col: 'production', facets: { location: 'US' }, unit: 'short tons', decimals: 3 },
+  { asset_id: 'EIA.COAL.PROD.US.ANNUAL', route: 'coal/aggregate-production', frequency: 'annual', data_col: 'production', facets: { stateRegionId: 'US' }, unit: 'short tons', decimals: 3 },
   { asset_id: 'EIA.COAL.PRICE.MARKET.US.ANNUAL', route: 'coal/market-sales-price', frequency: 'annual', data_col: 'price', facets: { stateRegionId: 'US' }, unit: '$/short ton', decimals: 6 },
-  { asset_id: 'EIA.COAL.PRICE.BITUMINOUS.QUARTERLY', route: 'coal/price-by-rank', frequency: 'quarterly', data_col: 'price', facets: { coalRankId: 'BIT' }, unit: '$/short ton', decimals: 6 },
+  { asset_id: 'EIA.COAL.PRICE.BITUMINOUS.ANNUAL', route: 'coal/price-by-rank', frequency: 'annual', data_col: 'price', facets: { stateRegionId: 'US', coalRankId: 'BIT' }, unit: '$/short ton', decimals: 6 },
 
-  // ── Densified biomass (quarterly EIA-63C; verify columns live) ──
-  { asset_id: 'EIA.DBF.PROD.US.QUARTERLY', route: 'densified-biomass/production-by-region', frequency: 'quarterly', data_col: 'value', facets: {}, unit: 'short tons', decimals: 3 },
-  { asset_id: 'EIA.DBF.SALES_PRICE.US.QUARTERLY', route: 'densified-biomass/sales-and-price-by-region', frequency: 'quarterly', data_col: 'value', facets: {}, unit: '$/short ton', decimals: 6 },
+  // ── Densified biomass (quarterly EIA-63C) ──
+  { asset_id: 'EIA.DBF.PROD.US.MONTHLY', route: 'densified-biomass/production-by-region', frequency: 'monthly', data_col: 'production', facets: {}, unit: 'short tons', decimals: 3 },
+  { asset_id: 'EIA.DBF.SALES_PRICE.US.MONTHLY', route: 'densified-biomass/sales-and-price-by-region', frequency: 'monthly', data_col: 'average-price', facets: {}, unit: '$/short ton', decimals: 6 },
 
   // ── Nuclear outages (daily) ──
   { asset_id: 'EIA.NUC.OUTAGE.US_PCT.DAILY', route: 'nuclear-outages/us-nuclear-outages', frequency: 'daily', data_col: 'percentOutage', facets: {}, unit: 'percent', decimals: 4 },
