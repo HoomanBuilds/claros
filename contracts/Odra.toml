@@ -6,3 +6,6 @@ fqn = "treasury_vault::TreasuryVault"
 
 [[contracts]]
 fqn = "eligibility_gate::EligibilityGate"
+
+[[contracts]]
+fqn = "feed_registry::FeedRegistry"

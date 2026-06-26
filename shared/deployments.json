@@ -22,6 +22,13 @@
       "agent": "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
       "upgradable": true
     },
+    "feed_registry": {
+      "package_hash": "dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46",
+      "deploy_tx": "a7900a2b094d9561b2170ff9f026ac6df40fd3efc1930e03a5e4e617fb36b6e4",
+      "owner": "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
+      "purpose": "self-describing feed metadata (decimals/unit/source) — read alongside attestation_registry by feed_id",
+      "upgradable": true
+    },
     "eligibility_gate": {
       "package_hash": "7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227",
       "deploy_tx": "bb35956d60fbfe9b19fac18d9d72b921b4113c455c475b9b2e29d8e4aff7be88",

@@ -1,4 +1,4 @@
-last_updated = "2026-06-26T15:29:17Z"
+last_updated = "2026-06-27T14:59:32Z"
 
 [[contracts]]
 name = "AttestationRegistry"
@@ -14,3 +14,8 @@ package_hash = "hash-a90b082d863c5977c6e54654fec10e523a38760529e664a87e9e8a8e887
 name = "EligibilityGate"
 package_name = "EligibilityGate"
 package_hash = "hash-7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227"
+
+[[contracts]]
+name = "FeedRegistry"
+package_name = "FeedRegistry"
+package_hash = "hash-dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46"

@@ -1,5 +1,6 @@
 use contracts::attestation_registry::{AttestationRegistry, AttestationRegistryInitArgs};
 use contracts::eligibility_gate::{EligibilityGate, EligibilityGateInitArgs};
+use contracts::feed_registry::{FeedRegistry, FeedRegistryInitArgs};
 use contracts::treasury_vault::{TreasuryVault, TreasuryVaultInitArgs};
 use odra::casper_types::U256;
 use odra::host::{HostEnv, InstallConfig};
@@ -47,6 +48,14 @@ impl DeployScript for ClarosDeployScript {
             container,
             800_000_000_000,
         )?;
+        FeedRegistry::load_or_deploy_with_cfg(
+            env,
+            None,
+            FeedRegistryInitArgs { owner: account },
+            InstallConfig::upgradable::<FeedRegistry>(),
+            container,
+            800_000_000_000,
+        )?;
         Ok(())
     }
 }
@@ -59,6 +68,7 @@ pub fn main() {
         .contract::<AttestationRegistry>()
         .contract::<TreasuryVault>()
         .contract::<EligibilityGate>()
+        .contract::<FeedRegistry>()
         .build()
         .run();
 }
