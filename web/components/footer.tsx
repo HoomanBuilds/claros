@@ -8,9 +8,9 @@ const ease = [0.22, 1, 0.36, 1] as const
 
 const LINKS = [
   { label: "Feeds", href: "/feeds" },
+  { label: "Datasets", href: "/datasets" },
   { label: "Docs", href: "/docs" },
-  { label: "Registry", href: "https://testnet.cspr.live/contract-package/dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46" },
-  { label: "Explorer", href: "https://testnet.cspr.live" },
+  { label: "Network", href: "/network" },
 ]
 
 export function Footer() {
