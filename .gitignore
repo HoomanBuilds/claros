@@ -1,6 +1,7 @@
-# planning & reference (local only — never committed)
-docs/
-inspiration/
+# planning & reference (local only — never committed). Root-anchored so app
+# routes like web/app/docs are NOT swallowed by these.
+/docs/
+/inspiration/
 
 # secrets & keys
 keys/
@@ -16,6 +17,7 @@ keys/
 **/.next/
 **/build/
 **/out/
+**/next-env.d.ts
 *.log
 npm-debug.log*
 
