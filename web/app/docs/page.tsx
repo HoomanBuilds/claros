@@ -3,13 +3,16 @@ import Link from "next/link"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { CodeBlock } from "@/components/code-block"
-import { getStats } from "@/lib/claros"
+import { DocTable } from "@/components/doc-table"
+import { FeedReference } from "@/components/feed-reference"
+import { getStats, getAllReadings } from "@/lib/claros"
+import { flagshipFirst } from "@/lib/format"
 
 export const revalidate = 300
 
 export const metadata: Metadata = {
   title: "Docs — Consume the Claros Oracle",
-  description: "Read Claros real-world-data feeds three ways: a free REST API, the claros-oracle SDK, or a cross-contract call from your own Casper contract.",
+  description: "Read Claros real-world-data feeds three ways: a free REST API, the claros-oracle SDK, or a cross-contract call from your own Casper contract. With parameter tables and a full feed reference.",
 }
 
 const FEED_REGISTRY = "dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46"
@@ -32,6 +35,10 @@ function H2({ children, id }: { children: React.ReactNode; id?: string }) {
       {children}
     </h2>
   )
+}
+
+function Sub({ children }: { children: React.ReactNode }) {
+  return <h3 className="text-[11px] tracking-[0.2em] uppercase text-muted-foreground font-mono mt-8 mb-3">{children}</h3>
 }
 
 const REST_RESPONSE = `GET /v1/feeds/EIA.PET.PRICE.WTI.DAILY
@@ -101,13 +108,11 @@ let feed = m.get_feed("EIA.PET.PRICE.WTI.DAILY".to_string()).unwrap_or_revert(&s
 
 const DATASETS_CODE = `# search the 232 indexed datasets Claros can attest
 GET /v1/datasets?q=coal
-GET /v1/datasets?family=natural-gas
-
-# families: petroleum · natural-gas · electricity · coal · nuclear
-#           co2 · biomass · seds · steo · international · total-energy`
+GET /v1/datasets?family=natural-gas`
 
 export default async function DocsPage() {
-  const stats = await getStats()
+  const [stats, readings] = await Promise.all([getStats(), getAllReadings()])
+  const feedRefs = flagshipFirst(readings).map((r) => ({ feed_id: r.feed_id, decimals: r.decimals, unit: r.unit, frequency: r.frequency }))
 
   const quickstart = [
     { tag: "01 · REST", title: "HTTP, no key", body: "Read any feed over plain HTTP. Best for apps, dashboards, bots.", href: "#rest" },
@@ -125,12 +130,26 @@ export default async function DocsPage() {
           <h1 className="font-pixel text-4xl sm:text-5xl lg:text-6xl tracking-tight text-foreground mb-4 select-none">
             INTEGRATE
           </h1>
-          <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl">
+          <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl mb-8">
             Claros is a Pyth-style oracle: values are integers scaled by{" "}
             <span className="text-foreground">10^decimals</span>, stored next to self-describing
-            metadata, keyed by <span className="text-foreground">feed_id</span>. Read them three ways —
-            all reads are free.
+            metadata, keyed by <span className="text-foreground">feed_id</span>. Pick a method below, grab a{" "}
+            <span className="text-foreground">feed_id</span> from the reference table, and read — all reads
+            are free.
           </p>
+
+          {/* Which method? */}
+          <Sub>Which method should I use?</Sub>
+          <DocTable
+            headers={["method", "best for", "auth", "runs", "returns"]}
+            cols="1.1fr 1.9fr 0.8fr 1.3fr 1.4fr"
+            minWidth={760}
+            rows={[
+              [<b key="m">REST API</b>, "web apps, dashboards, bots, AI agents", <span key="a" className="muted">none</span>, "off-chain (HTTP)", "JSON"],
+              [<b key="m">SDK</b>, "TypeScript / JS backends & scripts", <span key="a" className="muted">none</span>, "off-chain (reads node)", "typed Reading object"],
+              [<b key="m">Cross-contract</b>, "your own Casper smart contract", <span key="a" className="muted">n/a</span>, "on-chain (Casper VM)", "Attestation + Feed"],
+            ]}
+          />
         </section>
 
         {/* Quickstart */}
@@ -142,13 +161,9 @@ export default async function DocsPage() {
                 href={q.href}
                 className="group flex flex-col gap-2 px-5 py-6 border-r-2 border-b-2 border-foreground hover:bg-foreground hover:text-background transition-colors"
               >
-                <span className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground group-hover:text-background/60 font-mono">
-                  {q.tag}
-                </span>
+                <span className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground group-hover:text-background/60 font-mono">{q.tag}</span>
                 <span className="text-lg font-mono font-bold tracking-tight uppercase">{q.title}</span>
-                <span className="text-xs font-mono text-muted-foreground group-hover:text-background/70 leading-relaxed">
-                  {q.body}
-                </span>
+                <span className="text-xs font-mono text-muted-foreground group-hover:text-background/70 leading-relaxed">{q.body}</span>
               </Link>
             ))}
           </div>
@@ -159,23 +174,43 @@ export default async function DocsPage() {
           <Label tag="// REST_API" n="002" />
           <H2 id="rest">REST API</H2>
           <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl mb-6">
-            The Hermes of Claros — a read service that returns on-chain feeds as JSON. No wallet, no
-            key, CORS open. Run <span className="text-foreground">services/claros-api</span> or point at a
-            hosted instance.
+            The Hermes of Claros — a read service that returns on-chain feeds as JSON. No wallet, no key,
+            CORS open. Run <span className="text-foreground">services/claros-api</span> or point at a hosted
+            instance.
           </p>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 border-l-2 border-t-2 border-foreground mb-6">
-            {[
-              { m: "GET /v1/feeds", d: "all live feeds + values" },
-              { m: "GET /v1/feeds/:id", d: "one full reading" },
-              { m: "GET /v1/datasets", d: "discover 232 datasets" },
-            ].map((e) => (
-              <div key={e.m} className="flex flex-col gap-1 px-5 py-4 border-r-2 border-b-2 border-foreground">
-                <span className="text-xs font-mono font-bold text-foreground">{e.m}</span>
-                <span className="text-[10px] font-mono tracking-wide uppercase text-muted-foreground">{e.d}</span>
-              </div>
-            ))}
+
+          <Sub>Endpoints & parameters</Sub>
+          <DocTable
+            headers={["endpoint", "method", "parameters", "returns"]}
+            cols="1.7fr 0.7fr 1.7fr 1.5fr"
+            minWidth={740}
+            rows={[
+              [<code key="e">/v1/feeds</code>, "GET", <span key="p" className="muted">none</span>, "all live feeds + values"],
+              [<code key="e">/v1/feeds/:id</code>, "GET", <span key="p"><code>:id</code> = feed_id</span>, "one full reading"],
+              [<code key="e">/v1/datasets</code>, "GET", <span key="p"><code>?q=</code> · <code>?family=</code></span>, "matching datasets"],
+            ]}
+          />
+
+          <Sub>Response fields (a reading)</Sub>
+          <DocTable
+            headers={["field", "type", "meaning"]}
+            cols="1.1fr 0.9fr 2.6fr"
+            minWidth={640}
+            rows={[
+              [<code key="f">feed_id</code>, "string", "the key you requested"],
+              [<code key="f">value</code>, "number", <span key="m">human value = <code>amount / 10^decimals</code></span>],
+              [<code key="f">amount</code>, "string", "raw integer value×10^decimals (U512-safe)"],
+              [<code key="f">decimals</code>, "number", "scale exponent (Pyth expo)"],
+              [<code key="f">unit</code>, "string", "e.g. $/bbl, MWh, percent"],
+              [<code key="f">period</code>, "number", "YYYYMMDD / YYYYMM / YYYY"],
+              [<code key="f">source_hash</code>, "string", "sha256 provenance of the source row"],
+              [<code key="f">updated_at</code>, "number", "attestation time, epoch ms"],
+            ]}
+          />
+
+          <div className="mt-6">
+            <CodeBlock lang="http" code={REST_RESPONSE} />
           </div>
-          <CodeBlock lang="http" code={REST_RESPONSE} />
         </section>
 
         {/* SDK */}
@@ -187,7 +222,24 @@ export default async function DocsPage() {
             from Casper global state — no indexer, no running node. The same numbers an on-chain consumer
             sees.
           </p>
-          <div className="mb-4">
+
+          <Sub>Methods</Sub>
+          <DocTable
+            headers={["method", "returns", "description"]}
+            cols="1.7fr 1.4fr 2fr"
+            minWidth={760}
+            rows={[
+              [<code key="m">new ClarosOracle(cfg?)</code>, "instance", "testnet defaults baked in; cfg overrides rpc / registries"],
+              [<code key="m">.getReading(id)</code>, <code key="r">Reading | null</code>, "metadata + value + human number (one call)"],
+              [<code key="m">.getValue(id)</code>, <code key="r">FeedValue | null</code>, "just the latest value (amount, period…)"],
+              [<code key="m">.getFeed(id)</code>, <code key="r">Feed | null</code>, "just the metadata (decimals, unit…)"],
+              [<code key="m">.feedCount()</code>, <code key="r">number</code>, "how many feeds are registered on-chain"],
+              [<code key="m">.feedIdAt(i)</code>, <code key="r">string | null</code>, "feed_id at index i"],
+              [<code key="m">.listFeedIds()</code>, <code key="r">string[]</code>, "every feed_id on-chain"],
+            ]}
+          />
+
+          <div className="mt-6 mb-4">
             <CodeBlock lang="bash" code="npm install claros-oracle" />
           </div>
           <CodeBlock lang="typescript" code={SDK_CODE} />
@@ -199,51 +251,102 @@ export default async function DocsPage() {
           <H2 id="onchain">On-chain (cross-contract)</H2>
           <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl mb-6">
             Consume Claros from your own Casper contract, exactly like reading Pyth on-chain. Declare the
-            registry interfaces, then call <span className="text-foreground">get_latest(feed_id)</span> for
-            the value and <span className="text-foreground">get_feed(feed_id)</span> for decimals/unit.
+            registry interfaces, then call the entry points below with a{" "}
+            <span className="text-foreground">feed_id</span>.
           </p>
-          <CodeBlock lang="rust" code={ONCHAIN_CODE} />
+
+          <Sub>Entry points</Sub>
+          <DocTable
+            headers={["contract", "entry point", "argument", "returns"]}
+            cols="1.4fr 1.4fr 1.3fr 1.5fr"
+            minWidth={740}
+            rows={[
+              [<b key="c">AttestationRegistry</b>, <code key="e">get_latest</code>, <span key="a"><code>asset_id: String</code></span>, <code key="r">{"Option<Attestation>"}</code>],
+              [<b key="c">FeedRegistry</b>, <code key="e">get_feed</code>, <span key="a"><code>feed_id: String</code></span>, <code key="r">{"Option<Feed>"}</code>],
+            ]}
+          />
+
+          <Sub>Attestation (the value)</Sub>
+          <DocTable
+            headers={["field", "type", "meaning"]}
+            cols="1.1fr 1fr 2.5fr"
+            minWidth={620}
+            rows={[
+              [<code key="f">period</code>, "u64", "reporting period (YYYYMMDD…)"],
+              [<code key="f">amount</code>, "U512", "value × 10^decimals"],
+              [<code key="f">source_hash</code>, "String", "sha256 provenance"],
+              [<code key="f">attester</code>, "Address", "the Claros agent key"],
+              [<code key="f">timestamp</code>, "u64", "attestation time, epoch ms"],
+            ]}
+          />
+
+          <Sub>Feed (the metadata)</Sub>
+          <DocTable
+            headers={["field", "type", "meaning"]}
+            cols="1.1fr 1fr 2.5fr"
+            minWidth={620}
+            rows={[
+              [<code key="f">decimals</code>, "u8", "the 10^k scale to divide by"],
+              [<code key="f">unit</code>, "String", "e.g. $/bbl"],
+              [<code key="f">title</code>, "String", "human description"],
+              [<code key="f">source</code>, "String", "e.g. EIA APIv2"],
+              [<code key="f">route</code>, "String", "upstream dataset route"],
+              [<code key="f">frequency</code>, "String", "cadence (daily…)"],
+              [<code key="f">description</code>, "String", "long description"],
+            ]}
+          />
+
+          <div className="mt-6">
+            <CodeBlock lang="rust" code={ONCHAIN_CODE} />
+          </div>
+        </section>
+
+        {/* Feed reference */}
+        <section className="w-full py-12 border-t border-border">
+          <Label tag="// FEED_REFERENCE" n="005" />
+          <H2 id="feeds">Feed reference</H2>
+          <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl mb-6">
+            For each dataset, here is the exact <span className="text-foreground">feed_id</span> to pass and
+            the <span className="text-foreground">decimals</span> to divide by. Copy the id verbatim into
+            REST, the SDK, or a contract call.
+          </p>
+          <FeedReference feeds={feedRefs} />
         </section>
 
         {/* Datasets */}
         <section className="w-full py-12 border-t border-border">
-          <Label tag="// DISCOVERY" n="005" />
+          <Label tag="// DISCOVERY" n="006" />
           <H2 id="datasets">Datasets</H2>
           <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl mb-6">
             {stats.feedsLive} feeds are live today, crawled from {stats.datasets} indexed EIA datasets across
-            every energy family. Any of them can be attested on request.
+            every energy family. Browse them all on the{" "}
+            <Link href="/datasets" className="text-foreground underline decoration-[#ea580c] underline-offset-4">datasets page</Link>,
+            or query the discovery endpoint:
           </p>
           <CodeBlock lang="bash" code={DATASETS_CODE} />
         </section>
 
         {/* Addresses */}
         <section className="w-full py-12 border-t border-border">
-          <Label tag="// CONTRACTS" n="006" />
+          <Label tag="// CONTRACTS" n="007" />
           <H2>Addresses</H2>
-          <div className="border-2 border-foreground">
-            {[
-              { k: "Network", v: "casper-test (testnet)" },
-              { k: "RPC", v: "https://node.testnet.casper.network/rpc" },
-              { k: "FeedRegistry (metadata)", v: FEED_REGISTRY },
-              { k: "AttestationRegistry (values)", v: ATTESTATION_REGISTRY },
-            ].map((r, i) => (
-              <div
-                key={r.k}
-                className={`grid grid-cols-1 md:grid-cols-[1fr_2.4fr] gap-1 md:gap-4 px-4 py-3 ${
-                  i > 0 ? "border-t-2 border-foreground" : ""
-                }`}
-              >
-                <span className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground font-mono">{r.k}</span>
-                <span className="text-xs font-mono text-foreground break-all">{r.v}</span>
-              </div>
-            ))}
-          </div>
+          <DocTable
+            headers={["key", "value"]}
+            cols="1.1fr 2.6fr"
+            minWidth={680}
+            rows={[
+              ["Network", <span key="v" className="muted">casper-test (testnet)</span>],
+              ["RPC", <span key="v" className="muted break-all">https://node.testnet.casper.network/rpc</span>],
+              [<span key="k">FeedRegistry <span className="muted">(metadata)</span></span>, <span key="v" className="break-all">{FEED_REGISTRY}</span>],
+              [<span key="k">AttestationRegistry <span className="muted">(values)</span></span>, <span key="v" className="break-all">{ATTESTATION_REGISTRY}</span>],
+            ]}
+          />
           <div className="flex items-center gap-3 mt-8">
-            <Link
-              href="/feeds"
-              className="bg-foreground text-background px-4 py-2 text-xs font-mono tracking-widest uppercase hover:opacity-90"
-            >
+            <Link href="/feeds" className="bg-foreground text-background px-4 py-2 text-xs font-mono tracking-widest uppercase hover:opacity-90">
               Browse Live Feeds →
+            </Link>
+            <Link href="/network" className="border-2 border-foreground px-4 py-2 text-xs font-mono tracking-widest uppercase hover:bg-foreground hover:text-background transition-colors">
+              See the Agent →
             </Link>
             <div className="flex-1 border-t border-border" />
           </div>
