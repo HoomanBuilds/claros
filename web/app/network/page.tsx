@@ -4,7 +4,9 @@ import Image from "next/image"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { TopologyGraph } from "@/components/topology-graph"
+import { TreasuryPanel } from "@/components/treasury-panel"
 import { getStats } from "@/lib/claros"
+import { getTreasury } from "@/lib/treasury"
 
 export const revalidate = 300
 
@@ -46,7 +48,7 @@ const PILLARS = [
 ]
 
 export default async function NetworkPage() {
-  const stats = await getStats()
+  const [stats, treasury] = await Promise.all([getStats(), getTreasury()])
 
   return (
     <div className="min-h-screen dot-grid-bg">
@@ -128,6 +130,9 @@ export default async function NetworkPage() {
           </div>
         </section>
 
+        {/* Treasury + earnings (live on-chain) */}
+        <TreasuryPanel snapshot={treasury} />
+
         {/* Contracts */}
         <section className="w-full px-6 py-8 lg:px-12">
           <div className="flex items-center gap-4 mb-6">
@@ -135,7 +140,7 @@ export default async function NetworkPage() {
               {"// DEPLOYED_CONTRACTS"}
             </span>
             <div className="flex-1 border-t border-border" />
-            <span className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-mono">003</span>
+            <span className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-mono">004</span>
           </div>
           <div className="border-2 border-foreground">
             {CONTRACTS.map((c, i) => (
