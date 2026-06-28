@@ -297,6 +297,17 @@ cd ../../web && npm install && npm run dev                # http://localhost:300
 
 Secrets (Casper key, EIA API key, DeepSeek key, CSPR.cloud key) live only in gitignored `.env` files; see each project's `.env.example`. The web app bakes the testnet addresses in, so it reads live state with no env.
 
+To run Claros continuously on a host (the agent heartbeat plus the read API and x402 services), use the included pm2 config:
+
+```bash
+npm i -g pm2
+pm2 start ecosystem.config.cjs    # claros-agent + claros-api + oracle-server + facilitator
+pm2 logs                          # tail
+pm2 save && pm2 startup           # survive reboots
+```
+
+The agent and facilitator sign transactions, so their keys must hold testnet CSPR.
+
 ---
 
 ## Tech Stack
