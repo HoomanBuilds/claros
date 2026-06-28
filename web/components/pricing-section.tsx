@@ -50,7 +50,7 @@ const TIERS: Tier[] = [
       { text: "Usable inside a contract", included: false },
     ],
     cta: "OPEN REST",
-    href: "/docs#rest",
+    href: "/docs/reading/rest",
     highlighted: false,
   },
   {
@@ -88,7 +88,7 @@ const TIERS: Tier[] = [
       { text: "Funds the oracle's attestations", included: true },
     ],
     cta: "X402 DOCS",
-    href: "/docs#x402",
+    href: "/docs/reading/x402",
     highlighted: false,
   },
 ]
