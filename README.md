@@ -233,7 +233,7 @@ The full integration guide (REST endpoints, SDK methods, the cross-contract stru
 ## Project Structure
 
 ```
-proofyield/  (Claros)
+claros/
 ├── contracts/                     Odra 2.8 smart contracts (Rust)
 │   ├── src/
 │   │   ├── attestation_registry.rs   values, keyed by feed_id
@@ -276,7 +276,7 @@ proofyield/  (Claros)
 You need the Rust toolchain with [cargo-odra](https://github.com/odradev/cargo-odra) for the contracts, Node 20+ and npm for everything else. Each TypeScript folder (`agent/`, `services/*`, `sdk/`, `web/`) is an independent npm project. Signing on-chain needs a funded Casper testnet key; exercising x402 needs WCSPR.
 
 ```bash
-git clone <repo-url> && cd proofyield
+git clone https://github.com/HoomanBuilds/claros && cd claros
 
 # 1. contracts (already deployed; build/test locally)
 cd contracts && cargo odra test
