@@ -1,0 +1,214 @@
+---
+title: "Overview"
+description: "Claros is a verifiable real-world-data oracle on Casper. Read live energy and civic data on-chain by feed_id, the Pyth way."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# Claros
+
+**Claros is a verifiable real-world-data oracle on Casper.** An autonomous agent reads trusted public sources (U.S. energy data from the EIA, plus civic feeds such as San Diego parking revenue), attests each value on-chain together with its provenance, and exposes it as a self-describing feed that any app, backend, or contract can read by a single `feed_id`.
+
+If you have used [Pyth](https://docs.pyth.network), Claros will feel familiar. Values live on-chain as integers, every feed describes its own `decimals` and `unit`, and a reading is `amount / 10^decimals`. Casper is the settlement layer, your `feed_id` is the key, and there is no indexer to run.
+
+<Callout type="info">
+  Claros runs on the Casper testnet (network `casper-test`). Off-chain reads through the [REST API](/docs/reading/rest) and the [SDK](/docs/reading/sdk) are free and need no key, wallet, or indexer. Only on-chain [cross-contract](/docs/reading/on-chain) calls and the [x402 metered endpoint](/docs/reading/x402) involve gas or payment.
+</Callout>
+
+## What problem it solves
+
+Smart contracts cannot call an HTTP API, and most real-world data (energy prices, generation, emissions, municipal revenue) lives behind public web APIs that contracts and other agents cannot trust directly. Even when an app fetches that data off-chain, there is no shared, tamper-evident record of what value was true at a given time.
+
+Claros closes that gap:
+
+- **One canonical value on-chain.** Each feed has exactly one latest attested value, written to a Casper contract by a known attester.
+- **Provenance you can verify.** Every attestation carries the reporting `period`, a `source_hash` of the upstream payload, the `attester` address, and a `timestamp`.
+- **A self-describing schema.** A feed publishes its own `decimals`, `unit`, `source`, `route`, and `frequency`, so consumers never hardcode scaling factors.
+- **Many ways in.** Read the same value from a frontend, a backend in any language, another Casper contract, or a paid pay-per-call endpoint.
+
+## The model: self-describing feeds, the Pyth way
+
+A reading is split across two contracts, joined by the `feed_id`:
+
+| Contract | Holds | Key fields |
+| --- | --- | --- |
+| **AttestationRegistry** | the latest attested **value** | `period`, `amount` (integer), `source_hash`, `attester`, `timestamp` |
+| **FeedRegistry** | self-describing **metadata** | `decimals`, `unit`, `title`, `source`, `route`, `frequency`, `description` |
+
+The on-chain `amount` is always an unsigned integer (`U512`). To get the human number you divide by `10^decimals`, exactly like Pyth's `price x 10^expo`:
+
+```ts
+// EIA.PET.PRICE.WTI.DAILY  (WTI crude oil spot price)
+amount   = 78940000n            // integer, from AttestationRegistry
+decimals = 6                    // from FeedRegistry
+value    = 78940000 / 10 ** 6   // 78.94  ($/bbl)
+```
+
+<Callout type="warning">
+  Always read `decimals` and `unit` from the feed metadata, never assume them. Different feeds use different scales (unit prices use 6, volumes and energy use 3, counts use 0), and a feed can be upgraded. See [Decimals and scaling](/docs/concepts/decimals).
+</Callout>
+
+Pairing the value with its self-describing metadata is the heart of the design. See [How it works](/docs/how-it-works) for the full attestation pipeline and the two-registry layout, and [Decimals and scaling](/docs/concepts/decimals) for the exact integer math.
+
+## How a reading is made
+
+<Steps>
+
+### Source
+
+The agent pulls a fresh value from a trusted public source: the EIA APIv2 for energy series, or the City of San Diego open-data API for parking revenue.
+
+### Prove eligibility
+
+Before it can publish, the agent clears the on-chain **EligibilityGate** with a Groth16 zero-knowledge proof, so only an authorized attester (without revealing its private identity) can write a value.
+
+### Attest on-chain
+
+The value is normalized to an integer and written to **AttestationRegistry** under its `feed_id`, alongside the reporting `period`, a `source_hash`, the `attester`, and a `timestamp`. The matching metadata (`decimals`, `unit`, `source`) lives in **FeedRegistry**.
+
+### Read it
+
+Your app or contract reads the feed by `feed_id` through any of the [four methods](#four-ways-to-read-it) below and computes `amount / 10^decimals`.
+
+</Steps>
+
+The agent runs as an hourly heartbeat that acts only on new data. Each cycle also anomaly-checks the reading and makes a treasury decision, recorded on-chain through the **TreasuryVault**, so Claros is an oracle and an autonomous on-chain participant at once. See [How it works](/docs/how-it-works) for the full agent cycle.
+
+## What data Claros has
+
+Claros currently serves **37 feeds** live on-chain: **36 EIA energy series** plus the civic San Diego parking feed (**OP-1**). Those feeds are mapped from a crawled catalog of **232 EIA datasets**, and so far **72 attestations** have been written.
+
+The energy feeds span every major EIA family: petroleum, natural gas, electricity, coal, nuclear, densified biomass, total and state energy (SEDS), CO2 emissions, short-term outlooks, and international energy. A few examples:
+
+| feed_id | What it measures | Unit | Decimals |
+| --- | --- | --- | --- |
+| `EIA.PET.PRICE.WTI.DAILY` | WTI crude oil spot price | $/bbl | 6 |
+| `EIA.NG.PRICE.HENRYHUB.DAILY` | Henry Hub natural gas spot price | $/MMBtu | 6 |
+| `EIA.ELEC.DEMAND.US48.HOURLY` | U.S. Lower-48 electricity demand | MWh | 3 |
+| `EIA.CO2.AGG.US_TOTAL.ANNUAL` | U.S. total CO2 emissions | MMT CO2 | 6 |
+
+Recent values include WTI at **$78.94/bbl** and Henry Hub at **$3.16/MMBtu**. The flagship civic feed **OP-1** (San Diego parking revenue) read **$2,734.20** for the period 2026-06-23.
+
+The EIA APIv2 is one uniform faceted API, and a `feed_id` pins down a single series within it: a `route` (for example `petroleum/pri/spt`), one `frequency`, a data column, and a set of facet filters (for example `series`, `duoarea`, `stateid`, or `fueltype`). That mapping is covered in [the data model](/docs/concepts/data-model). Beyond the 36 live energy feeds, any dataset in the [catalog](/docs/catalog) can be registered and attested on demand.
+
+<Cards>
+  <Cards.Card title="Live feeds" href="/docs/feeds" arrow>
+    All 36 EIA feeds, grouped by family, with units and decimals.
+  </Cards.Card>
+  <Cards.Card title="The data model" href="/docs/concepts/data-model" arrow>
+    Routes, frequencies, columns, and the facet filters that define a feed.
+  </Cards.Card>
+  <Cards.Card title="Data catalog" href="/docs/catalog" arrow>
+    The full 232-dataset EIA universe you can attest on demand.
+  </Cards.Card>
+</Cards>
+
+## Four ways to read it
+
+The same on-chain value is reachable four ways. Pick by where your code runs and whether you want a free read or metered, paid access. See [Choose a method](/docs/reading) for a side-by-side comparison.
+
+| Method | Best for | Cost | Reads from |
+| --- | --- | --- | --- |
+| [REST API](/docs/reading/rest) | Any language, apps, dashboards, agents | Free | On-chain via the SDK |
+| [TypeScript SDK](/docs/reading/sdk) | TypeScript apps and frontends, no indexer | Free | Casper state directly |
+| [Cross-contract](/docs/reading/on-chain) | Other Casper contracts consuming a feed | Gas only | The registries on-chain |
+| [x402 metered](/docs/reading/x402) | Pay-per-call and agent-to-agent access | Paid (WCSPR) | A gated HTTP endpoint |
+
+The off-chain methods return the same reading. Here is a single feed in each:
+
+<Tabs items={['REST', 'SDK', 'Cross-contract']}>
+  <Tabs.Tab>
+
+Plain HTTP, any language, no key. Run [`services/claros-api`](/docs/reading/rest) (port `4030`) or point at a hosted instance:
+
+```bash
+curl http://localhost:4030/v1/feeds/EIA.PET.PRICE.WTI.DAILY
+# {
+#   "feed_id": "EIA.PET.PRICE.WTI.DAILY",
+#   "value": 78.94, "amount": "78940000", "decimals": 6,
+#   "unit": "$/bbl", "title": "WTI crude spot", "source": "EIA",
+#   "period": 20260623, "source_hash": "…", "updated_at": 1750636800000
+# }
+```
+
+The service also exposes `GET /v1/feeds` for every feed and `GET /v1/datasets?q=&family=` for discovery.
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+The fastest path with zero infrastructure. The [`claros-oracle`](/docs/reading/sdk) package reads Casper global state directly, testnet addresses baked in:
+
+```ts
+import { ClarosOracle } from 'claros-oracle';
+
+const claros = new ClarosOracle(); // testnet defaults
+const wti = await claros.getReading('EIA.PET.PRICE.WTI.DAILY');
+// { feed_id, value: 78.94, unit: '$/bbl', decimals: 6, amount: 78940000n, ... }
+```
+
+`getReading(id)` returns metadata, value, and the scaled human number in one call. Other methods include `getValue`, `getFeed`, `feedCount`, `feedIdAt`, and `listFeedIds`.
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+From your own Casper or Odra contract, read both registries by `feed_id`:
+
+```rust
+let v = AttestationRegistryRef::new(env, registry).get_latest(feed_id.clone()); // value
+let m = FeedRegistryRef::new(env, feed_registry).get_feed(feed_id);             // decimals/unit
+// real value = v.amount / 10^m.decimals
+```
+
+`get_latest` returns `Option<Attestation>` and `get_feed` returns `Option<Feed>`, so handle the missing-feed case. Full pattern on [Cross-contract reads](/docs/reading/on-chain).
+
+  </Tabs.Tab>
+</Tabs>
+
+The [x402 metered endpoint](/docs/reading/x402) wraps a feed behind the HTTP 402 payment protocol: a first request returns `402 Payment Required`, the client signs a WCSPR payment and retries with an `X-PAYMENT` header, a facilitator settles it on Casper, and the response carries the reading plus its on-chain provenance. That metered path is how the Claros agent funds its own attestations.
+
+## Network and contracts
+
+Everything is live on the Casper testnet (network `casper-test`), reachable at the public RPC `https://node.testnet.casper.network/rpc` and viewable on the explorer at `https://testnet.cspr.live`. The four Claros contracts are upgradable and keyed by package hash:
+
+| Contract | Role | Package hash |
+| --- | --- | --- |
+| AttestationRegistry | Latest attested value per `feed_id` | `236b5104...f98116cc` |
+| FeedRegistry | Self-describing metadata per `feed_id` | `dac573fc...f04366f46` |
+| TreasuryVault | Agent reinvestment ledger | `a90b082d...e887ffd7b` |
+| EligibilityGate | ZK Groth16 access gate | `7be33b05...e15aa5227` |
+
+<Callout type="info">
+  Casper testnet charges the gas **limit** you set, not the gas you consume, and there is no refund. Off-chain REST and SDK reads cost nothing. See [Network and contracts](/docs/network/contracts) for the full package hashes, the attester account, and gas guidance.
+</Callout>
+
+## Where to go next
+
+<Cards>
+  <Cards.Card title="Quickstart" href="/docs/quickstart" arrow>
+    Read your first feed three ways in under a minute.
+  </Cards.Card>
+  <Cards.Card title="How it works" href="/docs/how-it-works" arrow>
+    The attestation pipeline and the two-registry model end to end.
+  </Cards.Card>
+  <Cards.Card title="The data model" href="/docs/concepts/data-model" arrow>
+    Routes, frequencies, and facets, and how a feed_id is defined.
+  </Cards.Card>
+  <Cards.Card title="Data catalog" href="/docs/catalog" arrow>
+    The 232-dataset EIA universe Claros can attest.
+  </Cards.Card>
+  <Cards.Card title="Read with REST" href="/docs/reading/rest" arrow>
+    Free HTTP for any language, app, or agent.
+  </Cards.Card>
+  <Cards.Card title="Read with the SDK" href="/docs/reading/sdk" arrow>
+    `claros-oracle` reads Casper state directly, no indexer.
+  </Cards.Card>
+  <Cards.Card title="Read cross-contract" href="/docs/reading/on-chain" arrow>
+    Consume a feed from your own Casper contract.
+  </Cards.Card>
+  <Cards.Card title="Read with x402" href="/docs/reading/x402" arrow>
+    Metered, pay-per-call reads settled in WCSPR.
+  </Cards.Card>
+  <Cards.Card title="Network and contracts" href="/docs/network/contracts" arrow>
+    Package hashes, the RPC endpoint, and the gas note.
+  </Cards.Card>
+</Cards>

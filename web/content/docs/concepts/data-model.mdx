@@ -1,0 +1,337 @@
+---
+title: "The EIA data model"
+description: "How Claros maps every EIA APIv2 series to a feed using four knobs (route, frequency, column, facets), with a worked WTI example and how to find the right facet values."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# The EIA data model
+
+Claros turns U.S. Energy Information Administration (EIA) data into verifiable on-chain readings. To do that well, you need a precise mental model of how EIA exposes its data, because that model is exactly what a Claros `feed_id` encodes.
+
+The good news: EIA APIv2 is **one uniform, faceted API**. Electricity, natural gas, petroleum, coal, nuclear, SEDS, CO2, outlooks, and international data are all reached the same way. Claros ships a single generic adapter on top of it (`agent/src/eia.ts`), so adding any new series is one row of configuration, never a new client.
+
+<Callout type="info">
+Every EIA dataset is read through one endpoint shape:
+
+```http
+GET https://api.eia.gov/v2/{route}/data
+  ?api_key={key}
+  &frequency={frequency}
+  &data[0]={column}
+  &facets[{facetId}][]={value}      (repeat once per facet)
+  &sort[0][column]=period
+  &sort[0][direction]=desc
+  &offset=0
+  &length=1
+```
+
+Claros always asks for the single most recent row (`length=1`, sorted by `period` descending). The four placeholders `route`, `frequency`, `column`, and `facets` are the only things that change between datasets. Those are the four knobs.
+</Callout>
+
+## The four knobs
+
+Any EIA series, and therefore any Claros feed, is fully determined by four selectors. Pick all four and you have pinned exactly one stream of numbers.
+
+| Knob | Query parameter | What it selects | Example |
+| --- | --- | --- | --- |
+| **Route** | path `/{route}/` | which dataset (energy family + table) | `petroleum/pri/spt` |
+| **Frequency** | `frequency=` | the time granularity (pick exactly one) | `daily` |
+| **Column** | `data[0]=` | which numeric column you read | `value` |
+| **Facets** | `facets[id][]=` | the filters that narrow to one row per period | `series=RWTC` |
+
+In code, a Claros feed is precisely this tuple plus two presentation fields. From the `EiaFeed` interface in `agent/src/eia.ts`:
+
+```ts
+export interface EiaFeed {
+  asset_id: string;                  // the Claros feed_id, e.g. "EIA.PET.PRICE.WTI.DAILY"
+  route: string;                     // "petroleum/pri/spt"
+  frequency: string;                 // "daily" | "weekly" | "monthly" | "annual" | "hourly" | "quarterly"
+  data_col: string;                  // "value" | "price" | "quantity" | ...
+  facets: Record<string, string>;    // { series: "RWTC" }  (the filters)
+  unit: string;                      // "$/bbl"   (metadata, how to label it)
+  decimals: number;                  // 6         (metadata, how to scale it on-chain)
+}
+```
+
+The selection tuple is `{ route, frequency, data_col, facets }`. The `unit` and `decimals` fields do not select the number, they describe how to interpret it: `unit` is the human label and `decimals` is the fixed-point scale recorded as feed metadata. (See [reading values](/docs/reading/sdk) for how `amount` and `decimals` combine into a human value.)
+
+### Route
+
+The route is the dataset path under `/v2/`. It reads as a family followed by a table, for example `petroleum/pri/spt` is petroleum, then prices, then spot. The route alone fixes which physical table you are querying and, with it, the set of frequencies, columns, and facets that table supports.
+
+Claros tracks **232 EIA datasets** (routes) in its catalog and currently maps **37** of them to live feeds. Some flagship routes:
+
+| Route | Family | Reads |
+| --- | --- | --- |
+| `petroleum/pri/spt` | Petroleum | crude oil spot prices (WTI, Brent) |
+| `natural-gas/pri/fut` | Natural gas | Henry Hub spot and futures |
+| `electricity/retail-sales` | Electricity | retail price, sales, revenue, customers |
+| `electricity/rto/region-data` | Electricity | hourly grid demand by region |
+| `coal/price-by-rank` | Coal | coal price by rank |
+| `co2-emissions/co2-emissions-aggregates` | Emissions | CO2 by state, fuel, sector |
+| `international` | International | global production and consumption |
+
+### Frequency
+
+A route publishes the same underlying data at several cadences. You choose exactly one with `frequency`. The allowed values across EIA are `daily`, `weekly`, `monthly`, `quarterly`, `annual`, and `hourly`. The route's catalog entry lists which of these it supports and a `defaultFrequency`.
+
+Each frequency also fixes the shape of the `period` string EIA returns:
+
+| Frequency | EIA period format | Example |
+| --- | --- | --- |
+| `hourly` | `YYYY-MM-DD"T"HH` | `2026-06-19T14` |
+| `daily` | `YYYY-MM-DD` | `2026-06-19` |
+| `weekly` | `YYYY-MM-DD` | `2026-06-19` |
+| `monthly` | `YYYY-MM` | `2026-06` |
+| `quarterly` | `YYYY-"Q"Q` | `2026-Q2` |
+| `annual` | `YYYY` | `2026` |
+
+<Callout type="info">
+On-chain, the period is stored as an integer. The adapter (`periodToNumber` in `agent/src/eia.ts`) strips the separators, so `2026-06-19` becomes `20260619` and `2026-06` becomes `202606`. Hourly periods are stored as epoch seconds instead. Picking the frequency therefore also decides what the on-chain `period` looks like.
+</Callout>
+
+### Column
+
+A single EIA row can carry several numeric columns. The `data[0]` parameter chooses the one you actually read, and Claros reads exactly one column per feed. Common columns:
+
+| Column (`data[0]`) | Meaning | Example feed |
+| --- | --- | --- |
+| `value` | the dataset's primary value | `EIA.PET.PRICE.WTI.DAILY` |
+| `price` | a price column | `EIA.ELEC.RETAIL.PRICE.US_ALL.MONTHLY` |
+| `sales` | a sales / volume column | `EIA.ELEC.RETAIL.SALES.US_ALL.MONTHLY` |
+| `revenue` | a revenue column | `EIA.ELEC.RETAIL.REVENUE.US_ALL.MONTHLY` |
+| `customers` | a count column | `EIA.ELEC.RETAIL.CUSTOMERS.US_RES.MONTHLY` |
+| `quantity` | a quantity column | `EIA.PET.IMPORTS.CRUDE_SAU.MONTHLY` |
+| `production` | a production column | `EIA.COAL.PROD.US.ANNUAL` |
+| `percentOutage` | percent of capacity offline | `EIA.NUC.OUTAGE.US_PCT.DAILY` |
+| `capacity` | a capacity column | `EIA.NUC.OUTAGE.US_CAPACITY.DAILY` |
+
+The column matters as much as the filter. The four `EIA.ELEC.RETAIL.*` feeds above share the same route, frequency, and facets and differ only in this column, yet they return four completely different numbers (a price, a volume, a dollar amount, and a head count).
+
+### Facets (the filters)
+
+Facets are the filters people mean when they ask "which filter do I use." A route defines a fixed set of facets, each identified by an `id` (such as `series`, `duoarea`, `process`, `stateid`, `fueltype`). To select a row you choose a value for the facets that matter, sent as `facets[{id}][]={value}`.
+
+These are the facet ids used by the live Claros feeds, with the description straight from the catalog and the value the feed pins:
+
+| Facet `id` | Catalog description | Example value | Used by feed |
+| --- | --- | --- | --- |
+| `series` | Series | `RWTC` | `EIA.PET.PRICE.WTI.DAILY` |
+| `duoarea` | DuoArea | `NUS` | `EIA.NG.PROD.MARKETED.MONTHLY` |
+| `process` | Process | `VGM` | `EIA.NG.PROD.MARKETED.MONTHLY` |
+| `stateid` | State / Census Region | `US` | `EIA.ELEC.RETAIL.PRICE.US_ALL.MONTHLY` |
+| `sectorid` | Sector | `ALL` | `EIA.ELEC.RETAIL.PRICE.US_ALL.MONTHLY` |
+| `respondent` | Balancing Authority / Region | `US48` | `EIA.ELEC.DEMAND.US48.HOURLY` |
+| `type` | Metric | `D` | `EIA.ELEC.DEMAND.US48.HOURLY` |
+| `fueltype` | Energy Source | `NG` | `EIA.ELEC.GEN_NG.US48.HOURLY` |
+| `stateRegionId` | State / Region | `US` | `EIA.COAL.PROD.US.ANNUAL` |
+| `coalRankId` | Coal Rank | `BIT` | `EIA.COAL.PRICE.BITUMINOUS.ANNUAL` |
+| `msn` | Unique series identifier | `TETCBUS` | `EIA.TOTAL.PRIMARY_CONS.MONTHLY` |
+| `seriesId` | Unique series identifier | `WTIPUUS` | `EIA.STEO.WTI_PRICE.MONTHLY` |
+| `stateId` | State | `CA` | `EIA.SEDS.TOTAL_CONS.CA.ANNUAL` |
+| `originId` | Origin Id | `CTY_SA` | `EIA.PET.IMPORTS.CRUDE_SAU.MONTHLY` |
+
+<Callout type="warning">
+Facet ids are dataset-specific and are easy to confuse. `series` (petroleum, natural gas) is not the same as `seriesId` (STEO, SEDS); `stateid` (electricity) is not `stateId` (SEDS, CO2) is not `stateRegionId` (coal). Always read the facet ids from the route's own catalog entry rather than reusing one from another family.
+</Callout>
+
+Two facet patterns are worth calling out:
+
+- **Empty facets.** Some routes already resolve to a single national series, so the feed sets `facets: {}` and just takes the latest row. The nuclear-outage and densified-biomass feeds do this, for example `EIA.NUC.OUTAGE.US_PCT.DAILY`.
+- **A facet can pin the unit.** A few routes expose `unit` as a facet. The international crude-production feed uses `facets: { activityId: "1", productId: "57", countryRegionId: "WORL", unit: "TBPD" }`, where `unit=TBPD` (thousand barrels per day) is itself a filter, not just a label.
+
+## Worked example: `EIA.PET.PRICE.WTI.DAILY`
+
+This is the WTI crude oil spot price. Its definition in `agent/src/eia-feeds.ts` is one row:
+
+```ts
+{
+  asset_id: 'EIA.PET.PRICE.WTI.DAILY',
+  route: 'petroleum/pri/spt',
+  frequency: 'daily',
+  data_col: 'value',
+  facets: { series: 'RWTC' },
+  unit: '$/bbl',
+  decimals: 6,
+}
+```
+
+Here is how each knob maps onto the EIA request.
+
+<Steps>
+
+### Route: `petroleum/pri/spt`
+
+Petroleum spot prices. This route supports `daily`, `weekly`, `monthly`, and `annual`, exposes a single column `value`, and offers the facets `duoarea`, `product`, `process`, and `series`.
+
+### Frequency: `daily`
+
+We want the daily quote, so `frequency=daily`. Periods will arrive as `YYYY-MM-DD` and be stored on-chain as `YYYYMMDD`.
+
+### Column: `value`
+
+This route's numeric column is `value`, so `data[0]=value`.
+
+### Facet: `series=RWTC`
+
+The route carries many price series. `RWTC` is EIA's code for "Cushing, OK WTI spot price." Pinning `facets[series][]=RWTC` is what narrows a generic petroleum-spot-price query down to WTI specifically.
+
+</Steps>
+
+Putting the four knobs together produces exactly the request the adapter builds, plus the standard "latest row" tail:
+
+<Tabs items={['Request', 'Response', 'On-chain']}>
+
+<Tabs.Tab>
+
+```http
+GET https://api.eia.gov/v2/petroleum/pri/spt/data
+  ?api_key=YOUR_KEY
+  &frequency=daily
+  &data[0]=value
+  &facets[series][]=RWTC
+  &sort[0][column]=period
+  &sort[0][direction]=desc
+  &offset=0
+  &length=1
+```
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+EIA returns one row. Claros reads three fields from it: `period`, the chosen column (`value`), and `units`.
+
+```json
+{
+  "response": {
+    "frequency": "daily",
+    "data": [
+      {
+        "period": "2026-06-19",
+        "series": "RWTC",
+        "value": "78.94",
+        "units": "$/BBL"
+      }
+    ]
+  }
+}
+```
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+The reading is scaled to a fixed-point integer using the feed's `decimals`. With `decimals: 6`:
+
+```text
+value   = 78.94            (human)
+amount  = 78.94 * 10^6
+        = 78940000         (stored on-chain, U512-safe)
+period  = 20260619         (separators stripped)
+```
+
+Any consumer recovers the human value as `amount / 10^decimals = 78940000 / 1e6 = 78.94`. This is the Pyth-style integer convention used across Claros.
+
+</Tabs.Tab>
+
+</Tabs>
+
+<Callout type="info">
+The adapter prefers the unit EIA returns on the row (`units`) over the configured `unit`, so the on-chain label stays in sync with the source if EIA changes it.
+</Callout>
+
+## Why a `feed_id` encodes the full tuple
+
+A `feed_id` such as `EIA.PET.PRICE.WTI.DAILY` is not just a name. It is a stable alias for one exact `{ route, frequency, column, facets }` tuple. The reason it must carry all four parts is that changing any single knob, while holding the others fixed, gives you a genuinely different number.
+
+**Same route, frequency, and column. The facet alone changes the asset:**
+
+| Feed | Route | Frequency | Column | Facet `series` |
+| --- | --- | --- | --- | --- |
+| `EIA.PET.PRICE.WTI.DAILY` | `petroleum/pri/spt` | `daily` | `value` | `RWTC` (WTI) |
+| `EIA.PET.PRICE.BRENT.DAILY` | `petroleum/pri/spt` | `daily` | `value` | `RBRTE` (Brent) |
+
+**Same route, frequency, and facets. The column alone changes the metric:**
+
+| Feed | Route | Facets | Column |
+| --- | --- | --- | --- |
+| `EIA.ELEC.RETAIL.PRICE.US_ALL.MONTHLY` | `electricity/retail-sales` | `stateid=US, sectorid=ALL` | `price` |
+| `EIA.ELEC.RETAIL.SALES.US_ALL.MONTHLY` | `electricity/retail-sales` | `stateid=US, sectorid=ALL` | `sales` |
+| `EIA.ELEC.RETAIL.REVENUE.US_ALL.MONTHLY` | `electricity/retail-sales` | `stateid=US, sectorid=ALL` | `revenue` |
+
+In both cases the difference between feeds is a single knob, yet the values are unrelated (a crude benchmark versus another crude benchmark; a price versus a volume versus a revenue). The identity of a number, what it actually measures, lives in the whole tuple, not in the route. Encoding the tuple into the `feed_id` is what lets an on-chain consumer reference `EIA.PET.PRICE.WTI.DAILY` as a short, immutable string instead of a fragile URL full of query parameters. The feed's `unit`, `decimals`, `title`, `source`, `route`, and `frequency` are then recorded as self-describing metadata in the Feed Registry. See [feeds and the registry](/docs/concepts/feeds) for the metadata side.
+
+## Finding the right facet values
+
+Knowing that you need `facets[series][]=...` is only half the job; you still need the correct code, like `RWTC`. There are three ways to find it, in order of convenience.
+
+<Tabs items={['Claros catalog', 'EIA facet endpoints', 'EIA browser']}>
+
+<Tabs.Tab>
+
+Claros ships the whole EIA surface as a static catalog at `web/lib/eia-catalog.json` (232 datasets under the `leaves[]` key). Each leaf lists the route, a name, a description, the supported frequencies with their period formats, the columns, and the facets with human descriptions:
+
+```json
+{
+  "route": "electricity/retail-sales",
+  "name": "Electricity Sales to Ultimate Customers",
+  "description": "Electricity sales to ultimate customer by state and sector ...",
+  "frequencies": [ { "id": "monthly", "format": "YYYY-MM" }, ... ],
+  "columns": [ "revenue", "sales", "price", "customers" ],
+  "facets": [
+    { "id": "stateid",  "description": "State / Census Region" },
+    { "id": "sectorid", "description": "Sector" }
+  ],
+  "defaultFrequency": "monthly",
+  "startPeriod": "2001-01",
+  "endPeriod": "2026-04"
+}
+```
+
+The facet `description` tells you what a facet means; this is enough to pick the right facet id. You can browse all 232 datasets visually in the app at [/datasets](/datasets), and the 37 live feeds at [/feeds](/feeds).
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+EIA APIv2 is self-describing, so you can enumerate the allowed values for any facet directly. List a route's facets, then list one facet's values:
+
+```http
+# 1. List the facets a route supports
+GET https://api.eia.gov/v2/petroleum/pri/spt/facet?api_key=YOUR_KEY
+
+# 2. List the allowed values (id + label) for one facet
+GET https://api.eia.gov/v2/petroleum/pri/spt/facet/series?api_key=YOUR_KEY
+```
+
+The second call returns every series code with its label, so you can confirm that `RWTC` is the Cushing WTI spot price before wiring it into a feed. Every route exposes `/facet` and `/facet/{facet_id}` under the same `/v2/{route}` prefix.
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+For exploration, EIA's web tools build the query for you. Pick a series in a browser and read the facet codes off the API URL it generates:
+
+- **Opendata Query Browser:** [https://www.eia.gov/opendata/browser/](https://www.eia.gov/opendata/browser/)
+- **Per-family browsers** linked from many catalog descriptions, for example the coal browser at [https://www.eia.gov/coal/data/browser/](https://www.eia.gov/coal/data/browser/)
+
+You will need an API key for live calls. Register one at [https://www.eia.gov/opendata/](https://www.eia.gov/opendata/).
+
+</Tabs.Tab>
+
+</Tabs>
+
+## From tuple to reading
+
+Once a `feed_id` is defined and attested, you never touch EIA again to read it. The four knobs were resolved once, off-chain, by the agent; consumers just ask Claros for the feed by id. Pick the access path that fits your context:
+
+<Cards>
+  <Cards.Card title="REST API" href="/docs/reading/rest" />
+  <Cards.Card title="TypeScript SDK" href="/docs/reading/sdk" />
+  <Cards.Card title="Cross-contract reads" href="/docs/reading/on-chain" />
+  <Cards.Card title="x402 metered access" href="/docs/reading/x402" />
+</Cards>
+
+For how readings land on-chain, the integer convention, and the gas note on Casper testnet, see [the network reference](/docs/network/contracts).

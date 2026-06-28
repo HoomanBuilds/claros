@@ -1,0 +1,196 @@
+---
+title: "Petroleum"
+description: "Live petroleum feeds: exact feed ids, routes, facets, and units."
+---
+
+import { Callout } from 'nextra/components'
+
+# Petroleum
+
+9 live feeds in the petroleum family. Each section gives the exact `feed_id`, the EIA route, the frequency, the data column you read, every facet filter (id, the value Claros uses, and what that filter means in the EIA catalog), the unit, and the decimals. To turn an on-chain integer into a human value, compute `amount / 10^decimals`.
+
+<Callout type="info">
+Facet ids are the EIA filters. The "Means" column is taken from the dataset definition in the [data catalog](/docs/catalog). Pick a feed by its `feed_id` and read it with [the SDK](/docs/reading/sdk) or [REST](/docs/reading/rest).
+</Callout>
+
+## PRICE.WTI
+
+petroleum/pri/spt: value (daily), filtered to series=RWTC, in $/bbl.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.PET.PRICE.WTI.DAILY` |
+| EIA route | `petroleum/pri/spt` |
+| Dataset | petroleum/pri/spt |
+| Frequency | daily |
+| Data column | `value` |
+| Unit | $/bbl |
+| Decimals | 6 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `series` | `RWTC` | Series |
+
+## PRICE.BRENT
+
+petroleum/pri/spt: value (daily), filtered to series=RBRTE, in $/bbl.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.PET.PRICE.BRENT.DAILY` |
+| EIA route | `petroleum/pri/spt` |
+| Dataset | petroleum/pri/spt |
+| Frequency | daily |
+| Data column | `value` |
+| Unit | $/bbl |
+| Decimals | 6 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `series` | `RBRTE` | Series |
+
+## PRICE.GASOLINE_RETAIL
+
+petroleum/pri/gnd: value (weekly), filtered to series=EMM_EPM0_PTE_NUS_DPG, in $/gal.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.PET.PRICE.GASOLINE_RETAIL.WEEKLY` |
+| EIA route | `petroleum/pri/gnd` |
+| Dataset | petroleum/pri/gnd |
+| Frequency | weekly |
+| Data column | `value` |
+| Unit | $/gal |
+| Decimals | 6 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `series` | `EMM_EPM0_PTE_NUS_DPG` | Series |
+
+## PRICE.DIESEL_RETAIL
+
+petroleum/pri/gnd: value (weekly), filtered to series=EMD_EPD2D_PTE_NUS_DPG, in $/gal.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.PET.PRICE.DIESEL_RETAIL.WEEKLY` |
+| EIA route | `petroleum/pri/gnd` |
+| Dataset | petroleum/pri/gnd |
+| Frequency | weekly |
+| Data column | `value` |
+| Unit | $/gal |
+| Decimals | 6 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `series` | `EMD_EPD2D_PTE_NUS_DPG` | Series |
+
+## STOCKS.CRUDE_EXSPR
+
+petroleum/stoc/wstk: value (weekly), filtered to series=WCESTUS1, in Mbbl.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.PET.STOCKS.CRUDE_EXSPR.WEEKLY` |
+| EIA route | `petroleum/stoc/wstk` |
+| Dataset | petroleum/stoc/wstk |
+| Frequency | weekly |
+| Data column | `value` |
+| Unit | Mbbl |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `series` | `WCESTUS1` | Series |
+
+## PROD.CRUDE_FIELD
+
+petroleum/crd/crpdn: value (monthly), filtered to duoarea=NUS, process=FPF, in Mbbl/d.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.PET.PROD.CRUDE_FIELD.MONTHLY` |
+| EIA route | `petroleum/crd/crpdn` |
+| Dataset | petroleum/crd/crpdn |
+| Frequency | monthly |
+| Data column | `value` |
+| Unit | Mbbl/d |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `duoarea` | `NUS` | DuoArea |
+| `process` | `FPF` | Process |
+
+## RESERVES.CRUDE
+
+petroleum/crd/pres: value (annual), filtered to duoarea=NUS, in MMbbl.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.PET.RESERVES.CRUDE.ANNUAL` |
+| EIA route | `petroleum/crd/pres` |
+| Dataset | petroleum/crd/pres |
+| Frequency | annual |
+| Data column | `value` |
+| Unit | MMbbl |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `duoarea` | `NUS` | DuoArea |
+
+## SUPPLIED.PRODUCTS
+
+petroleum/cons/wpsup: value (weekly), filtered to series=WRPUPUS2, in Mbbl/d.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.PET.SUPPLIED.PRODUCTS.WEEKLY` |
+| EIA route | `petroleum/cons/wpsup` |
+| Dataset | petroleum/cons/wpsup |
+| Frequency | weekly |
+| Data column | `value` |
+| Unit | Mbbl/d |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `series` | `WRPUPUS2` | Series |
+
+## IMPORTS.CRUDE_SAU
+
+Crude Oil Imports: quantity (monthly), filtered to originId=CTY_SA, in Mbbl.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.PET.IMPORTS.CRUDE_SAU.MONTHLY` |
+| EIA route | `crude-oil-imports` |
+| Dataset | Crude Oil Imports |
+| Frequency | monthly |
+| Data column | `quantity` |
+| Unit | Mbbl |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `originId` | `CTY_SA` | Origin Id |
+

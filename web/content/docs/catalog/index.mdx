@@ -1,0 +1,2876 @@
+---
+title: "Data catalog"
+description: "All 232 EIA datasets Claros can attest, with routes, frequencies, columns, and facet filters."
+---
+
+import { Callout } from 'nextra/components'
+
+# Data catalog
+
+Claros is a generic adapter over the EIA APIv2, one uniform faceted API. Any of the 232 datasets below can become a Claros feed by mapping it to a `feed_id`. 36 are already live (see [live feeds](/docs/feeds)); the rest are one mapping row away.
+
+## How to read this catalog
+
+Every EIA dataset is addressed the same way:
+
+- **Route**: the dataset path, for example `petroleum/pri/spt`. This is the `{route}` in the EIA endpoint `/v2/{route}/data`.
+- **Frequencies**: the time resolutions the dataset supports (daily, weekly, monthly, quarterly, annual, hourly). You pick exactly one.
+- **Columns**: the numeric columns the dataset returns, for example `value`, `price`, `quantity`. You read one as the feed value.
+- **Facets**: the filters. Each facet has an `id` (for example `series`, `duoarea`, `stateid`, `fueltype`) and you choose a value for it to pin down one series.
+
+A Claros feed is exactly this tuple: `{ route, frequency, data_col, facets }`. For example `EIA.PET.PRICE.WTI.DAILY` is route `petroleum/pri/spt`, frequency `daily`, column `value`, facet `series=RWTC`.
+
+<Callout type="info">
+Rows marked **Live** already have a Claros `feed_id`. The rest are available to map: same adapter, one more row in the feed catalog.
+</Callout>
+
+## Datasets by family
+
+| Family | Datasets | Live feeds here |
+| --- | --- | --- |
+| [aeo](#aeo) | 13 | 0 |
+| [co2-emissions](#co2-emissions) | 2 | 1 |
+| [coal](#coal) | 13 | 3 |
+| [crude-oil-imports](#crude-oil-imports) | 1 | 1 |
+| [densified-biomass](#densified-biomass) | 8 | 2 |
+| [electricity](#electricity) | 19 | 3 |
+| [ieo](#ieo) | 4 | 0 |
+| [international](#international) | 1 | 1 |
+| [natural-gas](#natural-gas) | 53 | 6 |
+| [nuclear-outages](#nuclear-outages) | 3 | 1 |
+| [petroleum](#petroleum) | 112 | 6 |
+| [seds](#seds) | 1 | 1 |
+| [steo](#steo) | 1 | 1 |
+| [total-energy](#total-energy) | 1 | 1 |
+
+## aeo
+
+13 datasets.
+
+### `aeo/2014`
+
+**aeo/2014** Annual Energy Outlook 2014
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+### `aeo/2014-er`
+
+**aeo/2014-er** Annual Energy Outlook 2014 Early Release
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+### `aeo/2015`
+
+**aeo/2015** Annual Energy Outlook 2015
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+### `aeo/2016`
+
+**aeo/2016** Annual Energy Outlook 2016
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+### `aeo/2017`
+
+**aeo/2017** Annual Energy Outlook 2017
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+### `aeo/2018`
+
+**aeo/2018** Annual Energy Outlook 2018
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+### `aeo/2019`
+
+**aeo/2019** Annual Energy Outlook 2019
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+### `aeo/2020`
+
+**aeo/2020** Annual Energy Outlook 2020
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+### `aeo/2021`
+
+**aeo/2021** Annual Energy Outlook 2021
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+### `aeo/2022`
+
+**aeo/2022** Annual Energy Outlook 2022
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+### `aeo/2023`
+
+**aeo/2023** Annual Energy Outlook 2023
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+### `aeo/2025`
+
+**aeo/2025** Annual Energy Outlook 2025
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+### `aeo/2026`
+
+**aeo/2026** Annual Energy Outlook 2026
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+## co2-emissions
+
+2 datasets.
+
+### `co2-emissions/co2-emissions-aggregates` (Live)
+
+**Total CO2 Emissions by Sector and Fuel - deprecated: see SEDS** CO2 emission aggregates by fuel, state, and sector. Report and documentation: https://www.eia.gov/environment/emissions/state/. "This route is deprecated and no longer receiving fresh data. For state-level CO2 emissions data, please use the
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `sectorId`: Sector
+  - `fuelId`: Fuel Type
+  - `stateId`: State
+- **Live Claros feeds**: `EIA.CO2.AGG.US_TOTAL.ANNUAL`
+
+### `co2-emissions/co2-emissions-and-carbon-coefficients`
+
+**CO2 Emissions and Carbon Coefficients by Product - deprecated: see SEDS** CO2 emissions and carbon coefficients by fuel, state, and sector. Report and documentation: https://www.eia.gov/environment/emissions/state/. "This route is deprecated and no longer receiving fresh data. For state-level CO2 emissions data,
+
+- **Frequencies**: annual
+- **Columns**: `emissions`, `carbon-coefficient`
+- **Facets** (filters):
+  - `seriesId`: Series
+  - `sectorId`: Sector
+  - `fuelId`: Fuel Type
+  - `stateId`: State
+
+## coal
+
+13 datasets.
+
+### `coal/aggregate-production` (Live)
+
+**Aggregate Production** Coal state aggregated data by mine type, includes production, productivity, labor hours, employees, and coal rank. Source: EIA Form 7A and MSHA Form 7000-2. Interactive browser: https://www.eia.gov/coal/data/browser/
+
+- **Frequencies**: annual
+- **Columns**: `production`, `number-of-mines`, `labor-hours`, `average-employees`, `productivity`
+- **Facets** (filters):
+  - `stateRegionId`: State / Region
+  - `coalRankId`: Coal Rank
+  - `mineTypeId`: Mine Type
+- **Live Claros feeds**: `EIA.COAL.PROD.US.ANNUAL`
+
+### `coal/consumption-and-quality`
+
+**Consumption and Quality** Coal consumption and quality data by state and sector, including price, reciepts, heat content, sulfur content, ash content, and stocks. Source: EIA Form 7A and MSHA Form 7000-2. Interactive browser: https://www.eia.gov/coal/data/browser/
+
+- **Frequencies**: quarterly, annual
+- **Columns**: `receipts`, `consumption`, `stocks`, `price`, `heat-content`, `sulfur-content`, `ash-content`
+- **Facets** (filters):
+  - `location`: U.S. Total, States, and Census Regions.
+  - `sector`: Sector
+
+### `coal/exports-imports-quantity-price`
+
+**Exports / Imports Quantity / Price** Coal import/export data, including price, quantity, country, rank, and customs district. Source: EIA Form 7A and MSHA Form 7000-2. Interactive browser: https://www.eia.gov/coal/data/browser/
+
+- **Frequencies**: quarterly, annual
+- **Columns**: `quantity`, `price`
+- **Facets** (filters):
+  - `exportImportType`: Export / Import Type
+  - `coalRankId`: Coal Rank
+  - `countryId`: Country
+  - `customsDistrictId`: Customs District
+
+### `coal/market-sales-price` (Live)
+
+**Market Sales Price** Coal market sales prices and amounts by mine types for regions and states (unless withheld for pricing protections). Source: EIA Form 7A and MSHA Form 7000-2. Interactive browser: https://www.eia.gov/coal/data/browser/
+
+- **Frequencies**: annual
+- **Columns**: `sales`, `price`
+- **Facets** (filters):
+  - `stateRegionId`: State / Region
+  - `marketTypeId`: Market Type
+- **Live Claros feeds**: `EIA.COAL.PRICE.MARKET.US.ANNUAL`
+
+### `coal/mine-production`
+
+**Mine Production** Coal mine-level data, including production, region, state, county, rank, status, type, name and description. Source: EIA Form 7A and MSHA Form 7000-2. Interactive browser: https://www.eia.gov/coal/data/browser/
+
+- **Frequencies**: annual
+- **Columns**: `production`, `labor-hours`, `average-employees`, `refuse-flag`, `latitude`, `longitude`, `operating-company`, `operating-company-address`
+- **Facets** (filters):
+  - `mineMSHAId`: Mine
+  - `stateId`: State
+  - `regionId`: Region
+  - `supplyRegionId`: Supply Region
+  - `censusRegionId`: Census Region
+  - `mississippiRegionId`: Mississippi Region
+  - `mineCountyId`: Mine County
+  - `coalRankId`: Coal Rank
+  - `mineTypeId`: Mine Type
+  - `mineStatusId`: Mine Status
+
+### `coal/price-by-rank` (Live)
+
+**Price by Rank** Coal prices by rank data for region and state. Source: EIA Form 7A and MSHA Form 7000-2. Interactive browser: https://www.eia.gov/coal/data/browser/
+
+- **Frequencies**: annual
+- **Columns**: `price`
+- **Facets** (filters):
+  - `stateRegionId`: State / Region
+  - `coalRankId`: Coal Rank
+- **Live Claros feeds**: `EIA.COAL.PRICE.BITUMINOUS.ANNUAL`
+
+### `coal/reserves-capacity`
+
+**Reserves Capacity** Coal capacity data, including productive capacity, stocks, and recoverable reserves by state, region and mine type. Source: EIA Form 7A and MSHA Form 7000-2. Interactive browser: https://www.eia.gov/coal/data/browser/
+
+- **Frequencies**: annual
+- **Columns**: `productive-capacity`, `recoverable-reserves`, `producer-distributor-stocks`
+- **Facets** (filters):
+  - `stateId`: State / Region
+  - `mineTypeId`: Mine Type
+
+### `coal/shipments/by-mine-by-plant`
+
+**By Mine, By Plant** Coal shipments from mine- to plant-level data, including price, quantity, quality, and rank. Source: EIA Form 7A and MSHA Form 7000-2. Interactive browser: https://www.eia.gov/coal/data/browser/
+
+- **Frequencies**: quarterly, annual
+- **Columns**: `quantity`, `price`, `sulfur-content`, `ash-content`, `heat-content`
+- **Facets** (filters):
+  - `mineStateId`: Mine State / Region
+  - `mineMSHAId`: Mine
+  - `coalSupplier`: Coal Supplier
+  - `plantStateId`: Plant State / Region
+  - `plantId`: Plant
+  - `coalType`: Coal Type
+
+### `coal/shipments/mine-aggregates`
+
+**Mine Aggregates** Coal shipments aggregated at mine-level data, including price, quantity, quality, and rank. Source: EIA Form 7A and MSHA Form 7000-2. Interactive browser: https://www.eia.gov/coal/data/browser/
+
+- **Frequencies**: quarterly, annual
+- **Columns**: `quantity`, `price`, `heat-content`, `sulfur-content`, `ash-content`
+- **Facets** (filters):
+  - `mineStateId`: Mine State / Region
+  - `mineMSHAId`: Mine
+  - `coalRankId`: Coal Rank
+
+### `coal/shipments/mine-state-aggregates`
+
+**Mine State Aggregates** Coal shipments aggregated at state-level data, including price, quantity, quality, and rank. Source: EIA Form 7A and MSHA Form 7000-2. Interactive browser: https://www.eia.gov/coal/data/browser/
+
+- **Frequencies**: quarterly, annual
+- **Columns**: `quantity`, `price`, `heat-content`, `sulfur-content`, `ash-content`
+- **Facets** (filters):
+  - `mineStateId`: Mine State / Region
+  - `coalRankId`: Coal Rank
+
+### `coal/shipments/plant-aggregates`
+
+**Plant Aggregates** Coal reciepts aggregated to plant-level data, including price, quantity, quality, and rank. Source: EIA Form 7A and MSHA Form 7000-2. Interactive browser: https://www.eia.gov/coal/data/browser/
+
+- **Frequencies**: quarterly, annual
+- **Columns**: `quantity`, `price`, `sulfur-content`, `ash-content`, `heat-content`
+- **Facets** (filters):
+  - `location`: Plant State / Region.
+  - `plant`: Plant
+  - `rank`: Coal Rank
+
+### `coal/shipments/plant-state-aggregates`
+
+**Plant State Aggregates** Coal reciepts aggregated at state-level data, including price, quantity, quality, and rank. Source: EIA Form 7A and MSHA Form 7000-2. Interactive browser: https://www.eia.gov/coal/data/browser/
+
+- **Frequencies**: quarterly, annual
+- **Columns**: `quantity`, `price`, `heat-content`, `sulfur-content`, `ash-content`
+- **Facets** (filters):
+  - `plantStateId`: Plant State / Region
+  - `coalRankId`: Coal Rank
+
+### `coal/shipments/receipts`
+
+**Receipts** Coal shipment detailed by reciepient data, including transportation type, supplier, mine, coal basin, county, state, rank, contract type, price, quantity, and quality. Source: EIA Form 7A and MSHA Form 7000-2. Interactive browser: https://w
+
+- **Frequencies**: quarterly, annual
+- **Columns**: `quantity`, `price`, `heat-content`, `sulfur-content`, `ash-content`
+- **Facets** (filters):
+  - `plantStateId`: Plant State / Region
+  - `mineStateId`: Mine State / Region
+  - `mineTypeId`: Mine Type
+  - `mineMSHAId`: Mine
+  - `mineBasinId`: Mine Basin
+  - `mineCountyId`: Mine County
+  - `contractType`: Contract Type
+  - `transportationMode`: Transportation Mode
+  - `coalSupplier`: Coal Supplier
+  - `coalRankId`: Coal Rank
+  - `plantId`: Plant
+
+## crude-oil-imports
+
+1 dataset.
+
+### `crude-oil-imports` (Live)
+
+**Crude Oil Imports** Crude oil imports by country to destination, includes type, grade, quantity. Source: EIA-814 Interactive data product: www.eia.gov/petroleum/imports/companylevel/
+
+- **Frequencies**: monthly, annual
+- **Columns**: `quantity`
+- **Facets** (filters):
+  - `originId`: Origin Id
+  - `originType`: Origin Type
+  - `destinationId`: Destination Id
+  - `destinationType`: Destination Type
+  - `gradeId`: Grade Id
+- **Live Claros feeds**: `EIA.PET.IMPORTS.CRUDE_SAU.MONTHLY`
+
+## densified-biomass
+
+8 datasets.
+
+### `densified-biomass/capacity-by-region`
+
+**Capacity by Region** Densified biomass capacity includes number of facilities and number of employees. Source: EIA-63C Report: www.eia.gov/biomass/
+
+- **Frequencies**: monthly
+- **Columns**: `number-of-facilities`, `capacity`, `number-of-fte-employees`
+- **Facets** (filters):
+  - `region`: Region
+
+### `densified-biomass/characteristics-by-region`
+
+**Characteristics by Region** Densified biomass characteristics includes fuel type, average ash, heat, and moisture content by region. Source: EIA-63C Report: www.eia.gov/biomass/
+
+- **Frequencies**: monthly
+- **Columns**: `average-heat`, `average-ash`, `average-moisture`
+- **Facets** (filters):
+  - `fuelTypeId`: Fuel Type
+  - `region`: Region
+
+### `densified-biomass/export-sales-and-price`
+
+**Export Sales and Price** Densified biomass export prices and quantity. Source: EIA-63C Report: www.eia.gov/biomass/
+
+- **Frequencies**: monthly
+- **Columns**: `quantity`, `average-price`
+- **Facets**: none
+
+### `densified-biomass/feedstocks-and-cost`
+
+**Feedstocks and Costs** Densified biomass feedstocks and cost by type. Source: EIA-63C Report: www.eia.gov/biomass/
+
+- **Frequencies**: monthly
+- **Columns**: `quantity`, `cost`
+- **Facets** (filters):
+  - `fuelTypeId`: Fuel Type
+
+### `densified-biomass/inventories-by-region`
+
+**Inventories by Region** Densified biomass inventories by region and fuel type. Source: EIA-63C Report: www.eia.gov/biomass/
+
+- **Frequencies**: monthly
+- **Columns**: `inventory`
+- **Facets** (filters):
+  - `fuelTypeId`: Fuel Type
+  - `region`: Region
+
+### `densified-biomass/production-by-region` (Live)
+
+**Production by Region** Densified biomass production by region and fuel type. Source: EIA-63C Report: www.eia.gov/biomass/
+
+- **Frequencies**: monthly
+- **Columns**: `production`
+- **Facets** (filters):
+  - `fuelTypeId`: Fuel Type
+  - `region`: Region
+- **Live Claros feeds**: `EIA.DBF.PROD.US.MONTHLY`
+
+### `densified-biomass/sales-and-price-by-region` (Live)
+
+**Sales and Price by Region** Densified biomass sales and average price by region. Source: EIA-63C Report: www.eia.gov/biomass/
+
+- **Frequencies**: monthly
+- **Columns**: `quantity`, `average-price`
+- **Facets** (filters):
+  - `region`: Region
+- **Live Claros feeds**: `EIA.DBF.SALES_PRICE.US.MONTHLY`
+
+### `densified-biomass/wood-pellet-plants`
+
+**Wood Pellet Plant Capacity** Details on wood pellet plants includes region, respondent, capacity, and status. Source: EIA-63C Report: www.eia.gov/biomass/
+
+- **Frequencies**: annual
+- **Columns**: `capacity`
+- **Facets** (filters):
+  - `region`: Region
+  - `respondent`: Respondent
+  - `stateId`: State
+  - `status`: Operational Status
+
+## electricity
+
+19 datasets.
+
+### `electricity/electric-power-operational-data`
+
+**Electric Power Operations (Annual and Monthly)** Monthly and annual electric power operations by state, sector, and energy source. Source: Form EIA-923
+
+- **Frequencies**: monthly, quarterly, annual
+- **Columns**: `generation`, `total-consumption`, `consumption-for-eg`, `consumption-uto`, `total-consumption-btu`, `consumption-for-eg-btu`, `consumption-uto-btu`, `stocks`, `receipts`, `receipts-btu`, `cost`, `cost-per-btu`, `sulfur-content`, `ash-content`, `heat-content`
+- **Facets** (filters):
+  - `location`: State / Census Region
+  - `sectorid`: Sector
+  - `fueltypeid`: Energy Source
+
+### `electricity/facility-fuel`
+
+**Electric Power Operations for Individual Power Plants (Annual and Monthly)** Annual and monthly electric power operations for individual power plants, by energy source and prime mover Source: Form EIA-923
+
+- **Frequencies**: monthly, quarterly, annual
+- **Columns**: `generation`, `gross-generation`, `total-consumption`, `total-consumption-btu`, `consumption-for-eg`, `consumption-for-eg-btu`, `average-heat-content`
+- **Facets** (filters):
+  - `plantCode`: Plant ID and Name
+  - `fuel2002`: 2002 Fuel Source
+  - `fuelType`: Fuel Source
+  - `state`: State
+  - `primeMover`: Prime Mover
+
+### `electricity/operating-generator-capacity`
+
+**Inventory of Operable Generators** Inventory of operable generators in the U.S. Source: Forms EIA-860, EIA-860M
+
+- **Frequencies**: monthly
+- **Columns**: `nameplate-capacity-mw`, `net-summer-capacity-mw`, `net-winter-capacity-mw`, `operating-year-month`, `planned-retirement-year-month`, `planned-derate-year-month`, `planned-derate-summer-cap-mw`, `planned-uprate-year-month`, `planned-uprate-summer-cap-mw`, `county`, `longitude`, `latitude`
+- **Facets** (filters):
+  - `stateid`: State
+  - `sector`: Sector
+  - `entityid`: Entity ID and Name
+  - `plantid`: Plant ID and Name
+  - `generatorid`: Generator ID
+  - `unit`: Unit Code
+  - `technology`: Technology
+  - `energy_source_code`: Primary Energy Source
+  - `prime_mover_code`: Prime Mover Code
+  - `balancing_authority_code`: Balancing Authority
+  - `status`: Operating Status Code
+
+### `electricity/retail-sales` (Live)
+
+**Electricity Sales to Ultimate Customers** Electricity sales to ultimate customer by state and sector (number of customers, average price, revenue, and megawatthours of sales). Sources: Forms EIA-826, EIA-861, EIA-861M
+
+- **Frequencies**: monthly, quarterly, annual
+- **Columns**: `revenue`, `sales`, `price`, `customers`
+- **Facets** (filters):
+  - `stateid`: State / Census Region
+  - `sectorid`: Sector
+- **Live Claros feeds**: `EIA.ELEC.RETAIL.PRICE.US_ALL.MONTHLY`, `EIA.ELEC.RETAIL.SALES.US_ALL.MONTHLY`, `EIA.ELEC.RETAIL.REVENUE.US_ALL.MONTHLY`, `EIA.ELEC.RETAIL.CUSTOMERS.US_RES.MONTHLY`
+
+### `electricity/rto/daily-fuel-type-data`
+
+**Daily Generation by Energy Source** Daily net generation by balancing authority and energy source. Source: Form EIA-930 Product: Hourly Electric Grid Monitor
+
+- **Frequencies**: daily
+- **Columns**: `value`
+- **Facets** (filters):
+  - `respondent`: Balancing Authority / Region
+  - `fueltype`: Energy Source
+  - `timezone`: Time Zone for Determining Date
+
+### `electricity/rto/daily-interchange-data`
+
+**Daily Interchange by Neighboring Balancing Authority** Hourly interchange between neighboring balancing authorities. Source: Form EIA-930 Product: Hourly Electric Grid Monitor
+
+- **Frequencies**: daily
+- **Columns**: `value`
+- **Facets** (filters):
+  - `fromba`: Balancing Authority / Region
+  - `toba`: Neighboring Balancing Authority / Region
+  - `timezone`: Time Zone for Determining Date
+
+### `electricity/rto/daily-region-data`
+
+**Daily Demand, Demand Forecast, Generation, and Interchange** Daily demand, day-ahead demand forecast, net generation, and interchange by balancing authority. Source: Form EIA-930 Product: Hourly Electric Grid Monitor
+
+- **Frequencies**: daily
+- **Columns**: `value`
+- **Facets** (filters):
+  - `respondent`: Balancing Authority / Region
+  - `type`: Metric
+  - `timezone`: Time Zone for Determining Date
+
+### `electricity/rto/daily-region-sub-ba-data`
+
+**Daily Demand by Subregion** Daily demand by balancing authority subregion. Source: Form EIA-930 Product: Hourly Electric Grid Monitor
+
+- **Frequencies**: daily
+- **Columns**: `value`
+- **Facets** (filters):
+  - `subba`: Subregion
+  - `parent`: Balancing Authority
+  - `timezone`: Time Zone for Determining Date
+
+### `electricity/rto/fuel-type-data` (Live)
+
+**Hourly Generation by Energy Source** Hourly net generation by balancing authority and energy source. Source: Form EIA-930 Product: Hourly Electric Grid Monitor
+
+- **Frequencies**: hourly, local-hourly
+- **Columns**: `value`
+- **Facets** (filters):
+  - `respondent`: Balancing Authority / Region
+  - `fueltype`: Energy Source
+- **Live Claros feeds**: `EIA.ELEC.GEN_NG.US48.HOURLY`
+
+### `electricity/rto/interchange-data`
+
+**Hourly Interchange by Neighboring Balancing Authority** Daily interchange between neighboring balancing authorities. Source: Form EIA-930 Product: Hourly Electric Grid Monitor
+
+- **Frequencies**: hourly, local-hourly
+- **Columns**: `value`
+- **Facets** (filters):
+  - `fromba`: Balancing Authority / Region
+  - `toba`: Neighboring Balancing Authority / Region
+
+### `electricity/rto/region-data` (Live)
+
+**Hourly Demand, Demand Forecast, Generation, and Interchange** Hourly demand, day-ahead demand forecast, net generation, and interchange by balancing authority. Source: Form EIA-930 Product: Hourly Electric Grid Monitor
+
+- **Frequencies**: hourly, local-hourly
+- **Columns**: `value`
+- **Facets** (filters):
+  - `respondent`: Balancing Authority / Region
+  - `type`: Metric
+- **Live Claros feeds**: `EIA.ELEC.DEMAND.US48.HOURLY`
+
+### `electricity/rto/region-sub-ba-data`
+
+**Hourly Demand by Subregion** Hourly demand by balancing authority subregion. Source: Form EIA-930 Product: Hourly Electric Grid Monitor
+
+- **Frequencies**: hourly, local-hourly
+- **Columns**: `value`
+- **Facets** (filters):
+  - `subba`: Subregion
+  - `parent`: Balancing Authority
+
+### `electricity/state-electricity-profiles/capability`
+
+**Generating Capacity** Electric generating capacity (summer capacity) by state, energy source, and sector. Source: Form EIA-860 Product: State Electricity Profiles, Table 4
+
+- **Frequencies**: annual
+- **Columns**: `capability`
+- **Facets** (filters):
+  - `stateId`: State
+  - `producertypeid`: Sector
+  - `energysourceid`: Energy Source
+
+### `electricity/state-electricity-profiles/emissions-by-state-by-fuel`
+
+**Emissions from Energy Consumption at Conventional Power Plants and Combined-Heat-and-Power Plants** Emissions from electricity generation and the production of useful thermal output at conventional power plants and combined-heat-and-power plants. See Electric Power Annual, Technical Notes for a description of the sources and methodology u
+
+- **Frequencies**: annual
+- **Columns**: `so2-rate-lbs-mwh`, `so2-short-tons`, `nox-rate-lbs-mwh`, `nox-short-tons`, `co2-rate-lbs-mwh`, `co2-thousand-metric-tons`
+- **Facets** (filters):
+  - `stateid`: State
+  - `fuelid`: Energy Source
+
+### `electricity/state-electricity-profiles/energy-efficiency`
+
+**Costs and Savings from Energy Efficiency Programs** Costs and savings from energy efficiency programs by state and sector Source: Form EIA-861 Product: State Electricity Profiles, Table 13
+
+- **Frequencies**: annual
+- **Columns**: `energy-savings`, `potential-peak-savings`, `customer-incentive`, `all-other-costs`
+- **Facets** (filters):
+  - `state`: State
+  - `timePeriod`: Time Period Included in Costs and Savings
+  - `sector`: Sector
+
+### `electricity/state-electricity-profiles/meters`
+
+**Advanced Metering Infrastructure** Advanced meterting counts by technology, state, and sector Source: Forms EIA-861, EIA-861S Product: State Electricity Profiles, Table 12
+
+- **Frequencies**: annual
+- **Columns**: `meters`
+- **Facets** (filters):
+  - `state`: State
+  - `technology`: Meter Technology
+  - `sector`: sector
+
+### `electricity/state-electricity-profiles/net-metering`
+
+**Electricity Net Metering: Customers and Capacity** Electricity net metering customer counts and capacity by state, sector, and generating technology. Source: Form EIA-861 Product: State Electricity Profiles, Table 11
+
+- **Frequencies**: annual
+- **Columns**: `capacity`, `customers`
+- **Facets** (filters):
+  - `state`: state
+  - `technology`: Technology used to Generate Electricity
+  - `sector`: sector
+
+### `electricity/state-electricity-profiles/source-disposition`
+
+**Supply and disposition of electricity** Supply and disposition of electricity by state. Sources: Forms EIA-860, EIA-861, and EIA-923 Product: State Electricity Profiles, Table 10
+
+- **Frequencies**: annual
+- **Columns**: `electric-utilities`, `independent-power-producers`, `combined-heat-and-pwr-elect`, `elect-pwr-sector-gen-subtotal`, `combined-heat-and-pwr-comm`, `combined-heat-and-pwr-indust`, `indust-and-comm-gen-subtotal`, `total-net-generation`, `total-international-imports`, `total-supply`, `full-service-providers`, `energy-only-providers`, `facility-direct`, `total-elect-indust`, `direct-use`, `total-international-exports`, `estimated-losses`, `net-interstate-trade`, `unaccounted`, `total-disposition`, `net-trade-index`
+- **Facets** (filters):
+  - `state`: State
+
+### `electricity/state-electricity-profiles/summary`
+
+**State Rankings for Key Statistics** State rankings for key electricity statistics by state Source: Forms EIA-860, EIA-861, EIA-923 Product: State Electricity Profiles, Table 1
+
+- **Frequencies**: annual
+- **Columns**: `net-summer-capacity`, `net-summer-capacity-rank`, `capacity-elec-utilities`, `capacity-elect-utilities-rank`, `capacity-ipp`, `capacity-ipp-rank`, `net-generation`, `net-generation-rank`, `generation-elect-utils`, `generation-elect-utils-rank`, `generation-ipp`, `generation-ipp-rank`, `sulfer-dioxide`, `sulfer-dioxide-rank`, `nitrogen-oxide`, `nitrogen-oxide-rank`, `carbon-dioxide`, `carbon-dioxide-rank`, `sulfer-dioxide-lbs`, `sulfer-dioxide-rank-lbs`, `nitrogen-oxide-lbs`, `nitrogen-oxide-rank-lbs`, `carbon-dioxide-lbs`, `carbon-dioxide-rank-lbs`, `total-retail-sales`, `total-retail-sales-rank`, `fsp-service-provider-sales`, `fsp-sales-rank`, `eop-sales`, `eop-sales-rank`, `direct-use`, `direct-use-rank`, `average-retail-price`, `average-retail-price-rank`, `prime-source`
+- **Facets** (filters):
+  - `stateID`: State
+
+## ieo
+
+4 datasets.
+
+### `ieo/2017`
+
+**ieo/2017** International Energy Outlook 2017
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+### `ieo/2019`
+
+**ieo/2019** International Energy Outlook 2019
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+### `ieo/2021`
+
+**ieo/2021** International Energy Outlook 2021
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+### `ieo/2023`
+
+**ieo/2023** International Energy Outlook 2023
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `history`: History
+  - `scenario`: Scenario
+  - `tableId`: Table
+  - `seriesId`: Series
+  - `regionId`: Region
+
+## international
+
+1 dataset.
+
+### `international` (Live)
+
+**International** Country level production, consumption, imports, exports by energy source (petroleum, natural gas, electricity, renewable, etc.) Interactive product: https://www.eia.gov/international/data/world
+
+- **Frequencies**: monthly, quarterly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `productId`: Product
+  - `activityId`: Activity
+  - `countryRegionId`: Country/Region
+  - `countryRegionTypeId`: Country/Region Type
+  - `dataFlagId`: Data flag ID
+  - `unit`: Unit
+- **Live Claros feeds**: `EIA.INTL.CRUDE_PROD.WORLD.ANNUAL`
+
+## natural-gas
+
+53 datasets.
+
+### `natural-gas/cons/acct`
+
+**natural-gas/cons/acct** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/cons/heat`
+
+**natural-gas/cons/heat** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/cons/num`
+
+**natural-gas/cons/num** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/cons/pns`
+
+**natural-gas/cons/pns** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/cons/sum` (Live)
+
+**natural-gas/cons/sum** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+- **Live Claros feeds**: `EIA.NG.CONS.TOTAL.MONTHLY`
+
+### `natural-gas/enr/adng`
+
+**natural-gas/enr/adng** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/coalbed`
+
+**natural-gas/enr/coalbed** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/cplc`
+
+**natural-gas/enr/cplc** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/deep`
+
+**natural-gas/enr/deep** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/drill`
+
+**natural-gas/enr/drill** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/dry` (Live)
+
+**natural-gas/enr/dry** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+- **Live Claros feeds**: `EIA.NG.RESERVES.DRY.ANNUAL`
+
+### `natural-gas/enr/lc`
+
+**natural-gas/enr/lc** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/nang`
+
+**natural-gas/enr/nang** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/ngl`
+
+**natural-gas/enr/ngl** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/ngpl`
+
+**natural-gas/enr/ngpl** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/nprod`
+
+**natural-gas/enr/nprod** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/seis`
+
+**natural-gas/enr/seis** EIA natural gas survey data
+
+- **Frequencies**: monthly
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/shalegas`
+
+**natural-gas/enr/shalegas** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/sum`
+
+**natural-gas/enr/sum** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/wals`
+
+**natural-gas/enr/wals** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/wellcost`
+
+**natural-gas/enr/wellcost** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/welldep`
+
+**natural-gas/enr/welldep** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/wellend`
+
+**natural-gas/enr/wellend** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/enr/wellfoot`
+
+**natural-gas/enr/wellfoot** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/move/expc`
+
+**natural-gas/move/expc** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/move/impc` (Live)
+
+**natural-gas/move/impc** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+- **Live Claros feeds**: `EIA.NG.IMPORTS.TOTAL.MONTHLY`
+
+### `natural-gas/move/ist`
+
+**natural-gas/move/ist** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/move/poe1`
+
+**natural-gas/move/poe1** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/move/poe2`
+
+**natural-gas/move/poe2** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/move/state`
+
+**natural-gas/move/state** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/pri/fut` (Live)
+
+**natural-gas/pri/fut** EIA natural gas survey data
+
+- **Frequencies**: monthly, weekly, annual, daily
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+- **Live Claros feeds**: `EIA.NG.PRICE.HENRYHUB.DAILY`, `EIA.NG.PRICE.HENRYHUB_FUT1.DAILY`
+
+### `natural-gas/pri/rescom`
+
+**natural-gas/pri/rescom** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/pri/sum`
+
+**natural-gas/pri/sum** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/prod/coalbed`
+
+**natural-gas/prod/coalbed** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/prod/deep`
+
+**natural-gas/prod/deep** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/prod/lc`
+
+**natural-gas/prod/lc** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/prod/ngpl`
+
+**natural-gas/prod/ngpl** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/prod/off`
+
+**natural-gas/prod/off** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/prod/oilwells`
+
+**natural-gas/prod/oilwells** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/prod/pp`
+
+**natural-gas/prod/pp** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/prod/shalegas`
+
+**natural-gas/prod/shalegas** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/prod/ss`
+
+**natural-gas/prod/ss** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/prod/sum` (Live)
+
+**natural-gas/prod/sum** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+- **Live Claros feeds**: `EIA.NG.PROD.MARKETED.MONTHLY`
+
+### `natural-gas/prod/wells`
+
+**natural-gas/prod/wells** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/prod/whv`
+
+**natural-gas/prod/whv** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/stor/cap`
+
+**natural-gas/stor/cap** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/stor/lng`
+
+**natural-gas/stor/lng** EIA natural gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/stor/sum`
+
+**natural-gas/stor/sum** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/stor/type`
+
+**natural-gas/stor/type** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/stor/wkly` (Live)
+
+**natural-gas/stor/wkly** EIA natural gas survey data
+
+- **Frequencies**: weekly
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+- **Live Claros feeds**: `EIA.NG.STORAGE.L48_WORKING.WEEKLY`
+
+### `natural-gas/sum/lsum`
+
+**natural-gas/sum/lsum** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/sum/snd`
+
+**natural-gas/sum/snd** EIA natural gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `natural-gas/sum/sndm`
+
+**natural-gas/sum/sndm** EIA natural gas survey data
+
+- **Frequencies**: monthly
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+## nuclear-outages
+
+3 datasets.
+
+### `nuclear-outages/facility-nuclear-outages`
+
+**Facility Level Nuclear Outages** Facility level nuclear outages with capacity, outages, and percent outage. Source: Nuclear Regulatory Commission's Power Reactor Status Report. Interactive data report: Daily Status of Nuclear Reactors.
+
+- **Frequencies**: daily
+- **Columns**: `capacity`, `outage`, `percentOutage`
+- **Facets** (filters):
+  - `facility`: Plant code
+
+### `nuclear-outages/generator-nuclear-outages`
+
+**Generator Level Nuclear Outages** Generator level nuclear outages with capacity, outages, and percent outage. Source: Nuclear Regulatory Commission's Power Reactor Status Report. Interactive data report: Daily Status of Nuclear Reactors.
+
+- **Frequencies**: daily
+- **Columns**: `capacity`, `outage`, `percentOutage`
+- **Facets** (filters):
+  - `facility`: Plant code
+  - `generator`: Facility's generator ID number
+
+### `nuclear-outages/us-nuclear-outages` (Live)
+
+**U.S. Nuclear Outages** Nuclear outages daily with capacity, outages, and percent outage. Source: Nuclear Regulatory Commission's Power Reactor Status Report. Interactive data report: Daily Status of Nuclear Reactors.
+
+- **Frequencies**: daily
+- **Columns**: `capacity`, `outage`, `percentOutage`
+- **Facets**: none
+- **Live Claros feeds**: `EIA.NUC.OUTAGE.US_PCT.DAILY`, `EIA.NUC.OUTAGE.US_CAPACITY.DAILY`
+
+## petroleum
+
+112 datasets.
+
+### `petroleum/cons/821dst`
+
+**petroleum/cons/821dst** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/cons/821dsta`
+
+**petroleum/cons/821dsta** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/cons/821ker`
+
+**petroleum/cons/821ker** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/cons/821kera`
+
+**petroleum/cons/821kera** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/cons/821rsd`
+
+**petroleum/cons/821rsd** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/cons/821rsda`
+
+**petroleum/cons/821rsda** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/cons/821use`
+
+**petroleum/cons/821use** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/cons/821usea`
+
+**petroleum/cons/821usea** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/cons/prim`
+
+**petroleum/cons/prim** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/cons/psup`
+
+**petroleum/cons/psup** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/cons/refmg`
+
+**petroleum/cons/refmg** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/cons/refoth`
+
+**petroleum/cons/refoth** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/cons/refres`
+
+**petroleum/cons/refres** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/cons/wpsup` (Live)
+
+**petroleum/cons/wpsup** EIA petroleum gas survey data
+
+- **Frequencies**: weekly, four-week-average
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+- **Live Claros feeds**: `EIA.PET.SUPPLIED.PRODUCTS.WEEKLY`
+
+### `petroleum/crd/api`
+
+**petroleum/crd/api** EIA petroleum gas survey data
+
+- **Frequencies**: monthly
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/crd/cplc`
+
+**petroleum/crd/cplc** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/crd/crpdn` (Live)
+
+**petroleum/crd/crpdn** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+- **Live Claros feeds**: `EIA.PET.PROD.CRUDE_FIELD.MONTHLY`
+
+### `petroleum/crd/drill`
+
+**petroleum/crd/drill** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/crd/gom`
+
+**petroleum/crd/gom** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/crd/nprod`
+
+**petroleum/crd/nprod** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/crd/pres` (Live)
+
+**petroleum/crd/pres** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+- **Live Claros feeds**: `EIA.PET.RESERVES.CRUDE.ANNUAL`
+
+### `petroleum/crd/seis`
+
+**petroleum/crd/seis** EIA petroleum gas survey data
+
+- **Frequencies**: monthly
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/crd/wellcost`
+
+**petroleum/crd/wellcost** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/crd/welldep`
+
+**petroleum/crd/welldep** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/crd/wellend`
+
+**petroleum/crd/wellend** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/crd/wellfoot`
+
+**petroleum/crd/wellfoot** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/exp`
+
+**petroleum/move/exp** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/expc`
+
+**petroleum/move/expc** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/expcp`
+
+**petroleum/move/expcp** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/imc1`
+
+**petroleum/move/imc1** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/imc2`
+
+**petroleum/move/imc2** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/imc3`
+
+**petroleum/move/imc3** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/imp`
+
+**petroleum/move/imp** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/imp2`
+
+**petroleum/move/imp2** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/impcp`
+
+**petroleum/move/impcp** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/impcus`
+
+**petroleum/move/impcus** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/ipct`
+
+**petroleum/move/ipct** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/land1`
+
+**petroleum/move/land1** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/land2`
+
+**petroleum/move/land2** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/land3`
+
+**petroleum/move/land3** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/neti`
+
+**petroleum/move/neti** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/netr`
+
+**petroleum/move/netr** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/pipe`
+
+**petroleum/move/pipe** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/ptb`
+
+**petroleum/move/ptb** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/rail`
+
+**petroleum/move/rail** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/railNA`
+
+**petroleum/move/railNA** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/res`
+
+**petroleum/move/res** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/tb`
+
+**petroleum/move/tb** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/wimpc`
+
+**petroleum/move/wimpc** EIA petroleum gas survey data
+
+- **Frequencies**: weekly, four-week-average
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/move/wkly`
+
+**petroleum/move/wkly** EIA petroleum gas survey data
+
+- **Frequencies**: weekly, four-week-average
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/bioplfuel`
+
+**petroleum/pnp/bioplfuel** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/cap1`
+
+**petroleum/pnp/cap1** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/capbio`
+
+**petroleum/pnp/capbio** EIA petroleum gas survey data
+
+- **Frequencies**: monthly
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/capchg`
+
+**petroleum/pnp/capchg** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/capfuel`
+
+**petroleum/pnp/capfuel** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/capprod`
+
+**petroleum/pnp/capprod** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/caprec`
+
+**petroleum/pnp/caprec** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/capshell`
+
+**petroleum/pnp/capshell** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/capwork`
+
+**petroleum/pnp/capwork** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/crq`
+
+**petroleum/pnp/crq** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/dwns`
+
+**petroleum/pnp/dwns** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/feedbiofuel`
+
+**petroleum/pnp/feedbiofuel** EIA petroleum gas survey data
+
+- **Frequencies**: monthly
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/feedng`
+
+**petroleum/pnp/feedng** EIA petroleum gas survey data
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/gp`
+
+**petroleum/pnp/gp** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/inpt`
+
+**petroleum/pnp/inpt** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/inpt2`
+
+**petroleum/pnp/inpt2** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/inpt3`
+
+**petroleum/pnp/inpt3** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/oxy`
+
+**petroleum/pnp/oxy** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/pct`
+
+**petroleum/pnp/pct** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/refp`
+
+**petroleum/pnp/refp** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/refp2`
+
+**petroleum/pnp/refp2** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/refp3`
+
+**petroleum/pnp/refp3** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/unc`
+
+**petroleum/pnp/unc** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/wiup`
+
+**petroleum/pnp/wiup** EIA petroleum gas survey data
+
+- **Frequencies**: weekly, four-week-average
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/wprodb`
+
+**petroleum/pnp/wprodb** EIA petroleum gas survey data
+
+- **Frequencies**: weekly, four-week-average
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/wprode`
+
+**petroleum/pnp/wprode** EIA petroleum gas survey data
+
+- **Frequencies**: weekly, four-week-average
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/wprodr`
+
+**petroleum/pnp/wprodr** EIA petroleum gas survey data
+
+- **Frequencies**: weekly, four-week-average
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pnp/wprodrb`
+
+**petroleum/pnp/wprodrb** EIA petroleum gas survey data
+
+- **Frequencies**: weekly, four-week-average
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/allmg`
+
+**petroleum/pri/allmg** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/dfp1`
+
+**petroleum/pri/dfp1** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/dfp2`
+
+**petroleum/pri/dfp2** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/dfp3`
+
+**petroleum/pri/dfp3** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/dist`
+
+**petroleum/pri/dist** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/fut`
+
+**petroleum/pri/fut** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, weekly, annual, daily
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/gnd` (Live)
+
+**petroleum/pri/gnd** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, weekly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+- **Live Claros feeds**: `EIA.PET.PRICE.GASOLINE_RETAIL.WEEKLY`, `EIA.PET.PRICE.DIESEL_RETAIL.WEEKLY`
+
+### `petroleum/pri/imc1`
+
+**petroleum/pri/imc1** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/imc2`
+
+**petroleum/pri/imc2** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/imc3`
+
+**petroleum/pri/imc3** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/ipct`
+
+**petroleum/pri/ipct** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/land1`
+
+**petroleum/pri/land1** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/land2`
+
+**petroleum/pri/land2** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/land3`
+
+**petroleum/pri/land3** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/prop`
+
+**petroleum/pri/prop** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/rac2`
+
+**petroleum/pri/rac2** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/refmg`
+
+**petroleum/pri/refmg** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/refmg2`
+
+**petroleum/pri/refmg2** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/refoth`
+
+**petroleum/pri/refoth** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/resid`
+
+**petroleum/pri/resid** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/pri/spt` (Live)
+
+**petroleum/pri/spt** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, weekly, annual, daily
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+- **Live Claros feeds**: `EIA.PET.PRICE.WTI.DAILY`, `EIA.PET.PRICE.BRENT.DAILY`
+
+### `petroleum/pri/wfr`
+
+**petroleum/pri/wfr** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, weekly
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/stoc/cu`
+
+**petroleum/stoc/cu** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/stoc/gp`
+
+**petroleum/stoc/gp** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/stoc/ref`
+
+**petroleum/stoc/ref** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/stoc/st`
+
+**petroleum/stoc/st** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/stoc/ts`
+
+**petroleum/stoc/ts** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/stoc/typ`
+
+**petroleum/stoc/typ** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/stoc/wstk` (Live)
+
+**petroleum/stoc/wstk** EIA petroleum gas survey data
+
+- **Frequencies**: weekly
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+- **Live Claros feeds**: `EIA.PET.STOCKS.CRUDE_EXSPR.WEEKLY`
+
+### `petroleum/sum/b100`
+
+**petroleum/sum/b100** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/sum/crdsnd`
+
+**petroleum/sum/crdsnd** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/sum/mkt`
+
+**petroleum/sum/mkt** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/sum/snd`
+
+**petroleum/sum/snd** EIA petroleum gas survey data
+
+- **Frequencies**: monthly, annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+### `petroleum/sum/sndw`
+
+**petroleum/sum/sndw** EIA petroleum gas survey data
+
+- **Frequencies**: weekly, four-week-average
+- **Columns**: `value`
+- **Facets** (filters):
+  - `duoarea`: DuoArea
+  - `product`: Product
+  - `process`: Process
+  - `series`: Series
+
+## seds
+
+1 dataset.
+
+### `seds` (Live)
+
+**State Energy Data System (SEDS)** Estimated production, consumption, price, and expenditure data for all energy sources by state and sector. Source: https://www.eia.gov/state/seds/seds-technical-notes-complete.php Product: SEDS (https://www.eia.gov/state/seds/)
+
+- **Frequencies**: annual
+- **Columns**: `value`
+- **Facets** (filters):
+  - `seriesId`: Unique series identifier
+  - `stateId`: State name
+- **Live Claros feeds**: `EIA.SEDS.TOTAL_CONS.CA.ANNUAL`, `EIA.SEDS.PROD.CA.ANNUAL`
+
+## steo
+
+1 dataset.
+
+### `steo` (Live)
+
+**Short Term Energy Outlook** Monthly short term (18 month) projections using STEO model. Report and interactive projection data browser: STEO (www.eia.gov/steo/)
+
+- **Frequencies**: annual, quarterly, monthly
+- **Columns**: `value`
+- **Facets** (filters):
+  - `seriesId`: Unique series identifier
+- **Live Claros feeds**: `EIA.STEO.WTI_PRICE.MONTHLY`, `EIA.STEO.BRENT_PRICE.MONTHLY`
+
+## total-energy
+
+1 dataset.
+
+### `total-energy` (Live)
+
+**Total Energy** These data represent the most recent comprehensive energy statistics integrated across all energy sources. The data includes total energy production, consumption, stocks, and trade; energy prices; overviews of petroleum, natural gas, coal,
+
+- **Frequencies**: annual, monthly
+- **Columns**: `value`
+- **Facets** (filters):
+  - `msn`: Unique series identifier
+- **Live Claros feeds**: `EIA.TOTAL.PRIMARY_CONS.MONTHLY`
+

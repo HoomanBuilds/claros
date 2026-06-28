@@ -1,0 +1,55 @@
+---
+title: "Outlooks"
+description: "Live outlooks feeds: exact feed ids, routes, facets, and units."
+---
+
+import { Callout } from 'nextra/components'
+
+# Outlooks
+
+2 live feeds in the outlooks family. Each section gives the exact `feed_id`, the EIA route, the frequency, the data column you read, every facet filter (id, the value Claros uses, and what that filter means in the EIA catalog), the unit, and the decimals. To turn an on-chain integer into a human value, compute `amount / 10^decimals`.
+
+<Callout type="info">
+Facet ids are the EIA filters. The "Means" column is taken from the dataset definition in the [data catalog](/docs/catalog). Pick a feed by its `feed_id` and read it with [the SDK](/docs/reading/sdk) or [REST](/docs/reading/rest).
+</Callout>
+
+## WTI_PRICE
+
+Short Term Energy Outlook: value (monthly), filtered to seriesId=WTIPUUS, in $/bbl.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.STEO.WTI_PRICE.MONTHLY` |
+| EIA route | `steo` |
+| Dataset | Short Term Energy Outlook |
+| Frequency | monthly |
+| Data column | `value` |
+| Unit | $/bbl |
+| Decimals | 6 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `seriesId` | `WTIPUUS` | Unique series identifier |
+
+## BRENT_PRICE
+
+Short Term Energy Outlook: value (monthly), filtered to seriesId=BREPUUS, in $/bbl.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.STEO.BRENT_PRICE.MONTHLY` |
+| EIA route | `steo` |
+| Dataset | Short Term Energy Outlook |
+| Frequency | monthly |
+| Data column | `value` |
+| Unit | $/bbl |
+| Decimals | 6 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `seriesId` | `BREPUUS` | Unique series identifier |
+

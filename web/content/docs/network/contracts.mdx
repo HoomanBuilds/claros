@@ -1,0 +1,312 @@
+---
+title: "Contracts & addresses"
+description: "Every Claros contract on Casper testnet, with package hashes, roles, entry points, the casper-test network details, and the external WCSPR and WiseLending packages."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# Contracts & addresses
+
+Claros runs on **Casper testnet** (network id `casper-test`). Four Odra (Rust) contracts
+make up the on-chain system, and two external testnet packages (WCSPR and WiseLending)
+complete the agent's payment and yield path. Every contract is **upgradable**, so its
+**package hash** is the stable address you integrate against: an upgrade publishes a new
+contract version under the same package, and your calls keep working unchanged.
+
+This page is the canonical address and entry-point reference. For how a value is produced
+and read, see [how it works](/docs/how-it-works); for the on-chain record shape, see
+[the attestation](/docs/concepts/attestation).
+
+## Contract addresses
+
+| Contract | Package hash (cspr.live) | Role |
+| --- | --- | --- |
+| **AttestationRegistry** | [`236b51…16cc`](https://testnet.cspr.live/contract-package/236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc) | Stores feed **values** by `feed_id`: the latest reading plus the full append-only history. |
+| **FeedRegistry** | [`dac573…6f46`](https://testnet.cspr.live/contract-package/dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46) | Stores self-describing feed **metadata** by `feed_id` (decimals, unit, source, route, frequency). |
+| **TreasuryVault** | [`a90b08…fd7b`](https://testnet.cspr.live/contract-package/a90b082d863c5977c6e54654fec10e523a38760529e664a87e9e8a8e887ffd7b) | Append-only ledger of the agent's reinvestment decisions and treasury holdings. |
+| **EligibilityGate** | [`7be33b…5227`](https://testnet.cspr.live/contract-package/7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227) | Zero-knowledge (Groth16) access gate the agent clears before it is allowed to attest. |
+
+The AttestationRegistry and the FeedRegistry share one key: a `feed_id` string. Read the
+value from one and the metadata from the other, then compute `value = amount / 10^decimals`.
+See [the two registries](/docs/how-it-works#two-registries-one-feed_id).
+
+<Callout type="info">
+**One account holds every privileged role.** The attester (AttestationRegistry), the owner
+(FeedRegistry, EligibilityGate), and the agent (TreasuryVault) are all the same Claros agent
+account, account-hash
+[`43d7dd…21d4`](https://testnet.cspr.live/account/020362ef3cb7536f7eac9a1d30a8d0fbdf7ed3384717b5365751005ebf1826c7b1f6).
+Any other caller of a privileged entry point reverts with an authorization error, so every
+attested value carries a verifiable `attester` you can check on-chain.
+</Callout>
+
+## Network
+
+| Setting | Value |
+| --- | --- |
+| Network name (chain id) | `casper-test` |
+| JSON-RPC endpoint | `https://node.testnet.casper.network/rpc` |
+| Block explorer | `https://testnet.cspr.live` |
+| Gas and fee token | CSPR (fees are denominated in **motes**, where 1 CSPR = 1,000,000,000 motes) |
+| Contract addressing | by **package hash** (upgrades preserve the address) |
+| Transaction format | Casper 2.0 (Condor) `TransactionV1`, signed with casper-js-sdk v5 |
+
+<Callout type="warning">
+**Casper testnet charges the gas limit you set, not the gas you consume, and it does not
+refund the difference.** A call that sets a 20 CSPR limit but uses 6 CSPR of compute still
+costs 20 CSPR. Size every transaction's payment deliberately: too low and it runs out of
+gas (and you still pay the limit), too high and you overpay. The agent sizes each attestation
+and treasury call accordingly, and cross-contract reads should set a tight limit.
+</Callout>
+
+### Deployment manifest
+
+The full machine-readable manifest lives at `shared/deployments.json`. The package hashes
+below are the same ones the [SDK](/docs/reading/sdk) bakes in as defaults, so most integrators
+never paste an address by hand.
+
+```json
+{
+  "network": "casper-test",
+  "rpc": "https://node.testnet.casper.network/rpc",
+  "explorer": "https://testnet.cspr.live",
+  "contracts": {
+    "attestation_registry": "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc",
+    "feed_registry":        "dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46",
+    "treasury_vault":       "a90b082d863c5977c6e54654fec10e523a38760529e664a87e9e8a8e887ffd7b",
+    "eligibility_gate":     "7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227"
+  },
+  "external": {
+    "wcspr":             "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e",
+    "wiselending_scspr": "baa50d1500aa5361c497c06b40f2822ebb0b5fce5b1c3a037ea628cb68d920f3"
+  },
+  "agent_account_hash": "43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4"
+}
+```
+
+<Callout type="info">
+These values are **package hashes** (no `hash-` or `contract-` prefix). When you query global
+state directly, prefix a package hash with `hash-` (for example `hash-236b51…16cc`), which is
+exactly what the SDK does under the hood.
+</Callout>
+
+## Contract reference
+
+Each contract is an Odra module. Below are the key entry points (parameter types as declared
+in `contracts/src`), the events they emit, and the revert errors they define. Every getter is
+a free read; the privileged write entry points revert for any caller other than the role noted.
+
+### AttestationRegistry
+
+The value store. The agent calls `attest` once per genuinely new period; everyone else reads.
+
+Source: `contracts/src/attestation_registry.rs`. Package
+[`236b51…16cc`](https://testnet.cspr.live/contract-package/236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc),
+contract `5b4c6c…9173`, deployed in transaction `ed0820…90fd`.
+
+| Entry point | Signature | Access | Returns |
+| --- | --- | --- | --- |
+| `attest` | `attest(asset_id: String, period: u64, amount: U512, source_hash: String)` | Attester only | none, emits `RevenueAttested` |
+| `get_latest` | `get_latest(asset_id: String)` | Public view | `Option<Attestation>` |
+| `get_at` | `get_at(asset_id: String, index: u64)` | Public view | `Option<Attestation>` |
+| `get_count` | `get_count(asset_id: String)` | Public view | `u64` (history length for a feed) |
+| `total_attestations` | `total_attestations()` | Public view | `u64` (global count across feeds) |
+| `get_attester` | `get_attester()` | Public view | `Address` |
+
+`get_latest` returns an `Attestation { period: u64, amount: U512, source_hash: String, attester: Address, timestamp: u64 }`,
+where `timestamp` is the chain commit time in epoch milliseconds. See
+[the attestation record](/docs/concepts/attestation) for the field meanings and freshness rules.
+
+- **Event:** `RevenueAttested { asset_id, period, amount, source_hash, index, timestamp }`
+- **Error:** `Unauthorized` (a caller other than the attester invoked `attest`)
+
+### FeedRegistry
+
+The metadata store. Holds one self-describing `Feed` record per `feed_id`, so a consumer can
+interpret a value entirely on-chain (the Pyth model: the value ships with its exponent and unit).
+
+Source: `contracts/src/feed_registry.rs`. Package
+[`dac573…6f46`](https://testnet.cspr.live/contract-package/dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46),
+deployed in transaction `a7900a…b6e4`.
+
+| Entry point | Signature | Access | Returns |
+| --- | --- | --- | --- |
+| `register_feed` | `register_feed(feed_id: String, decimals: u8, unit: String, title: String, source: String, route: String, frequency: String, description: String)` | Owner only | none, emits `FeedRegistered` |
+| `get_feed` | `get_feed(feed_id: String)` | Public view | `Option<Feed>` |
+| `get_feed_at` | `get_feed_at(index: u64)` | Public view | `Option<String>` (the `feed_id` at that index) |
+| `feed_count` | `feed_count()` | Public view | `u64` |
+
+`get_feed` returns a `Feed { decimals: u8, unit: String, title: String, source: String, route: String, frequency: String, description: String }`.
+Re-registering an existing `feed_id` updates it in place and does not double-count. Use
+`feed_count` with `get_feed_at` to enumerate every live feed (the [SDK](/docs/reading/sdk)
+wraps this as `listFeedIds`).
+
+- **Event:** `FeedRegistered { feed_id, decimals, unit, source }`
+- **Error:** `Unauthorized` (a caller other than the owner invoked `register_feed`)
+
+### TreasuryVault
+
+The agent's on-chain reinvestment ledger. The agent records each treasury decision here after
+it attests, so the capital trail is auditable.
+
+Source: `contracts/src/treasury_vault.rs`. Package
+[`a90b08…fd7b`](https://testnet.cspr.live/contract-package/a90b082d863c5977c6e54654fec10e523a38760529e664a87e9e8a8e887ffd7b),
+contract `61a3b6…d0bf`, deployed in transaction `bcbe32…f2a0`.
+
+| Entry point | Signature | Access | Returns |
+| --- | --- | --- | --- |
+| `record_reinvest` | `record_reinvest(venue: String, amount_in: U512, amount_out: U512, reasoning: String)` | Agent only | none, emits `Reinvested` |
+| `update_holdings` | `update_holdings(wcspr_liquid: U512, scspr_held: U512)` | Agent only | none, emits `TreasuryUpdated` |
+| `get_reinvestment` | `get_reinvestment(index: u64)` | Public view | `Option<Reinvestment>` |
+| `reinvestment_count` | `reinvestment_count()` | Public view | `u64` |
+| `total_reinvested` | `total_reinvested()` | Public view | `U512` |
+| `venue_total` | `venue_total(venue: String)` | Public view | `U512` (total routed to one venue) |
+| `wcspr_liquid` | `wcspr_liquid()` | Public view | `U512` |
+| `scspr_held` | `scspr_held()` | Public view | `U512` |
+| `get_agent` | `get_agent()` | Public view | `Address` |
+
+A `Reinvestment` is `{ venue: String, amount_in: U512, amount_out: U512, reasoning: String, timestamp: u64 }`,
+where `reasoning` is the agent's recorded rationale for the decision.
+
+- **Events:** `Reinvested { index, venue, amount_in, amount_out, reasoning, timestamp }`, `TreasuryUpdated { wcspr_liquid, scspr_held, timestamp }`
+- **Error:** `Unauthorized` (a caller other than the agent invoked a write)
+
+### EligibilityGate
+
+A zero-knowledge access gate. A caller proves (off-chain) that it knows a secret whose leaf is
+in a depth-20 MiMC7 Merkle allowlist, without revealing which leaf. The contract verifies the
+Groth16 proof on-chain, binds the caller's account, and burns a one-time nullifier so the proof
+cannot be replayed. The Claros agent clears this gate before it attests.
+
+Source: `contracts/src/eligibility_gate.rs`. Package
+[`7be33b…5227`](https://testnet.cspr.live/contract-package/7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227),
+deployed in transaction `bb3595…be88`.
+
+| Entry point | Signature | Access | Returns |
+| --- | --- | --- | --- |
+| `verify_eligibility` | `verify_eligibility(proof: Vec<u8>, root: U256, nullifier_hash: U256)` | Public, proof-gated | none, emits `EligibilityGranted` |
+| `set_root` | `set_root(new_root: U256)` | Owner only | none, emits `RootUpdated` |
+| `is_eligible` | `is_eligible(who: Address)` | Public view | `bool` |
+| `get_root` | `get_root()` | Public view | `U256` |
+| `granted_count` | `granted_count()` | Public view | `u64` |
+
+The public inputs to `verify_eligibility` are `(root, nullifier_hash, caller)`. The on-chain
+allowlist root is `16331994690242190256441629756923135657650690078906869969179988007525570044228`,
+and the gate has granted eligibility once so far (`granted_count` = 1, verified in transaction
+`b3048a…a433`). Internals are covered on [the ZK eligibility gate](/docs/network/zk-gate) page.
+
+- **Events:** `EligibilityGranted { account, nullifier_hash, timestamp }`, `RootUpdated { root }`
+- **Errors:** `NotOwner` (1), `UnknownRoot` (2), `InvalidProof` (3), `AlreadyClaimed` (4)
+
+## External packages
+
+Two existing Casper testnet packages complete the agent's economic loop. Claros does not own
+them; it integrates against their deployed package hashes.
+
+| Package | Package hash (cspr.live) | Role in Claros |
+| --- | --- | --- |
+| **WCSPR** (Wrapped CSPR) | [`3d80df…7c1e`](https://testnet.cspr.live/contract-package/3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e) | Settlement asset for the paid [x402 feed](/docs/reading/x402). It supports `transfer_with_authorization`, which the x402 `exact` scheme uses so a client can authorize a transfer that the facilitator settles on-chain. |
+| **WiseLending sCSPR** | [`baa50d…20f3`](https://testnet.cspr.live/contract-package/baa50d1500aa5361c497c06b40f2822ebb0b5fce5b1c3a037ea628cb68d920f3) | Liquid-staking yield venue. The agent stakes treasury CSPR through its `stake` entry point, receives sCSPR, and records the move in the TreasuryVault. |
+
+See [the autonomous agent](/docs/network/agent) for how the agent decides between staking into
+WiseLending, native delegation, and holding.
+
+## Referencing these contracts
+
+How you point at these package hashes depends on where your code runs. The free off-chain
+reads use only the two registries; the contract path can call any of them.
+
+<Tabs items={['SDK', 'Cross-contract', 'REST']}>
+
+<Tabs.Tab>
+
+The [`claros-oracle`](/docs/reading/sdk) SDK has the testnet RPC and the two registry package
+hashes baked in as defaults, so there is nothing to paste:
+
+```ts
+import { ClarosOracle } from 'claros-oracle'
+
+const oracle = new ClarosOracle() // casper-test RPC + registries baked in
+
+// Override only to point at a different deployment:
+const custom = new ClarosOracle({
+  rpc: 'https://node.testnet.casper.network/rpc',
+  attestationRegistry: '236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc',
+  feedRegistry: 'dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46',
+})
+```
+
+The SDK reads the AttestationRegistry and FeedRegistry only. The TreasuryVault and
+EligibilityGate are read on-chain or over JSON-RPC.
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+From your own Casper contract, reference a registry by its **package hash** and call its entry
+points through an external contract trait. Full trait wiring is on
+[the cross-contract page](/docs/reading/on-chain).
+
+```rust
+// The upgradable package hashes are the stable addresses to call.
+const ATTESTATIONS: &str = "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc";
+const FEEDS: &str        = "dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46";
+
+// AttestationRegistry.get_latest(asset_id) -> Option<Attestation>
+// FeedRegistry.get_feed(feed_id)           -> Option<Feed>
+// real value = attestation.amount / 10^feed.decimals
+```
+
+<Callout type="warning">
+Set a tight gas limit on cross-contract reads. Casper testnet bills the limit, not the
+consumption (see [Network](#network)).
+</Callout>
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+The [REST API](/docs/reading/rest) hides addresses entirely: the `claros-api` service reads
+the registries for you and returns plain JSON.
+
+```bash
+curl http://localhost:4030/v1/feeds/EIA.PET.PRICE.WTI.DAILY
+```
+
+You never handle a package hash; the service resolves the on-chain state and computes `value`.
+
+</Tabs.Tab>
+
+</Tabs>
+
+## Verify it on-chain
+
+Nothing here requires trusting this page. Every claim is checkable on testnet right now.
+
+- **Open the explorer.** Each package hash above links to its
+  [cspr.live](https://testnet.cspr.live) contract-package page, where you can see its versions,
+  entry points, and recent activity.
+- **Count the feeds.** `FeedRegistry.feed_count` returns **37** live feeds. The SDK helper
+  `feedCount()` and `GET /v1/feeds` both reflect this.
+- **Count the attestations.** `AttestationRegistry.total_attestations` returns **72** total
+  attestations across all feeds.
+- **Check the gate.** `EligibilityGate.granted_count` returns **1**.
+
+```ts
+import { ClarosOracle } from 'claros-oracle'
+
+const oracle = new ClarosOracle()
+await oracle.feedCount()                          // 37
+await oracle.getReading('OP-1')                   // San Diego parking, value 2734.2 USD
+await oracle.getReading('EIA.PET.PRICE.WTI.DAILY')// WTI crude, value 78.94 $/bbl
+```
+
+## Related
+
+<Cards>
+  <Cards.Card title="How it works" href="/docs/how-it-works" arrow />
+  <Cards.Card title="The attestation record" href="/docs/concepts/attestation" arrow />
+  <Cards.Card title="Read from a contract" href="/docs/reading/on-chain" arrow />
+  <Cards.Card title="Read with the SDK" href="/docs/reading/sdk" arrow />
+  <Cards.Card title="The autonomous agent" href="/docs/network/agent" arrow />
+  <Cards.Card title="The ZK eligibility gate" href="/docs/network/zk-gate" arrow />
+</Cards>

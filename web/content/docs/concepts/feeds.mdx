@@ -1,0 +1,266 @@
+---
+title: "Feeds & feed_id"
+description: "What a Claros feed and feed_id are, the naming convention, how one feed_id keys both on-chain registries, and how to enumerate every feed."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# Feeds & feed_id
+
+A **feed** is a single real-world data series that Claros tracks and attests on Casper: WTI crude spot price, Lower-48 electricity demand, San Diego parking revenue, and so on. Every feed carries two things on-chain, a **self-describing metadata** record (what it is, its unit, how many decimals) and a **latest attested value**.
+
+A **feed_id** is the stable, unique string that names that series. It is the only identifier you ever need. Pass it to [the SDK](/docs/reading/sdk), [the REST API](/docs/reading/rest), or a [cross-contract call](/docs/reading/on-chain) and the reading comes back. If you have used Pyth, a `feed_id` plays the same role as a Pyth price feed id.
+
+<Callout type="info">
+  One `feed_id` is the single key into **both** Claros registries: the **FeedRegistry** (metadata) and the **AttestationRegistry** (value). Read both with the same string, then compute `value = amount / 10^decimals`.
+</Callout>
+
+## Anatomy of a feed
+
+A feed is split across two contracts so that a value never travels without the context needed to interpret it. This is the Pyth model: a price ships with its exponent. Both records are keyed by the same `feed_id`.
+
+**Metadata** lives in the FeedRegistry. `get_feed(feed_id) -> Option<Feed>`:
+
+| Field | Type | Example | Meaning |
+| --- | --- | --- | --- |
+| `decimals` | `u8` | `6` | scale exponent, `value = amount / 10^decimals` |
+| `unit` | `String` | `"$/bbl"` | unit of the value |
+| `title` | `String` | `"WTI crude spot"` | human label |
+| `source` | `String` | `"EIA"` | upstream provider (`"EIA"` or `"City of San Diego"`) |
+| `route` | `String` | `"petroleum/pri/spt"` | provider route the value came from |
+| `frequency` | `String` | `"daily"` | reporting cadence |
+| `description` | `String` | `"Cushing WTI spot price"` | longer description |
+
+**Value** lives in the AttestationRegistry. `get_latest(feed_id) -> Option<Attestation>`:
+
+| Field | Type | Example | Meaning |
+| --- | --- | --- | --- |
+| `period` | `u64` | `20260622` | the data's reporting period (YYYYMMDD daily, YYYYMM monthly, YYYY annual, epoch seconds hourly) |
+| `amount` | `U512` | `78940000` | the raw integer value |
+| `source_hash` | `String` | `"a1b2…"` | deterministic provenance digest of the upstream row |
+| `attester` | `Address` | `account-hash-43d7…` | the account that signed the attestation |
+| `timestamp` | `u64` | `1750636800000` | attestation block time (epoch milliseconds) |
+
+Put the two together and you have a reading. For `EIA.PET.PRICE.WTI.DAILY` the value is `78940000 / 10^6 = $78.94 / bbl`.
+
+The [SDK](/docs/reading/sdk) and [REST API](/docs/reading/rest) return both halves pre-joined and scaled as one **reading** object:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `feed_id` | string | the key |
+| `value` | number | `amount / 10^decimals`, the human number |
+| `amount` | string | raw integer, U512-safe (string over HTTP, `bigint` in the SDK) |
+| `decimals` | number | scale exponent |
+| `unit` | string | for example `"$/bbl"` |
+| `title` | string | human label |
+| `source` | string | upstream provider |
+| `route` | string | provider route |
+| `frequency` | string | reporting cadence |
+| `description` | string | longer description |
+| `period` | number | the data's reporting period |
+| `source_hash` | string | provenance digest |
+| `updated_at` | number | attestation time, epoch milliseconds |
+
+## The feed_id naming convention
+
+To both the contracts and the SDK a `feed_id` is an **opaque string key**. Nothing parses it. The naming scheme below is a human convention that makes ids readable and predictable; the machine mapping from a `feed_id` to its upstream query is a lookup table, not derived from the string.
+
+### EIA energy feeds
+
+Energy feeds from the U.S. Energy Information Administration follow a dotted, uppercase scheme:
+
+```
+EIA.<FAMILY>.<METRIC>[.<SUBMETRIC>].<SPECIFIER>.<FREQ>
+```
+
+The first segment is always `EIA`, and the last segment is always the frequency. Everything in between identifies the quantity. Taking `EIA.PET.PRICE.WTI.DAILY`:
+
+| Segment | Value | Meaning |
+| --- | --- | --- |
+| `EIA` | `EIA` | provider prefix |
+| `<FAMILY>` | `PET` | EIA dataset family (petroleum) |
+| `<METRIC>` | `PRICE` | the quantity measured |
+| `<SPECIFIER>` | `WTI` | the specific series, region, or product |
+| `<FREQ>` | `DAILY` | reporting cadence (always last) |
+
+Some ids carry an extra segment when a family has sub-metrics, for example `EIA.ELEC.RETAIL.PRICE.US_ALL.MONTHLY` (family `ELEC`, metric path `RETAIL.PRICE`, specifier `US_ALL`).
+
+The `<FREQ>` suffix is one of `DAILY`, `WEEKLY`, `MONTHLY`, `QUARTERLY`, `ANNUAL`, or `HOURLY`. The `<FAMILY>` token maps to an EIA route family:
+
+| Family | EIA route prefix | Domain |
+| --- | --- | --- |
+| `NG` | `natural-gas` | Natural gas |
+| `PET` | `petroleum` | Crude oil and products |
+| `ELEC` | `electricity` | Electricity |
+| `COAL` | `coal` | Coal |
+| `DBF` | `densified-biomass` | Wood pellets and biomass |
+| `NUC` | `nuclear-outages` | Nuclear outages |
+| `STEO` | `steo` | Short-Term Energy Outlook |
+| `TOTAL` | `total-energy` | Total energy |
+| `SEDS` | `seds` | State Energy Data System |
+| `CO2` | `co2-emissions` | CO2 emissions |
+| `INTL` | `international` | International energy |
+
+A few real feed ids live on-chain today:
+
+| feed_id | What it is | Unit |
+| --- | --- | --- |
+| `EIA.PET.PRICE.WTI.DAILY` | WTI crude spot price | `$/bbl` |
+| `EIA.NG.PRICE.HENRYHUB.DAILY` | Henry Hub spot price | `$/MMBtu` |
+| `EIA.ELEC.DEMAND.US48.HOURLY` | Lower-48 electricity demand | `MWh` |
+| `EIA.CO2.AGG.US_TOTAL.ANNUAL` | U.S. total CO2 emissions | `MMT CO2` |
+
+### Civic feeds
+
+Non-EIA sources use short, provider-specific ids rather than the dotted scheme. The flagship civic feed is **`OP-1`**, San Diego parking revenue (`source` `"City of San Diego"`), which returns for example `$2,734.20` for period `20260623`. A `feed_id` can be any string the registrar chooses; the EIA convention is simply the scheme Claros uses for EIA series.
+
+<Callout type="info">
+  Because the id is opaque, the on-chain query never round-trips through string parsing. For EIA feeds the resolution table (`feed_id` to `route` / `frequency` / `data_col` / `facets`) is `agent/src/eia-feeds.ts`. See [the EIA data model](/docs/concepts/data-model) for how those routes and facets work.
+</Callout>
+
+## One feed_id, both registries
+
+The same `feed_id` is the dictionary key in both contracts: `FeedRegistry.feeds` (metadata) and `AttestationRegistry.latest` (value). Read one for context, the other for the number, and divide.
+
+<Tabs items={['SDK', 'REST', 'Cross-contract']}>
+  <Tabs.Tab>
+```ts
+import { ClarosOracle } from 'claros-oracle';
+
+const claros = new ClarosOracle(); // Casper testnet defaults baked in
+
+// one call: metadata + value + human number
+const r = await claros.getReading('EIA.PET.PRICE.WTI.DAILY');
+// r.value      === 78.94
+// r.amount     === 78940000n
+// r.decimals   === 6
+// r.unit       === '$/bbl'
+// r.updated_at === 1750636800000  (epoch ms)
+
+// or the two halves separately, same id into each registry
+const meta  = await claros.getFeed('EIA.PET.PRICE.WTI.DAILY');  // FeedRegistry
+const value = await claros.getValue('EIA.PET.PRICE.WTI.DAILY'); // AttestationRegistry
+```
+  </Tabs.Tab>
+  <Tabs.Tab>
+```bash
+# one feed, fully joined and scaled, read live from on-chain state
+curl https://<claros-api>/v1/feeds/EIA.PET.PRICE.WTI.DAILY
+```
+```json
+{
+  "feed_id": "EIA.PET.PRICE.WTI.DAILY",
+  "value": 78.94,
+  "amount": "78940000",
+  "decimals": 6,
+  "unit": "$/bbl",
+  "title": "WTI crude spot",
+  "source": "EIA",
+  "route": "petroleum/pri/spt",
+  "frequency": "daily",
+  "period": 20260622,
+  "source_hash": "…",
+  "updated_at": 1750636800000
+}
+```
+  </Tabs.Tab>
+  <Tabs.Tab>
+```rust
+// from your own Odra contract, the same feed_id keys both registries
+let value = AttestationRegistryRef::new(env, attestation_registry)
+    .get_latest(feed_id.clone());          // Option<Attestation>
+let meta  = FeedRegistryRef::new(env, feed_registry)
+    .get_feed(feed_id);                     // Option<Feed>
+
+// real value = value.amount / 10^meta.decimals
+```
+  </Tabs.Tab>
+</Tabs>
+
+<Callout type="warning">
+  The AttestationRegistry read method is `get_latest(asset_id: String)`, keeping the original `asset_id` parameter name from the project's revenue-feed origins. It is the same string as the FeedRegistry's `feed_id`. One id, both registries.
+</Callout>
+
+## Enumerating feeds
+
+The set of feeds is discoverable on-chain, no indexer required. The FeedRegistry maintains an index so the whole catalog can be walked.
+
+<Tabs items={['SDK', 'REST', 'Cross-contract']}>
+  <Tabs.Tab>
+```ts
+import { ClarosOracle } from 'claros-oracle';
+
+const claros = new ClarosOracle();
+
+const ids = await claros.listFeedIds(); // ['EIA.PET.PRICE.WTI.DAILY', 'OP-1', …]
+const n   = await claros.feedCount();   // 37
+const id0 = await claros.feedIdAt(0);   // first registered feed_id
+```
+  </Tabs.Tab>
+  <Tabs.Tab>
+```bash
+# every feed live on-chain, each with metadata + latest value
+curl https://<claros-api>/v1/feeds
+# { "count": 37, "feeds": [ { "feed_id": "EIA.PET.PRICE.WTI.DAILY", "value": 78.94, … }, … ] }
+```
+  </Tabs.Tab>
+  <Tabs.Tab>
+```rust
+let n  = FeedRegistryRef::new(env, feed_registry).feed_count();     // u64
+let id = FeedRegistryRef::new(env, feed_registry).get_feed_at(0);  // Option<String>
+```
+  </Tabs.Tab>
+</Tabs>
+
+The SDK's `listFeedIds()` is just the loop below, which is also exactly what the REST API does to build `GET /v1/feeds`:
+
+<Steps>
+### Read the count
+
+`feedCount()` reads `FeedRegistry.count`, the number of distinct feeds ever registered.
+
+### Walk the index
+
+For `i` in `0..count`, `feedIdAt(i)` reads `FeedRegistry.ids[i]`, the `feed_id` registered at that index.
+
+### Read each feed
+
+Pass each id to `getReading(id)` (or both registries directly) to get metadata and value.
+</Steps>
+
+<Callout type="info">
+  Casper (Odra) `Mapping`s cannot be iterated. The FeedRegistry therefore keeps an explicit `ids: Mapping<u64, String>` alongside a `count`, appending each new `feed_id` at the next index when it is first registered. Re-registering an existing id updates its metadata in place and does not advance the count, so ids stay stable and gap-free.
+</Callout>
+
+Today **37 feeds** are registered: the 36 EIA energy mappings in `agent/src/eia-feeds.ts` plus the civic feed `OP-1`.
+
+## From feed_id to upstream data
+
+Each EIA `feed_id` resolves to one concrete EIA API v2 query, a tuple of `{ route, frequency, data_col, facets }`. For example `EIA.PET.PRICE.WTI.DAILY` resolves to:
+
+```ts
+{
+  route: 'petroleum/pri/spt',
+  frequency: 'daily',
+  data_col: 'value',
+  facets: { series: 'RWTC' }, // unit $/bbl, decimals 6
+}
+```
+
+The `facets` object holds the filters that pin a single series within a dataset (here `series: 'RWTC'` selects the Cushing WTI spot price). To browse the whole EIA universe (232 datasets) and the routes, columns, and facets you can filter on, use discovery:
+
+```bash
+curl "https://<claros-api>/v1/datasets?family=petroleum&q=price"
+```
+
+See [the EIA data model](/docs/concepts/data-model) for a full treatment of routes, frequencies, columns, and facets.
+
+## Next
+
+<Cards>
+  <Cards.Card title="Read with the SDK" href="/docs/reading/sdk" />
+  <Cards.Card title="Read over REST" href="/docs/reading/rest" />
+  <Cards.Card title="Read on-chain (cross-contract)" href="/docs/reading/on-chain" />
+  <Cards.Card title="The EIA data model" href="/docs/concepts/data-model" />
+  <Cards.Card title="Network & addresses" href="/docs/network/contracts" />
+</Cards>

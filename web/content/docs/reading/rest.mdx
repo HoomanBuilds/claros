@@ -1,0 +1,360 @@
+---
+title: "REST API"
+description: "The free, no-key HTTP read API for Claros feeds, the Hermes of Claros. List feeds, read one feed, and discover EIA datasets, all served live from Casper on-chain state."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# REST API
+
+The Claros REST API is the **Hermes** of Claros: a small HTTP service (`services/claros-api`, an Express app on port `4030`) that serves real-world-data feeds read **directly from Casper on-chain state**, plus the full EIA dataset discovery catalog. It is the API way to read Claros, modelled on Pyth's price service: any language, no key, free.
+
+The service holds no database and runs no indexer. Each request reads Casper global state through the [TypeScript SDK](/docs/reading/sdk) (`claros-oracle`), so a response always reflects the latest value attested on-chain at request time.
+
+<Callout type="info">
+**Base URL.** When you self-host the service it listens on `http://localhost:4030` by default. Replace the host with your own deployment. Everything points at Casper **testnet** (network id `casper-test`); the registry addresses are baked into the SDK, so reads need no key and no wallet.
+</Callout>
+
+## Endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | [`/v1/feeds`](#get-v1feeds) | List every live feed with metadata and its latest value |
+| `GET` | [`/v1/feeds/:id`](#get-v1feedsid) | One feed: the full reading (metadata, value, human number) |
+| `GET` | [`/v1/datasets`](#get-v1datasets) | Discover the EIA dataset universe (search by `family` and `q`) |
+| `GET` | [`/health`](#get-health) | Liveness and the number of datasets loaded |
+
+## Authentication and CORS
+
+There is none, by design. Reads are free.
+
+- **No API key.** No `Authorization` header, no token, no signup.
+- **Open CORS.** The service sends `Access-Control-Allow-Origin: *`, so you can call it directly from a browser or frontend with `fetch`, no proxy required.
+- **JSON only.** Every response is `application/json`.
+
+<Callout type="warning">
+Reads are free because the data already lives on-chain. If you want a hosted, metered endpoint where each call is settled in WCSPR over the HTTP 402 protocol, that is a different service: see [x402 metered reads](/docs/reading/x402).
+</Callout>
+
+## GET /v1/feeds/:id
+
+Return the full reading for one feed: its self-describing metadata, its latest on-chain value, and the scaled human number, in a single object. This is the endpoint you call to read a value.
+
+```http
+GET /v1/feeds/EIA.PET.PRICE.WTI.DAILY HTTP/1.1
+Host: localhost:4030
+```
+
+```bash
+curl http://localhost:4030/v1/feeds/EIA.PET.PRICE.WTI.DAILY
+```
+
+### Path parameters
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `id` | path | string | yes | The `feed_id` to read, for example `EIA.PET.PRICE.WTI.DAILY`. See the [Feed IDs](/docs/concepts/feeds) naming scheme. Enumerate every live id with [`GET /v1/feeds`](#get-v1feeds). |
+
+This endpoint takes no query parameters.
+
+### Response fields
+
+The body is a single `Reading` object. Fields appear in this order.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `feed_id` | string | The key you requested. |
+| `decimals` | number | The scale exponent. Human value is `amount / 10^decimals`. |
+| `unit` | string | Unit of the value, for example `$/bbl`. |
+| `title` | string | Human-readable title from the FeedRegistry. |
+| `source` | string | Upstream source, for example `EIA APIv2`. |
+| `route` | string | The upstream EIA dataset route, for example `petroleum/pri/spt`. |
+| `frequency` | string | Cadence of the series, for example `daily`. |
+| `description` | string | Longer description of the series. |
+| `value` | number | The human value, `amount / 10^decimals`, pre-computed for you. |
+| `amount` | string | The raw on-chain integer (a Casper `U512`), serialized as a **string** so it is safe past JavaScript's integer range. |
+| `period` | number | The reporting period the data describes, as `YYYYMMDD`, `YYYYMM`, or `YYYY`. |
+| `source_hash` | string | A sha256 over the upstream source row, the provenance of this value. |
+| `updated_at` | number | When Claros attested the value, in **epoch milliseconds**. |
+
+<Callout type="info">
+`amount` is a string and `value` is a number. A `U512` can exceed `Number.MAX_SAFE_INTEGER`, so parse `amount` with `BigInt(amount)` before doing math on it. For the full scaling rules see [Decimals and scaling](/docs/concepts/decimals).
+</Callout>
+
+### Example response
+
+`200 OK` for `GET /v1/feeds/EIA.PET.PRICE.WTI.DAILY`:
+
+```json
+{
+  "feed_id": "EIA.PET.PRICE.WTI.DAILY",
+  "decimals": 6,
+  "unit": "$/bbl",
+  "title": "Cushing, OK WTI Spot Price FOB",
+  "source": "EIA APIv2",
+  "route": "petroleum/pri/spt",
+  "frequency": "daily",
+  "description": "Cushing, OK crude oil (WTI) spot price, free on board, US dollars per barrel.",
+  "value": 78.94,
+  "amount": "78940000",
+  "period": 20260622,
+  "source_hash": "9f2c1ad4b7e0…",
+  "updated_at": 1781740800000
+}
+```
+
+Reading it: `amount = 78940000`, `decimals = 6`, so `value = 78940000 / 10^6 = 78.94` in `$/bbl`. The `period` `20260622` is the trading day, and `updated_at` is when the agent attested it.
+
+<Callout type="default">
+`period` is the period the data describes; `updated_at` is when Claros wrote it on-chain. Check both before you trust a value, so you can reject a reading that is stale for your use case.
+</Callout>
+
+### Errors
+
+| Status | When | Body |
+| --- | --- | --- |
+| `404` | The `feed_id` is not registered on-chain. | `{ "error": "feed not found on-chain: <id>" }` |
+| `502` | The upstream Casper RPC failed or returned unexpected state. | `{ "error": "<message>" }` |
+
+```json
+// 404 Not Found
+{ "error": "feed not found on-chain: EIA.FOO.BAR" }
+```
+
+## GET /v1/feeds
+
+List every feed that is live on-chain, each as a full reading (metadata plus latest value). There are **37 feeds** live today. There are no parameters and no pagination: the call enumerates all feed ids, then reads each one, so it is the heaviest endpoint. To read a single value, prefer [`GET /v1/feeds/:id`](#get-v1feedsid).
+
+```bash
+curl http://localhost:4030/v1/feeds
+```
+
+### Response fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `count` | number | The number of feeds returned. |
+| `feeds` | array | An array of `Reading` objects, the same shape as [`GET /v1/feeds/:id`](#response-fields). |
+
+### Example response
+
+```json
+{
+  "count": 37,
+  "feeds": [
+    {
+      "feed_id": "EIA.PET.PRICE.WTI.DAILY",
+      "value": 78.94,
+      "unit": "$/bbl",
+      "decimals": 6,
+      "amount": "78940000",
+      "period": 20260622,
+      "updated_at": 1781740800000
+    },
+    {
+      "feed_id": "EIA.NG.PRICE.HENRYHUB.DAILY",
+      "value": 3.16,
+      "unit": "$/MMBtu",
+      "decimals": 6,
+      "amount": "3160000",
+      "period": 20260622,
+      "updated_at": 1781740800000
+    }
+  ]
+}
+```
+
+Each entry is abbreviated above; the live response carries every field listed in [the reading fields table](#response-fields). On an upstream RPC failure this endpoint returns `502` with `{ "error": "<message>" }`.
+
+## GET /v1/datasets
+
+Discover the universe of EIA datasets Claros can attest. The EIA APIv2 is one uniform faceted API: every dataset has a **route**, a set of **frequencies**, a set of **columns**, and a set of **facets** (the filters). A Claros feed is exactly the tuple `{ route, frequency, data_col, facets }`. This endpoint searches the full catalog of **232 datasets** so you can find the route and facets behind a feed, or scout a new series to register.
+
+```bash
+curl "http://localhost:4030/v1/datasets?family=electricity&q=price"
+```
+
+### Query parameters
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `family` | query | string | no | Filter to datasets whose `route` starts with this prefix. **Case-sensitive.** Pass a top-level family such as `petroleum`, `natural-gas`, `electricity`, `coal`, or `nuclear-outages`, or a deeper prefix such as `natural-gas/pri` to narrow further. |
+| `q` | query | string | no | Free-text keyword. **Case-insensitive** substring match against the dataset's `route`, `name`, and `description`. |
+
+Both parameters are optional and combine: `family` is applied first, then `q` filters what remains. With neither, the endpoint returns the entire catalog. The top-level families are `aeo`, `co2-emissions`, `coal`, `crude-oil-imports`, `densified-biomass`, `electricity`, `ieo`, `international`, `natural-gas`, `nuclear-outages`, `petroleum`, `seds`, `steo`, and `total-energy`.
+
+### Response fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `total` | number | The number of datasets that matched the filters. |
+| `datasets` | array | The matching datasets (see fields below). |
+| `datasets[].route` | string | The dataset path, the `{route}` in the EIA endpoint `/v2/{route}/data`. |
+| `datasets[].name` | string | Human-readable dataset name. |
+| `datasets[].frequencies` | string[] | The time resolutions the dataset supports. Pick exactly one for a feed. |
+| `datasets[].columns` | string[] | The numeric columns the dataset returns. Read one as the feed value. |
+| `datasets[].facets` | string[] | The facet ids, the filters. Choose a value for each to pin down one series. |
+
+<Callout type="info">
+This endpoint returns facet **ids** only (for example `series`, `duoarea`, `stateid`). The human descriptions for each facet, frequency, and column live in the full [data catalog](/docs/catalog) page.
+</Callout>
+
+### Example response
+
+`200 OK` for `GET /v1/datasets?family=electricity&q=price`:
+
+```json
+{
+  "total": 1,
+  "datasets": [
+    {
+      "route": "electricity/retail-sales",
+      "name": "Electricity Sales to Ultimate Customers",
+      "frequencies": ["monthly", "quarterly", "annual"],
+      "columns": ["revenue", "sales", "price", "customers"],
+      "facets": ["stateid", "sectorid"]
+    }
+  ]
+}
+```
+
+That one dataset already backs several live feeds, including `EIA.ELEC.RETAIL.PRICE.US_ALL.MONTHLY` and `EIA.ELEC.RETAIL.SALES.US_ALL.MONTHLY`: same route, one column and one set of facet values each. See [live feeds](/docs/feeds) for the mapped ones and the [data catalog](/docs/catalog) for the rest.
+
+<Callout type="default">
+`/v1/datasets` is served from an in-memory catalog and never touches the chain, so it always returns `200`. An empty match is `{ "total": 0, "datasets": [] }`.
+</Callout>
+
+## GET /health
+
+A liveness probe. Returns `200` with the service name and the number of discovery datasets loaded.
+
+```bash
+curl http://localhost:4030/health
+```
+
+```json
+{ "status": "ok", "service": "claros-api", "datasets": 232 }
+```
+
+## REST, the SDK, or a cross-contract call
+
+The REST API, the SDK, and a cross-contract call all return the same on-chain reading. Pick by where your code runs.
+
+<Tabs items={['REST', 'SDK', 'Cross-contract']}>
+
+<Tabs.Tab>
+
+Plain HTTP, any language, no key, open CORS. Best for apps, dashboards, bots, and AI agents that are not written in TypeScript, or that should not bundle a Casper client.
+
+```bash
+curl http://localhost:4030/v1/feeds/EIA.PET.PRICE.WTI.DAILY
+```
+
+The service reads Casper state through the SDK and hands you back the JSON reading.
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+If your code is TypeScript or JavaScript, skip the HTTP hop and use the [SDK](/docs/reading/sdk) directly. It reads Casper global state itself, testnet addresses included, so there is no server to run.
+
+```ts
+import { ClarosOracle } from 'claros-oracle'
+
+const oracle = new ClarosOracle() // Casper testnet defaults baked in
+const wti = await oracle.getReading('EIA.PET.PRICE.WTI.DAILY')
+
+console.log(wti.value, wti.unit) // 78.94 $/bbl
+```
+
+The REST service is itself a thin wrapper around `oracle.getReading(id)`, so the SDK gives you the identical object, with `amount` as a `bigint` rather than a string.
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+To read Claros from another Casper contract, declare the registry as an external contract and call `get_latest(asset_id)` with the `feed_id`. This costs gas, not HTTP. See [Cross-contract reads](/docs/reading/on-chain).
+
+```rust
+#[odra::external_contract]
+pub trait ClarosValues {
+    fn get_latest(&self, asset_id: String) -> Option<Attestation>;
+}
+
+let att = ClarosValuesContractRef::new(self.env(), registry)
+    .get_latest("EIA.PET.PRICE.WTI.DAILY".to_string())
+    .unwrap_or_revert(&self.env());
+// real price = att.amount / 10^6
+```
+
+</Tabs.Tab>
+
+</Tabs>
+
+## Run the API yourself
+
+The service is part of the Claros repo at `services/claros-api`. It is a small Express app with three dependencies (`express`, `cors`, and `claros-oracle`).
+
+<Steps>
+
+### Install
+
+```bash
+npm install
+```
+
+### Configure (optional)
+
+Every setting has a testnet default baked into the SDK, so a `.env` is optional. Override any of these to point at a different node or different registry deployments:
+
+```bash
+# services/claros-api/.env
+PORT=4030
+CASPER_NODE_RPC=https://node.testnet.casper.network/rpc
+FEED_REGISTRY_PACKAGE_HASH=dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46
+ATTESTATION_REGISTRY_PACKAGE_HASH=236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc
+```
+
+### Start
+
+```bash
+npm start        # tsx index.ts
+# or: npm run dev  (watch mode)
+```
+
+The service logs `Claros oracle API on http://localhost:4030`.
+
+### Call it
+
+```bash
+curl http://localhost:4030/v1/feeds/EIA.PET.PRICE.WTI.DAILY
+```
+
+</Steps>
+
+<Callout type="info">
+Because the service is a thin wrapper over the SDK with no state of its own, you do not need to run it at all if your code is TypeScript or JavaScript. Use [`claros-oracle`](/docs/reading/sdk) directly. The REST service exists for everything that is not JS, and for browsers that want open CORS.
+</Callout>
+
+## Related
+
+<Cards>
+  <Cards.Card title="TypeScript SDK" href="/docs/reading/sdk" arrow>
+    `claros-oracle`, the library this API wraps. Read Casper state with no server.
+  </Cards.Card>
+  <Cards.Card title="Cross-contract reads" href="/docs/reading/on-chain" arrow>
+    Call `get_latest(id)` from your own Casper contract. Gas only.
+  </Cards.Card>
+  <Cards.Card title="x402 metered reads" href="/docs/reading/x402" arrow>
+    The paid, per-call endpoint settled in WCSPR over HTTP 402.
+  </Cards.Card>
+  <Cards.Card title="Decimals and scaling" href="/docs/concepts/decimals" arrow>
+    Why `amount` is an integer string and how to convert it to a value.
+  </Cards.Card>
+  <Cards.Card title="Data catalog" href="/docs/catalog" arrow>
+    All 232 EIA datasets with routes, frequencies, columns, and facet filters.
+  </Cards.Card>
+  <Cards.Card title="Feed IDs" href="/docs/concepts/feeds" arrow>
+    The `EIA.<DATASET>.<METRIC>.<SPECIFIER>.<FREQ>` naming scheme.
+  </Cards.Card>
+</Cards>

@@ -1,0 +1,312 @@
+---
+title: "Provenance & source hash"
+description: "How every Claros value carries a deterministic SHA-256 source hash of its exact upstream row, why that same hash is attested on-chain and served over x402, and how to reconcile them."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# Provenance & source hash
+
+Every value Claros publishes carries a `source_hash`: a deterministic SHA-256 fingerprint
+of the exact upstream row it was derived from. The hash is computed once, from the
+substantive identity of the row (route, frequency, facets, period, value, unit for energy
+data, or asset, period, amount, count, source URL for civic data), and it travels with the
+value everywhere it goes. The agent attests it on-chain, and the paid x402 feed serves the
+same digest, so a buyer can reconcile the two without trusting Claros.
+
+<Callout type="info">
+  If the `source_hash` you receive over [the x402 feed](/docs/reading/x402) equals the
+  `source_hash` stored in the on-chain attestation, the value you paid for is byte-for-byte
+  the value Claros committed on-chain. A matching hash is the trust boundary: you do not
+  have to trust the server, only the chain and the algorithm below.
+</Callout>
+
+## What `source_hash` commits to
+
+The hash is the first 32 hex characters (128 bits) of a SHA-256 digest over a **canonical
+string** built from stable fields only. It deliberately excludes upstream cosmetics:
+human-readable labels, API version strings, request echoes, and response metadata are not
+hashed, so a harmless change upstream (a relabeled column, a new API version) does not break
+the digest. Only the data identity of the row is committed.
+
+Claros has two data families, and each canonicalizes the row in its own fixed way.
+
+<Tabs items={['EIA energy feeds', 'Civic feeds (San Diego)']}>
+  <Tabs.Tab>
+    EIA feeds are reached through one uniform faceted API, so the hash commits to the request
+    coordinates plus the value. Facets are sorted by id, and the value is serialized as a
+    string. See [the data model](/docs/concepts/data-model) for what route, frequency, and
+    facets mean.
+
+    | Field       | Where it comes from                          | Example (WTI)        |
+    | ----------- | -------------------------------------------- | -------------------- |
+    | `route`     | feed mapping                                 | `petroleum/pri/spt`  |
+    | `frequency` | EIA response (falls back to the feed config) | `daily`              |
+    | `facets`    | feed mapping, sorted by facet id             | `[["series","RWTC"]]`|
+    | `period`    | the row's raw EIA period string              | `2026-06-26`         |
+    | `value`     | the data column, as a string                 | `"78.94"`            |
+    | `unit`      | EIA row units (falls back to the feed config)| `$/bbl`              |
+
+    The hashing code, from `agent/src/eia.ts`:
+
+    ```ts
+    function sourceHash(f: EiaFeed, row: Record<string, any>, frequency: string, unit: string): string {
+      const canonical = JSON.stringify({
+        route: f.route,
+        frequency,
+        facets: Object.entries(f.facets).sort(([a], [b]) => a.localeCompare(b)),
+        period: row.period,
+        value: String(row[f.data_col]),
+        unit,
+      });
+      return createHash('sha256').update(canonical).digest('hex').slice(0, 32);
+    }
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    Civic feeds (for example `OP-1`, San Diego parking-meter revenue) come from a daily CSV
+    with no queryable API, so the hash commits to the reading plus the exact file URL it was
+    read from. Fields are joined with a literal pipe in a fixed order. Amounts are in cents,
+    so the example value `$2,734.20` is `273420`.
+
+    | Field        | Where it comes from                         | Example (OP-1)        |
+    | ------------ | ------------------------------------------- | --------------------- |
+    | `asset_id`   | feed id                                     | `OP-1`                |
+    | `period`     | `YYYYMMDD` of the latest day in the file     | `20260623`            |
+    | `cents`      | summed transaction amount, in cents          | `273420`              |
+    | `txn_count`  | number of transactions that day              | `412`                 |
+    | `source_url` | the exact CSV file URL                       | `seshat.datasd.org/.../treas_meters_2026_pole_by_mo_day_datasd.csv` |
+
+    The hashing code, from `agent/src/sandiego.ts`:
+
+    ```ts
+    const source_hash = createHash('sha256')
+      .update(`${assetId}|${period}|${rec.cents}|${rec.n}|${SOURCE_URL}`)
+      .digest('hex')
+      .slice(0, 32);
+    ```
+  </Tabs.Tab>
+</Tabs>
+
+## One hash, two homes: on-chain and over x402
+
+The point of a deterministic digest is that it can be computed independently in more than one
+place and still agree. Claros computes it in exactly two:
+
+1. **The agent**, each cycle, reads the latest upstream row, computes `source_hash`, and
+   attests it on-chain. The agent's instructions are explicit: attest with the exact
+   `period`, `amount`, and `source_hash` from the reading, never recomputed or rounded.
+2. **The x402 oracle server**, when it sells the feed, recomputes the reading with the same
+   function (`latestRevenue` for civic feeds, `fetchLatest` for EIA), so the `source_hash` in
+   the paid response is the identical digest the agent attested.
+
+Because both call the same canonicalization over the same upstream row, the two digests are
+equal by construction. There is no separate "served" value and "attested" value to drift
+apart.
+
+### On-chain: the attestation record
+
+The agent signs an `attest` call into `AttestationRegistry`, which stores the digest verbatim
+in the attestation and emits it as an event. Reading it back gives you the committed hash
+(`contracts/src/attestation_registry.rs`):
+
+```rust
+#[odra::odra_type]
+pub struct Attestation {
+    pub period: u64,
+    pub amount: U512,
+    pub source_hash: String,
+    pub attester: Address,
+    pub timestamp: u64,
+}
+
+// get_latest(asset_id: String) -> Option<Attestation>
+```
+
+The deployed registry is package
+`236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc` on `casper-test`, and the
+attester account-hash is `43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4`.
+
+### Over x402: the paid payload
+
+The x402 endpoint (`GET /oracle/feed?asset_id=OP-1`, gated by HTTP 402) returns the reading
+together with provenance pointers back to that same registry. The `source_hash` field is the
+reconciliation anchor (`services/oracle-server/index.ts`):
+
+```json
+{
+  "asset_id": "OP-1",
+  "period": 20260623,
+  "amount_cents": 273420,
+  "txn_count": 412,
+  "latest_date": "2026-06-23",
+  "source_hash": "71db7d2dd6edd2a47f3fe27c4c693fa1",
+  "provenance": {
+    "network": "casper-test",
+    "registry_package_hash": "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc",
+    "attester": "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
+    "source": "City of San Diego: parking-meter daily transactions",
+    "source_url": "https://seshat.datasd.org/parking_meters_transactions_daily/treas_meters_2026_pole_by_mo_day_datasd.csv",
+    "verify": "https://testnet.cspr.live/contract-package/236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc"
+  },
+  "served_at": "2026-06-23T18:04:11.000Z"
+}
+```
+
+<Callout type="info">
+  The `provenance` block is not the proof, it is a set of pointers. The proof is that
+  `source_hash` here equals the `source_hash` at that registry. The block just tells you which
+  registry, attester, and network to check, and gives you a `verify` link to the explorer.
+</Callout>
+
+## Verify a reading
+
+Reconciliation is a string comparison. Read the committed hash from the chain, read the hash
+from the payload, and confirm they are identical. The strongest check goes one step further
+and recomputes the hash from the raw upstream source.
+
+<Steps>
+
+### Read the committed `source_hash` from the chain
+
+Use whichever read path you already have. All of them surface the same field that
+`AttestationRegistry` stores.
+
+<Tabs items={['SDK', 'REST', 'Cross-contract', 'Explorer']}>
+  <Tabs.Tab>
+    ```ts
+    import { ClarosOracle } from 'claros-oracle'
+
+    const oracle = new ClarosOracle()
+    const reading = await oracle.getReading('OP-1')
+    console.log(reading.source_hash) // committed on-chain
+    ```
+    See [the SDK](/docs/reading/sdk) for the full reading shape.
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```bash
+    curl http://localhost:4030/v1/feeds/OP-1
+    # -> { ..., "source_hash": "71db7d2dd6edd2a47f3fe27c4c693fa1", ... }
+    ```
+    The [REST API](/docs/reading/rest) reads on-chain state and returns `source_hash` directly.
+  </Tabs.Tab>
+  <Tabs.Tab>
+    From your own Casper contract, call the registry and read the field off the attestation:
+
+    ```rust
+    let att = self.registry.get_latest(String::from("OP-1"));
+    let committed = att.unwrap().source_hash; // compare this
+    ```
+    See [reading cross-contract](/docs/reading/on-chain) for the trait setup.
+  </Tabs.Tab>
+  <Tabs.Tab>
+    Open the registry on the explorer and inspect the latest `RevenueAttested` event or the
+    stored attestation:
+
+    ```text
+    https://testnet.cspr.live/contract-package/236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc
+    ```
+  </Tabs.Tab>
+</Tabs>
+
+### Read the `source_hash` from the x402 payload
+
+Buy or fetch the feed and pull `source_hash` out of the response body. The
+[x402 flow](/docs/reading/x402) returns the reading and provenance after settlement:
+
+```bash
+# after the 402 -> X-PAYMENT -> 200 handshake
+curl ... 'http://localhost:4021/oracle/feed?asset_id=OP-1' | jq -r .source_hash
+# -> 71db7d2dd6edd2a47f3fe27c4c693fa1
+```
+
+### Compare the two strings
+
+Both are 32-character lowercase hex. They must be byte-for-byte identical:
+
+```text
+on-chain : 71db7d2dd6edd2a47f3fe27c4c693fa1
+x402     : 71db7d2dd6edd2a47f3fe27c4c693fa1   ✓ reconciled
+```
+
+A match means the paid value is exactly what Claros attested. A mismatch means the payload
+does not correspond to the on-chain attestation, and you should reject it.
+
+</Steps>
+
+## Reproduce the hash from source
+
+The chain proves the served value equals the attested value. To also prove the attested value
+faithfully represents the real world, recompute the digest yourself from the upstream row and
+confirm it equals both. The algorithm is the canonical string plus `sha256` truncated to 32
+hex characters, nothing else.
+
+<Tabs items={['Civic (shell)', 'Civic (Node)', 'EIA (Node)']}>
+  <Tabs.Tab>
+    ```bash
+    # asset_id | period | cents | txn_count | source_url
+    printf '%s' "OP-1|20260623|273420|412|https://seshat.datasd.org/parking_meters_transactions_daily/treas_meters_2026_pole_by_mo_day_datasd.csv" \
+      | sha256sum | cut -c1-32
+    # -> 71db7d2dd6edd2a47f3fe27c4c693fa1
+    ```
+    Use `printf '%s'`, not `echo`: a trailing newline would change the digest. Plug in the
+    `period`, `cents`, and `txn_count` from your own reading.
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```ts
+    import { createHash } from 'node:crypto'
+
+    const assetId = 'OP-1', period = 20260623, cents = 273420, n = 412
+    const sourceUrl =
+      'https://seshat.datasd.org/parking_meters_transactions_daily/treas_meters_2026_pole_by_mo_day_datasd.csv'
+
+    const hash = createHash('sha256')
+      .update(`${assetId}|${period}|${cents}|${n}|${sourceUrl}`)
+      .digest('hex')
+      .slice(0, 32)
+    // -> 71db7d2dd6edd2a47f3fe27c4c693fa1
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```ts
+    import { createHash } from 'node:crypto'
+
+    const facets = { series: 'RWTC' }
+    const canonical = JSON.stringify({
+      route: 'petroleum/pri/spt',
+      frequency: 'daily',
+      facets: Object.entries(facets).sort(([a], [b]) => a.localeCompare(b)),
+      period: '2026-06-26',
+      value: String(78.94),
+      unit: '$/bbl',
+    })
+
+    const hash = createHash('sha256').update(canonical).digest('hex').slice(0, 32)
+    // canonical:
+    // {"route":"petroleum/pri/spt","frequency":"daily","facets":[["series","RWTC"]],"period":"2026-06-26","value":"78.94","unit":"$/bbl"}
+    // -> 99b9da88a5293cccbed73a8991e2a4e9
+    ```
+  </Tabs.Tab>
+</Tabs>
+
+<Callout type="warning">
+  The values above are sample inputs chosen to make the worked digests reproducible. To check
+  a specific live attestation, use that attestation's own fields. Reproduction is exact only
+  if you match the canonicalization byte-for-byte:
+
+  - hex is lowercase and truncated to the first **32** characters;
+  - civic fields are joined with literal `|` in the order `asset_id | period | cents | txn_count | source_url`, with no trailing newline;
+  - EIA facets are sorted by id and the `value` is serialized as a **string** (`"78.94"`, not the number `78.94`).
+
+  Any single differing byte produces a completely different hash.
+</Callout>
+
+## Related
+
+<Cards>
+  <Cards.Card title="Reading data: the x402 way" href="/docs/reading/x402" arrow />
+  <Cards.Card title="Reading on-chain (cross-contract)" href="/docs/reading/on-chain" arrow />
+  <Cards.Card title="Reading with the SDK" href="/docs/reading/sdk" arrow />
+  <Cards.Card title="Reading with the REST API" href="/docs/reading/rest" arrow />
+  <Cards.Card title="The data model: routes, frequencies, facets" href="/docs/concepts/data-model" arrow />
+</Cards>

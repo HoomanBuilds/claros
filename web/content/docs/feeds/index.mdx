@@ -1,0 +1,124 @@
+---
+title: "Live feeds"
+description: "All 36 live Claros feeds, grouped by family."
+---
+
+import { Callout, Cards } from 'nextra/components'
+
+# Live feeds
+
+Claros publishes 36 live feeds on Casper testnet. Each feed has a stable `feed_id`, and on-chain values are integers: the human value is `amount / 10^decimals` (Pyth-style). Every feed maps to one EIA APIv2 dataset (a route, a frequency, a data column, and a set of facet filters). See [the data catalog](/docs/catalog) for all 232 datasets you can request.
+
+<Callout type="info">
+Values are read by `feed_id`. Use [the SDK](/docs/reading/sdk), [the REST API](/docs/reading/rest), or a [cross-contract call](/docs/reading/on-chain) to read them.
+</Callout>
+
+## Families
+
+<Cards>
+  <Cards.Card title="Biomass (2)" href="/docs/feeds/biomass" arrow />
+  <Cards.Card title="Coal (3)" href="/docs/feeds/coal" arrow />
+  <Cards.Card title="Electricity (6)" href="/docs/feeds/electricity" arrow />
+  <Cards.Card title="Emissions (1)" href="/docs/feeds/emissions" arrow />
+  <Cards.Card title="International (1)" href="/docs/feeds/international" arrow />
+  <Cards.Card title="Natural gas (7)" href="/docs/feeds/natural-gas" arrow />
+  <Cards.Card title="Nuclear (2)" href="/docs/feeds/nuclear" arrow />
+  <Cards.Card title="Outlooks (2)" href="/docs/feeds/outlooks" arrow />
+  <Cards.Card title="Petroleum (9)" href="/docs/feeds/petroleum" arrow />
+  <Cards.Card title="State energy (SEDS) (2)" href="/docs/feeds/state-energy" arrow />
+  <Cards.Card title="Total energy (1)" href="/docs/feeds/total-energy" arrow />
+</Cards>
+
+## All feeds
+
+### [Biomass](/docs/feeds/biomass)
+
+| Feed ID | Ticker / short name | Family | Frequency | Unit | Decimals |
+| --- | --- | --- | --- | --- | --- |
+| `EIA.DBF.PROD.US.MONTHLY` | PROD.US | Biomass | monthly | short tons | 3 |
+| `EIA.DBF.SALES_PRICE.US.MONTHLY` | SALES_PRICE.US | Biomass | monthly | $/short ton | 6 |
+
+### [Coal](/docs/feeds/coal)
+
+| Feed ID | Ticker / short name | Family | Frequency | Unit | Decimals |
+| --- | --- | --- | --- | --- | --- |
+| `EIA.COAL.PROD.US.ANNUAL` | PROD.US | Coal | annual | short tons | 3 |
+| `EIA.COAL.PRICE.MARKET.US.ANNUAL` | PRICE.MARKET.US | Coal | annual | $/short ton | 6 |
+| `EIA.COAL.PRICE.BITUMINOUS.ANNUAL` | PRICE.BITUMINOUS | Coal | annual | $/short ton | 6 |
+
+### [Electricity](/docs/feeds/electricity)
+
+| Feed ID | Ticker / short name | Family | Frequency | Unit | Decimals |
+| --- | --- | --- | --- | --- | --- |
+| `EIA.ELEC.DEMAND.US48.HOURLY` | DEMAND.US48 | Electricity | hourly | MWh | 3 |
+| `EIA.ELEC.GEN_NG.US48.HOURLY` | GEN_NG.US48 | Electricity | hourly | MWh | 3 |
+| `EIA.ELEC.RETAIL.PRICE.US_ALL.MONTHLY` | RETAIL.PRICE.US_ALL | Electricity | monthly | cents/kWh | 6 |
+| `EIA.ELEC.RETAIL.SALES.US_ALL.MONTHLY` | RETAIL.SALES.US_ALL | Electricity | monthly | million kWh | 3 |
+| `EIA.ELEC.RETAIL.REVENUE.US_ALL.MONTHLY` | RETAIL.REVENUE.US_ALL | Electricity | monthly | million $ | 3 |
+| `EIA.ELEC.RETAIL.CUSTOMERS.US_RES.MONTHLY` | RETAIL.CUSTOMERS.US_RES | Electricity | monthly | count | 0 |
+
+### [Emissions](/docs/feeds/emissions)
+
+| Feed ID | Ticker / short name | Family | Frequency | Unit | Decimals |
+| --- | --- | --- | --- | --- | --- |
+| `EIA.CO2.AGG.US_TOTAL.ANNUAL` | AGG.US_TOTAL | Emissions | annual | MMT CO2 | 6 |
+
+### [International](/docs/feeds/international)
+
+| Feed ID | Ticker / short name | Family | Frequency | Unit | Decimals |
+| --- | --- | --- | --- | --- | --- |
+| `EIA.INTL.CRUDE_PROD.WORLD.ANNUAL` | CRUDE_PROD.WORLD | International | annual | Mbbl/d | 3 |
+
+### [Natural gas](/docs/feeds/natural-gas)
+
+| Feed ID | Ticker / short name | Family | Frequency | Unit | Decimals |
+| --- | --- | --- | --- | --- | --- |
+| `EIA.NG.PRICE.HENRYHUB.DAILY` | PRICE.HENRYHUB | Natural gas | daily | $/MMBtu | 6 |
+| `EIA.NG.PRICE.HENRYHUB_FUT1.DAILY` | PRICE.HENRYHUB_FUT1 | Natural gas | daily | $/MMBtu | 6 |
+| `EIA.NG.STORAGE.L48_WORKING.WEEKLY` | STORAGE.L48_WORKING | Natural gas | weekly | Bcf | 3 |
+| `EIA.NG.PROD.MARKETED.MONTHLY` | PROD.MARKETED | Natural gas | monthly | MMcf | 3 |
+| `EIA.NG.CONS.TOTAL.MONTHLY` | CONS.TOTAL | Natural gas | monthly | MMcf | 3 |
+| `EIA.NG.RESERVES.DRY.ANNUAL` | RESERVES.DRY | Natural gas | annual | Bcf | 3 |
+| `EIA.NG.IMPORTS.TOTAL.MONTHLY` | IMPORTS.TOTAL | Natural gas | monthly | MMcf | 3 |
+
+### [Nuclear](/docs/feeds/nuclear)
+
+| Feed ID | Ticker / short name | Family | Frequency | Unit | Decimals |
+| --- | --- | --- | --- | --- | --- |
+| `EIA.NUC.OUTAGE.US_PCT.DAILY` | OUTAGE.US_PCT | Nuclear | daily | percent | 4 |
+| `EIA.NUC.OUTAGE.US_CAPACITY.DAILY` | OUTAGE.US_CAPACITY | Nuclear | daily | MW | 3 |
+
+### [Outlooks](/docs/feeds/outlooks)
+
+| Feed ID | Ticker / short name | Family | Frequency | Unit | Decimals |
+| --- | --- | --- | --- | --- | --- |
+| `EIA.STEO.WTI_PRICE.MONTHLY` | WTI_PRICE | Outlooks | monthly | $/bbl | 6 |
+| `EIA.STEO.BRENT_PRICE.MONTHLY` | BRENT_PRICE | Outlooks | monthly | $/bbl | 6 |
+
+### [Petroleum](/docs/feeds/petroleum)
+
+| Feed ID | Ticker / short name | Family | Frequency | Unit | Decimals |
+| --- | --- | --- | --- | --- | --- |
+| `EIA.PET.PRICE.WTI.DAILY` | PRICE.WTI | Petroleum | daily | $/bbl | 6 |
+| `EIA.PET.PRICE.BRENT.DAILY` | PRICE.BRENT | Petroleum | daily | $/bbl | 6 |
+| `EIA.PET.PRICE.GASOLINE_RETAIL.WEEKLY` | PRICE.GASOLINE_RETAIL | Petroleum | weekly | $/gal | 6 |
+| `EIA.PET.PRICE.DIESEL_RETAIL.WEEKLY` | PRICE.DIESEL_RETAIL | Petroleum | weekly | $/gal | 6 |
+| `EIA.PET.STOCKS.CRUDE_EXSPR.WEEKLY` | STOCKS.CRUDE_EXSPR | Petroleum | weekly | Mbbl | 3 |
+| `EIA.PET.PROD.CRUDE_FIELD.MONTHLY` | PROD.CRUDE_FIELD | Petroleum | monthly | Mbbl/d | 3 |
+| `EIA.PET.RESERVES.CRUDE.ANNUAL` | RESERVES.CRUDE | Petroleum | annual | MMbbl | 3 |
+| `EIA.PET.SUPPLIED.PRODUCTS.WEEKLY` | SUPPLIED.PRODUCTS | Petroleum | weekly | Mbbl/d | 3 |
+| `EIA.PET.IMPORTS.CRUDE_SAU.MONTHLY` | IMPORTS.CRUDE_SAU | Petroleum | monthly | Mbbl | 3 |
+
+### [State energy (SEDS)](/docs/feeds/state-energy)
+
+| Feed ID | Ticker / short name | Family | Frequency | Unit | Decimals |
+| --- | --- | --- | --- | --- | --- |
+| `EIA.SEDS.TOTAL_CONS.CA.ANNUAL` | TOTAL_CONS.CA | State energy (SEDS) | annual | billion Btu | 3 |
+| `EIA.SEDS.PROD.CA.ANNUAL` | PROD.CA | State energy (SEDS) | annual | billion Btu | 3 |
+
+### [Total energy](/docs/feeds/total-energy)
+
+| Feed ID | Ticker / short name | Family | Frequency | Unit | Decimals |
+| --- | --- | --- | --- | --- | --- |
+| `EIA.TOTAL.PRIMARY_CONS.MONTHLY` | PRIMARY_CONS | Total energy | monthly | trillion Btu | 3 |
+

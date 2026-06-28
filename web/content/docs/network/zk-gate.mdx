@@ -1,0 +1,202 @@
+---
+title: "ZK eligibility gate"
+description: "How the EligibilityGate contract gates the Claros oracle behind a Groth16 proof of allowlist membership: the circuit, the on-chain BN254 verifier, the entry points, and the replay-safe nullifier."
+---
+
+import { Callout, Steps, Cards } from 'nextra/components'
+
+# ZK eligibility gate
+
+The **EligibilityGate** contract puts the Claros oracle behind a zero-knowledge proof
+of allowlist membership. Before the agent is allowed to attest, it must prove on-chain
+that it belongs to an authorized set, without revealing which member it is. This is a
+regulation-ready access pattern: an operator can require that only vetted parties write
+to the oracle (a KYC or licensing allowlist, for example) while every individual member
+keeps their identity private. The proof reveals nothing beyond "the caller is on the
+list".
+
+The contract is live on Casper testnet under package hash
+[`7be33b…5227`](https://testnet.cspr.live/contract-package/7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227)
+(full hash `7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227`). The
+[autonomous agent](/docs/network/agent) checks this credential on-chain before every
+cycle, so a value is never attested unless the gate has been cleared. Source:
+`contracts/src/eligibility_gate.rs`, `contracts/src/verifier.rs`, and
+`zk-gate/circuits/eligibility.circom`.
+
+<Callout type="info">
+**Prove membership, not identity.** The allowlist members live off-chain; only the
+Merkle **root** of the list is stored on-chain. A member proves their leaf is under that
+root in zero knowledge, so the contract learns that the caller is authorized but not
+which entry authorized them.
+</Callout>
+
+## What the circuit proves
+
+The statement is defined in `zk-gate/circuits/eligibility.circom` (`pragma circom
+2.1.0`). The prover holds a private `(identity, nullifier)` pair. Its leaf is the MiMC7
+hash of those two values, and that leaf must sit in a 20-level Merkle allowlist anchored
+to a public `root`. The circuit also publishes a `nullifierHash` (so each membership can
+be spent only once) and binds the on-chain caller `account` into the constraint system
+(so a valid proof cannot be lifted and replayed by a different address).
+
+| Signal | Visibility | Meaning |
+| --- | --- | --- |
+| `identity` | private | the member's secret identity preimage |
+| `nullifier` | private | the member's secret spend tag preimage |
+| `pathElements[20]`, `pathIndices[20]` | private | the Merkle authentication path to the leaf |
+| `root` | public | the allowlist anchor, checked against the on-chain root |
+| `nullifierHash` | public | one-shot spend tag, `MiMC7([nullifier])` |
+| `account` | public | the caller account-hash the proof is bound to |
+
+Internally the circuit:
+
+- computes the leaf as `MiMC7([identity, nullifier])` (91 rounds),
+- runs a `MerkleTreeChecker(20)` and constrains `tree.root === root`, so the leaf must be
+  a genuine member of the depth-20 allowlist (capacity up to 2^20 leaves),
+- constrains `MiMC7([nullifier]) === nullifierHash`, exposing the spend tag without
+  exposing the nullifier,
+- folds `account` into the constraints so its value is fixed by the proof.
+
+```
+// zk-gate/circuits/eligibility.circom
+component main {public [root, nullifierHash, account]} = Eligibility(20);
+```
+
+The proof is produced off-chain (the prover converts the snarkjs output into the compact
+binary format the contract expects), then submitted in a single transaction.
+
+## The on-chain verifier
+
+`contracts/src/verifier.rs` compiles a **Groth16** verifier over the **BN254** curve
+(`ark-groth16` plus `ark-bn254`) directly into the contract. It is forked from Shroud
+Protocol's circuit-agnostic verifier and pinned to this circuit's verifying key.
+
+To stay under Casper's per-transaction argument size cap, proofs are passed as a compact
+**256-byte** blob: eight 32-byte big-endian field elements laying out the Groth16
+`(A, B, C)` group points. The verifier reconstructs the proof, assembles the public
+inputs in the exact circuit order, and runs the pairing check.
+
+```rust
+// Public inputs are bound in circuit order: root, nullifier_hash, account.
+// `account` is the on-chain caller, so the proof cannot be replayed by another address.
+let mut public_inputs: Vec<Fr> = Vec::with_capacity(3);
+public_inputs.push(u256_to_fr(root));
+public_inputs.push(u256_to_fr(nullifier_hash));
+public_inputs.push(address_to_fr(account));
+
+Groth16::<Bn254>::verify_with_processed_vk(&pvk, &public_inputs, &proof).unwrap_or(false)
+```
+
+Because `account` is a public input fixed to `env::caller()`, a proof minted for one
+account fails verification for any other caller.
+
+## Entry points
+
+| Entry point | Signature | Access | Returns |
+| --- | --- | --- | --- |
+| `verify_eligibility` | `verify_eligibility(proof: Vec<u8>, root: U256, nullifier_hash: U256)` | Public, proof-gated | none, emits `EligibilityGranted` |
+| `set_root` | `set_root(new_root: U256)` | Owner only | none, emits `RootUpdated` |
+| `is_eligible` | `is_eligible(who: Address)` | Public view | `bool` |
+| `get_root` | `get_root()` | Public view | `U256` |
+| `granted_count` | `granted_count()` | Public view | `u64` |
+
+The allowlist is rotated entirely through `set_root`: members are added or removed
+off-chain, and the owner publishes the new Merkle root. The members themselves never
+touch the chain.
+
+## How `verify_eligibility` works
+
+<Steps>
+
+### Build the proof off-chain
+
+The caller takes its private `(identity, nullifier)` and Merkle path, computes the public
+`nullifier_hash`, sets `account` to its own account-hash, and generates a Groth16 proof.
+That proof is encoded into the 256-byte binary format.
+
+### Submit one transaction
+
+The caller invokes `verify_eligibility(proof, root, nullifier_hash)`. The `root` it passes
+must equal the allowlist root currently stored on-chain.
+
+### The contract verifies
+
+The contract runs four ordered checks (see below). The proof is checked against the
+account derived from `env::caller()`, not from any argument, so the binding cannot be
+spoofed.
+
+### Eligibility is granted
+
+On success the contract burns the nullifier, marks the caller eligible, increments
+`granted_count`, and emits `EligibilityGranted`. A later `is_eligible(caller)` returns
+`true`.
+
+</Steps>
+
+The on-chain checks, in order, map one-to-one onto the contract's revert errors:
+
+```rust
+pub fn verify_eligibility(&mut self, proof: Vec<u8>, root: U256, nullifier_hash: U256) {
+    // 1. the submitted root must match the on-chain allowlist root
+    if root != self.allowlist_root.get().unwrap_or_revert(&self.env()) {
+        self.env().revert(Error::UnknownRoot);
+    }
+    // 2. the nullifier must not have been spent before
+    if self.spent_nullifiers.get(&nullifier_hash).unwrap_or(false) {
+        self.env().revert(Error::AlreadyClaimed);
+    }
+    // 3. the Groth16 proof must verify, binding the caller's account
+    let caller = self.env().caller();
+    if !Verifier::verify(&proof, root, nullifier_hash, caller) {
+        self.env().revert(Error::InvalidProof);
+    }
+    // 4. burn the nullifier, mark eligible, count, emit
+    self.spent_nullifiers.set(&nullifier_hash, true);
+    self.eligible.set(&caller, true);
+    self.granted.set(self.granted.get_or_default() + 1);
+    // ... emits EligibilityGranted { account: caller, nullifier_hash, timestamp }
+}
+```
+
+<Callout type="warning">
+**Each membership is one-shot and replay-safe.** The `nullifier_hash` is recorded the
+first time it clears, so the same membership cannot be claimed twice (`AlreadyClaimed`),
+and the proof is bound to the caller, so it cannot be reused by another account
+(`InvalidProof`). These two properties together make the gate sybil-resistant.
+</Callout>
+
+## Events and errors
+
+| Event | Fields |
+| --- | --- |
+| `EligibilityGranted` | `account: Address`, `nullifier_hash: U256`, `timestamp: u64` |
+| `RootUpdated` | `root: U256` |
+
+| Error | Code | Raised when |
+| --- | --- | --- |
+| `NotOwner` | 1 | a non-owner called `set_root` |
+| `UnknownRoot` | 2 | the submitted `root` does not match the on-chain allowlist root |
+| `InvalidProof` | 3 | the Groth16 proof failed verification (or was not bound to the caller) |
+| `AlreadyClaimed` | 4 | the `nullifier_hash` was already spent |
+
+## Verify it on-chain
+
+This is not a claim on paper. A real proof has already cleared the gate on Casper
+testnet:
+
+- **Open the package.** The package hash
+  [`7be33b…5227`](https://testnet.cspr.live/contract-package/7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227)
+  links to its versions, entry points, and activity on cspr.live.
+- **Read the root.** `get_root()` returns the on-chain allowlist root
+  `16331994690242190256441629756923135657650690078906869969179988007525570044228`.
+- **Count the grants.** `granted_count()` returns **1**: one valid proof has been verified
+  on-chain, and the agent confirms this credential before each attestation cycle.
+
+## Related
+
+<Cards>
+  <Cards.Card title="Contracts & addresses" href="/docs/network/contracts" arrow />
+  <Cards.Card title="The autonomous agent" href="/docs/network/agent" arrow />
+  <Cards.Card title="How it works" href="/docs/how-it-works" arrow />
+  <Cards.Card title="The attestation record" href="/docs/concepts/attestation" arrow />
+</Cards>

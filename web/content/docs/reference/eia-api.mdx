@@ -1,0 +1,161 @@
+---
+title: "EIA API"
+description: "Reference for the upstream EIA APIv2 that Claros attests from: the faceted GET /v2/{route}/data endpoint, its query parameters, the JSON response shape, and how the Claros adapter reads, scales, and hashes each row."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# EIA API
+
+This page documents the **upstream** API Claros reads from: the U.S. Energy Information Administration (EIA) APIv2. Claros does not replace this API, it attests from it. The agent calls EIA off-chain, pins the latest value, and records it on Casper so consumers can read a verifiable number without ever touching EIA themselves.
+
+The details below come straight from EIA's published OpenAPI spec (OpenAPI 3.0, `EIA APIv2` version `2.1.0`, server `https://api.eia.gov`). For how Claros maps an EIA series onto a `feed_id`, see [the EIA data model](/docs/concepts/data-model); for the full list of attestable datasets and their facet values, see [the data catalog](/docs/catalog).
+
+<Callout type="info">
+EIA APIv2 is **one uniform, faceted API**. Electricity, natural gas, petroleum, coal, nuclear, SEDS, CO2, outlooks, and international data are all reached through the same endpoint shape, which is why Claros ships a single generic adapter (`agent/src/eia.ts`) instead of one client per family.
+</Callout>
+
+## Authentication and limits
+
+Every EIA request needs a free API key, passed as the `api_key` query parameter. In the spec this is a global security requirement (`securitySchemes.api_key`, an `apiKey` in `query`), so it applies to every endpoint, including the data endpoint below.
+
+- **Get a key:** register at [https://www.eia.gov/opendata/](https://www.eia.gov/opendata/). It is free and immediate.
+- **Rate limits:** EIA throttles by key. The Claros adapter treats HTTP `429` as a back-off signal (`throw new Error('EIA rate limit (429)')` in `fetchLatest`) and never hammers the endpoint, since it only ever asks for a single row per feed.
+- **Transport:** all calls are plain HTTPS `GET` against `https://api.eia.gov`. The spec also defines `POST` variants that carry the same selectors in a JSON body, but Claros uses `GET` exclusively.
+
+## The data endpoint
+
+All numeric values come from one endpoint, parameterized by a dataset `route`:
+
+```http
+GET https://api.eia.gov/v2/{route}/data
+```
+
+`{route}` is the dataset path, for example `petroleum/pri/spt` (petroleum, prices, spot) or `electricity/retail-sales`. The route fixes which physical table you query, and with it the set of frequencies, columns, and facets that are valid. Everything else is supplied as query parameters.
+
+EIA uses PHP-style nested query parameters, so several parameters carry bracketed keys (`data[0]`, `facets[series][]`, `sort[0][column]`). This is exactly how the Claros adapter serializes them in `buildUrl`.
+
+### Query parameters
+
+| Parameter | Spec name | Required | Shape | What it does |
+| --- | --- | --- | --- | --- |
+| `api_key` | `api_key` | Yes | string | Your EIA API key. Required on every request. |
+| `frequency` | `frequency` | Recommended | string | The time granularity, exactly one of `daily`, `weekly`, `monthly`, `quarterly`, `annual`, `hourly`. The route advertises which it supports and a `defaultFrequency`. |
+| `data[0]` | `data` (array) | Yes in practice | string | The numeric column to return, for example `data[0]=value`. The spec models `data` as an array ("Data columns to filter by"), so it serializes as `data[0]`, `data[1]`, and so on. Without it, EIA returns rows with no numeric column. |
+| `facets[<id>][]` | `facets` (object) | Optional | string | The filters. `facets` is an object keyed by facet `id`, so each filter is sent as `facets[<id>][]=<value>`, for example `facets[series][]=RWTC`. Repeat the parameter to pass several ids or several values for one id. |
+| `sort[0][column]` | `sort.column` | Optional | string | Which column to order by. Claros always uses `period`. |
+| `sort[0][direction]` | `sort.direction` | Optional | string | `asc` or `desc`. Claros uses `desc` so the newest period comes first. |
+| `offset` | `offset` | Optional | integer | Row offset into the result set. Claros sends `0`. |
+| `length` | `length` | Optional | integer | Maximum number of rows returned. Claros sends `1` to fetch only the latest row. |
+| `start`, `end` | `start`, `end` | Optional | string | Optional period bounds ("Start date to filter by" / "End date to filter by"). Claros does not use these: it sorts by `period` descending and takes `length=1` instead. |
+
+<Callout type="warning">
+The spec marks every parameter except `api_key` as optional. That is structurally true but operationally misleading: to pull one deterministic, current number you must send `data[0]` (the column), usually `frequency`, and the facets that narrow the route to a single series. Claros always sends `data[0]`, `frequency`, the feed's facets, `sort[0]=period desc`, `offset=0`, and `length=1`.
+</Callout>
+
+## Worked example: WTI spot price
+
+WTI crude is the `petroleum/pri/spt` route, daily frequency, `value` column, filtered to the `RWTC` series (EIA's code for "Cushing, OK WTI spot price"). The request for the single latest quote is:
+
+```http
+GET https://api.eia.gov/v2/petroleum/pri/spt/data?api_key=YOUR_KEY&frequency=daily&data[0]=value&facets[series][]=RWTC&sort[0][column]=period&sort[0][direction]=desc&length=1
+```
+
+The same call with `curl` (note the bracketed parameters are quoted so the shell does not expand them):
+
+```bash
+curl -G 'https://api.eia.gov/v2/petroleum/pri/spt/data' \
+  --data-urlencode 'api_key=YOUR_KEY' \
+  --data-urlencode 'frequency=daily' \
+  --data-urlencode 'data[0]=value' \
+  --data-urlencode 'facets[series][]=RWTC' \
+  --data-urlencode 'sort[0][column]=period' \
+  --data-urlencode 'sort[0][direction]=desc' \
+  --data-urlencode 'length=1'
+```
+
+Swapping the facet (`facets[series][]=RBRTE`) gives Brent on the same route; swapping the column or route gives a different metric entirely. That is the whole point of the four-knob model in [the data model](/docs/concepts/data-model).
+
+## Response shape
+
+EIA wraps everything in a container with a top-level `apiVersion`, an echoed `request`, and a `response` object. The actual rows live in `response.data`, an array. With `length=1` it holds exactly one element.
+
+```json
+{
+  "response": {
+    "total": "11000",
+    "dateFormat": "YYYY-MM-DD",
+    "frequency": "daily",
+    "description": "Cushing, OK WTI Spot Price FOB",
+    "data": [
+      {
+        "period": "2026-06-19",
+        "series": "RWTC",
+        "series-description": "Cushing, OK WTI Spot Price FOB",
+        "value": "78.94",
+        "units": "$/BBL"
+      }
+    ]
+  },
+  "request": { "command": "/v2/petroleum/pri/spt/data", "params": {} },
+  "apiVersion": "2.1.0"
+}
+```
+
+Three things matter when reading a row:
+
+- **`response.data` is an array of rows.** Claros sorts by `period` descending and takes `data[0]`, the most recent period.
+- **The value is a string in the chosen column.** Because you requested `data[0]=value`, the number arrives as `row.value`, and it is a JSON **string** (`"78.94"`), not a float. Scaling it as a string is what avoids floating-point drift.
+- **The unit travels on the row.** `row.units` (here `"$/BBL"`) carries the human unit. Claros prefers this over its own configured label so the on-chain unit stays in sync if EIA changes it.
+
+<Callout type="info">
+On error, EIA returns a body with an `error` field (and the HTTP status may still be `200`). The adapter checks `body.error` explicitly and surfaces it, in addition to handling non-`2xx` statuses and the `429` rate-limit case.
+</Callout>
+
+## How Claros uses it
+
+The adapter in `agent/src/eia.ts` turns one EIA row into one on-chain reading. Each feed is a small tuple (`route`, `frequency`, `data_col`, `facets`, `unit`, `decimals`); the adapter does the rest.
+
+<Steps>
+
+### Build the URL
+
+`buildUrl` serializes the feed tuple plus the fixed "latest row" tail. It appends `data[0]=<data_col>`, one `facets[<id>][]=<value>` per facet, then `sort[0][column]=period`, `sort[0][direction]=desc`, `offset=0`, and `length=1`:
+
+```ts
+p.append('data[0]', f.data_col);
+for (const [k, v] of Object.entries(f.facets)) p.append(`facets[${k}][]`, v);
+p.set('sort[0][column]', 'period');
+p.set('sort[0][direction]', 'desc');
+p.set('offset', '0');
+p.set('length', '1');
+```
+
+### Read the latest row
+
+`fetchLatest` calls the endpoint, rejects empty, non-JSON, error, and `429` responses, then reads `body.response.data[0]`. It pulls the raw value from `row[data_col]` and the unit from `row.units` (falling back to `row["<col>-units"]`, then the configured `unit`).
+
+### Scale to an integer
+
+The string value is scaled to a fixed-point integer using the feed's `decimals`: `amount = value * 10^decimals`. `scaleDecimalString` does this on the decimal **string** (splitting on the dot, padding or trimming the fraction to `decimals` digits) so there is no float rounding. With `decimals: 6`, `"78.94"` becomes `78940000n`. Any consumer recovers the human value as `amount / 10^decimals`.
+
+### Hash the source
+
+`sourceHash` computes a SHA-256 digest over a canonical JSON of the stable fields only (`route`, `frequency`, sorted `facets`, `period`, `value`, `unit`), keeping the first 32 hex characters. This becomes the attestation's `source_hash`: recompute it from the same EIA row to prove the on-chain number was not altered.
+
+</Steps>
+
+The result is an `EiaReading` (`asset_id`, integer `period`, `amount`, human `value`, `unit`, `source_hash`, raw `latest_date`) that the agent writes to the AttestationRegistry. From that point on, consumers read the feed from Claros and never call EIA again.
+
+<Callout type="warning">
+The OpenAPI spec is **structural**. It defines the endpoint, the parameter shapes, and the response envelope, but not the allowed facet values. The real codes (for example `RWTC` for WTI, or the `stateid` and `sectorid` options for electricity) come from the dataset itself. Find them in the [Claros catalog](/docs/catalog), or query EIA's self-describing facet endpoints under the same route prefix: `GET /v2/{route}/facet` lists a route's facets, and `GET /v2/{route}/facet/{facet_id}` lists the allowed values for one facet.
+</Callout>
+
+## Related
+
+<Cards>
+  <Cards.Card title="The EIA data model" href="/docs/concepts/data-model" />
+  <Cards.Card title="Data catalog" href="/docs/catalog" />
+  <Cards.Card title="Fixed-point decimals" href="/docs/concepts/decimals" />
+  <Cards.Card title="Provenance and source hashes" href="/docs/concepts/provenance" />
+</Cards>

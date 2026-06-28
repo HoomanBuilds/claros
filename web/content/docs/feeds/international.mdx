@@ -1,0 +1,38 @@
+---
+title: "International"
+description: "Live international feeds: exact feed ids, routes, facets, and units."
+---
+
+import { Callout } from 'nextra/components'
+
+# International
+
+1 live feed in the international family. Each section gives the exact `feed_id`, the EIA route, the frequency, the data column you read, every facet filter (id, the value Claros uses, and what that filter means in the EIA catalog), the unit, and the decimals. To turn an on-chain integer into a human value, compute `amount / 10^decimals`.
+
+<Callout type="info">
+Facet ids are the EIA filters. The "Means" column is taken from the dataset definition in the [data catalog](/docs/catalog). Pick a feed by its `feed_id` and read it with [the SDK](/docs/reading/sdk) or [REST](/docs/reading/rest).
+</Callout>
+
+## CRUDE_PROD.WORLD
+
+International: value (annual), filtered to activityId=1, productId=57, countryRegionId=WORL, unit=TBPD, in Mbbl/d.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.INTL.CRUDE_PROD.WORLD.ANNUAL` |
+| EIA route | `international` |
+| Dataset | International |
+| Frequency | annual |
+| Data column | `value` |
+| Unit | Mbbl/d |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `activityId` | `1` | Activity |
+| `productId` | `57` | Product |
+| `countryRegionId` | `WORL` | Country/Region |
+| `unit` | `TBPD` | Unit |
+

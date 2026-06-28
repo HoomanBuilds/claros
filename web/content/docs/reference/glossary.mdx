@@ -1,0 +1,83 @@
+---
+title: "Glossary"
+description: "Plain-language definitions of the terms used across the Claros oracle docs: feed_id, attestations, decimals, EIA route and facets, x402, WCSPR, sCSPR, and the ZK eligibility terms."
+---
+
+import { Callout, Cards } from 'nextra/components'
+
+# Glossary
+
+A quick reference for the vocabulary used across the Claros docs. Almost
+everything here resolves to one idea: a `feed_id` is the single key, and the
+other terms either describe a feed, scale its value, prove where it came from,
+or pay for it.
+
+<Callout type="info">
+  One [`feed_id`](/docs/concepts/feeds) is the master key. It keys the
+  **FeedRegistry** (metadata) and the **AttestationRegistry** (value), and it is
+  the only identifier you pass to the SDK, the REST API, or a cross-contract
+  call.
+</Callout>
+
+## Feeds and registries
+
+| Term | Definition |
+| --- | --- |
+| [`feed_id`](/docs/concepts/feeds) | The stable string that names one data series and the only identifier you ever pass to Claros, for example `EIA.PET.PRICE.WTI.DAILY` or `OP-1`. It is the single key into both registries: metadata from the FeedRegistry, value from the AttestationRegistry, read with the same string. |
+| **attestation** | One value the agent wrote on-chain for a feed, recording the reporting `period`, the scaled `amount`, the `source_hash`, the `attester` account, and the chain `timestamp`. The AttestationRegistry keeps the latest plus an append-only history per `feed_id`. |
+| [`AttestationRegistry`](/docs/reference/contract-types) | The Casper contract that stores feed values by `feed_id` (package `236b51…16cc`). Its `get_latest(asset_id)` view returns the most recent attestation for a feed. |
+| [`FeedRegistry`](/docs/reference/contract-types) | The Casper contract that stores self-describing metadata by `feed_id`: `decimals`, `unit`, `source`, `route`, `frequency`, `title`, and `description` (package `dac573…6f46`). A consumer reads it to interpret a value entirely on-chain, the Pyth model where a number ships with its exponent and unit. |
+
+## Values and scaling
+
+| Term | Definition |
+| --- | --- |
+| `amount` | The scaled integer value stored on-chain, a `U512` equal to the human value times `10^decimals`. For WTI at `$78.94` with `decimals = 6` the amount is `78940000`. |
+| [`decimals`](/docs/concepts/decimals) / scaling | The per-feed exponent that turns the integer `amount` back into a human number: value = amount / 10^decimals, the Pyth fixed-point convention. It is feed metadata, so always read it rather than assuming a fixed scale. |
+| `source_hash` / provenance | A deterministic SHA-256 digest of the exact upstream row a value came from, attested on-chain and served identically over the paid [x402](/docs/reading/x402) feed. A buyer reconciles the two hashes to confirm the purchased reading matches what Claros committed on-chain, without trusting the server. |
+| `period` | The reporting period the value describes, stored as an integer: `YYYYMMDD` daily, `YYYYMM` monthly, `YYYY` annual, and epoch seconds for hourly feeds. It says which real-world interval the value covers, distinct from `timestamp`, which is when the value was written. |
+
+## EIA data model
+
+These four selectors fully determine one EIA series, and a `feed_id` encodes all
+four. See [the EIA data model](/docs/concepts/data-model) for the full treatment.
+
+| Term | Definition |
+| --- | --- |
+| `route` | The EIA dataset path under the APIv2 endpoint, for example `petroleum/pri/spt`. It fixes which upstream table a feed reads. |
+| `frequency` | The reporting cadence of a feed, one of `daily`, `weekly`, `monthly`, `quarterly`, `annual`, or `hourly`. It also fixes the shape of the `period` the source returns. |
+| `column` | The single numeric column Claros reads from an EIA row (`data[0]`), for example `value` or `price`. The same route and facets with a different column give a different metric (a price versus a volume versus a revenue). |
+| `facet` | An EIA filter, an `id` plus a chosen value (for example `series=RWTC`), that narrows a dataset down to one series per period. A feed pins the facets it needs; some already-national series need none. |
+
+## Payments and yield
+
+| Term | Definition |
+| --- | --- |
+| [**x402**](/docs/reading/x402) | The HTTP 402 "Payment Required" protocol behind the metered, paid read path. A client signs a WCSPR `transfer_with_authorization`, a facilitator settles it on Casper, and the reading comes back with on-chain provenance. |
+| `WCSPR` | Wrapped CSPR, the CEP-18 token used to settle [x402](/docs/reading/x402) payments (package `3d80df…7c1e`). It supports `transfer_with_authorization`, which native CSPR cannot, so a buyer authorizes the transfer off-chain and the facilitator submits it. |
+| `sCSPR` | The WiseLending yield-bearing liquid-staking token the agent receives when it stakes treasury CSPR, with a redemption rate that grows as yield accrues. Staking into WiseLending is the agent's preferred way to put idle treasury to work. |
+
+## Eligibility (zero-knowledge)
+
+| Term | Definition |
+| --- | --- |
+| [**Merkle root**](/docs/network/zk-gate) | The on-chain anchor of the eligibility allowlist, a single value committing to a depth-20 MiMC7 tree of permitted leaves. The EligibilityGate stores it, and a valid proof must show membership under this root. |
+| [nullifier](/docs/network/zk-gate) / `nullifierHash` | A one-shot tag the zero-knowledge proof publishes so an eligibility credential cannot be reused. The EligibilityGate burns each `nullifierHash` on first use and reverts `AlreadyClaimed` on replay, without revealing which allowlist leaf was used. |
+
+## Casper platform
+
+| Term | Definition |
+| --- | --- |
+| **Condor** / `TransactionV1` | Casper 2.0 (codename Condor) and its transaction type, `TransactionV1`. Every Claros write is a `TransactionV1` the agent builds and signs with casper-js-sdk v5. |
+| `motes` | The smallest unit of CSPR, where 1 CSPR = 1,000,000,000 motes (1e9). Gas limits and transferred amounts are expressed in motes. |
+
+## Related
+
+<Cards>
+  <Cards.Card title="Feeds & feed_id" href="/docs/concepts/feeds" arrow />
+  <Cards.Card title="Decimals & scaling" href="/docs/concepts/decimals" arrow />
+  <Cards.Card title="The EIA data model" href="/docs/concepts/data-model" arrow />
+  <Cards.Card title="Pay-per-call (x402)" href="/docs/reading/x402" arrow />
+  <Cards.Card title="The ZK eligibility gate" href="/docs/network/zk-gate" arrow />
+  <Cards.Card title="Contract types" href="/docs/reference/contract-types" arrow />
+</Cards>

@@ -1,0 +1,233 @@
+---
+title: "Attestation & freshness"
+description: "How Claros records a value on-chain (period, amount, source_hash, attester, timestamp) and how to tell whether a reading is fresh."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# Attestation & freshness
+
+Every value Claros publishes is an **attestation**: a compact record written to the `AttestationRegistry` contract by the Claros agent, and only by the agent's authorized attester key. An attestation pins a number to the real-world data **period** it covers, a provenance hash, the account that wrote it, and the chain time it was committed.
+
+This page covers the record's fields, how `period` encodes each cadence, and how to decide whether a reading is fresh enough to use.
+
+## The attestation record
+
+On-chain, an attestation is this Odra struct (`contracts/src/attestation_registry.rs`):
+
+```rust
+#[odra::odra_type]
+pub struct Attestation {
+    pub period: u64,
+    pub amount: U512,
+    pub source_hash: String,
+    pub attester: Address,
+    pub timestamp: u64,
+}
+```
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `period` | `u64` | The real-world data period the value covers, encoded as an integer (see [What `period` means](#what-period-means)). |
+| `amount` | `U512` | The integer value. The human value is `amount / 10^decimals`, where `decimals` comes from the feed's [metadata](/docs/feeds). |
+| `source_hash` | `String` | A deterministic provenance digest (a 32-character truncated SHA-256) of the canonical source row. Identical wherever the reading is computed, so the on-chain value and the served feed share one verifiable digest. |
+| `attester` | `Address` | The account that wrote the record. `attest` reverts `Unauthorized` for anyone but the configured attester (the Claros agent, account-hash `43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4`). |
+| `timestamp` | `u64` | Epoch **milliseconds**, set by the chain via `get_block_time()` at inclusion. It is the commit time, not a value supplied by the agent. |
+
+<Callout type="info">
+`timestamp` is assigned by the network, not the caller. The agent can pick the `period` it attests, but it cannot backdate or forge the on-chain commit time. That makes `timestamp` the trustworthy signal for "when was this written?".
+</Callout>
+
+### How records are stored
+
+`attest(asset_id, period, amount, source_hash)` writes three places at once: the `latest` value for the feed, an append-only `history` entry keyed `"{asset_id}#{index}"`, and a per-feed `count` (the total across all feeds is also tracked). Read them back with these view methods:
+
+| Method | Returns | Use |
+| --- | --- | --- |
+| `get_latest(asset_id)` | `Option<Attestation>` | The most recent attestation for a feed. |
+| `get_at(asset_id, index)` | `Option<Attestation>` | A specific historical attestation (index `0` is the first). |
+| `get_count(asset_id)` | `u64` | Number of attestations for a feed. |
+| `total_attestations()` | `u64` | Total across all feeds. |
+| `get_attester()` | `Address` | The authorized attester account. |
+
+For most consumers, `get_latest` (on-chain) or its off-chain equivalents are all you need: see [the SDK](/docs/reading/sdk), [the REST API](/docs/reading/rest), and [cross-contract reads](/docs/reading/on-chain).
+
+### Verifying provenance with `source_hash`
+
+`source_hash` is computed from the stable source fields only (for EIA: route, frequency, sorted facets, period, value, unit; for civic data: asset, period, amount, count, source URL). Because the formula is deterministic, a consumer can recompute the digest from the raw upstream data and compare it to the on-chain `source_hash`. A match proves the attested number was derived from that exact source row and was not altered in transit.
+
+## What `period` means
+
+`period` is an integer that names the interval the value describes. The encoding depends on the feed's `frequency` (read it from the [feed metadata](/docs/feeds)). The agent strips the separators from the source's period string, so a calendar period becomes a plain integer:
+
+| Cadence (`frequency`) | `period` format | Example | Covers |
+| --- | --- | --- | --- |
+| `daily` | `YYYYMMDD` | `20260623` | 23 Jun 2026 |
+| `weekly` | `YYYYMMDD` | `20260619` | The week the source dates 19 Jun 2026 |
+| `monthly` | `YYYYMM` | `202605` | May 2026 |
+| `annual` | `YYYY` | `2025` | Calendar year 2025 |
+| `hourly` | epoch **seconds** | `1750680000` | One UTC hour |
+
+<Callout type="warning">
+Hourly feeds (for example `EIA.ELEC.DEMAND.US48.HOURLY`) encode `period` as **epoch seconds**, not a date integer. Always branch on the feed's `frequency` before you parse `period`, otherwise an hourly `period` will look like a nonsensical date.
+</Callout>
+
+A length-based decoder handles every cadence:
+
+```ts
+// period -> the UTC instant the value covers. `frequency` comes from the feed metadata.
+function decodePeriod(period: number, frequency: string): Date {
+  if (frequency === 'hourly') return new Date(period * 1000); // epoch seconds
+  const s = String(period);
+  if (s.length === 8) return new Date(Date.UTC(+s.slice(0, 4), +s.slice(4, 6) - 1, +s.slice(6, 8))); // YYYYMMDD
+  if (s.length === 6) return new Date(Date.UTC(+s.slice(0, 4), +s.slice(4, 6) - 1, 1));               // YYYYMM
+  if (s.length === 4) return new Date(Date.UTC(+s, 0, 1));                                             // YYYY
+  throw new Error(`unrecognized period: ${period}`);
+}
+```
+
+## Checking freshness
+
+A reading carries two independent time signals, and a robust staleness check uses both:
+
+| | `period` | `timestamp` / `updated_at` |
+| --- | --- | --- |
+| What it is | The real-world interval the value covers | The chain time the attestation was committed |
+| Set by | The agent (from the source row) | The chain (`get_block_time()` at inclusion) |
+| Format | `YYYYMMDD` / `YYYYMM` / `YYYY` (epoch seconds if hourly) | Epoch milliseconds |
+| Answers | "What does this number describe?" | "When was it written?" |
+
+They can diverge. A value written minutes ago can still carry an old `period` if the upstream source has not published anything new, and a recent `period` written long ago means nothing has changed since. Check `timestamp` for write age, and decode `period` to confirm the underlying data is current for the cadence you expect.
+
+<Callout type="info">
+`timestamp` (cross-contract field) and `updated_at` (SDK `getReading` and REST) are the **same value**: the on-chain commit time in epoch milliseconds. The SDK's lower-level `getValue` exposes it as `timestamp` to match the contract.
+</Callout>
+
+A reasonable default tolerance, before you treat a reading as stale, scales with the cadence and the source's own publishing lag:
+
+| Cadence | Suggested max age |
+| --- | --- |
+| `hourly` | a few hours |
+| `daily` | 2 to 3 days (sources lag) |
+| `weekly` | about 10 days |
+| `monthly` | about 45 days |
+| `annual` | until the next release window |
+
+<Tabs items={['SDK', 'REST', 'Cross-contract']}>
+<Tabs.Tab>
+
+`getReading` returns `period`, `frequency`, and `updated_at` (epoch ms) in one call, so a freshness guard is a subtraction:
+
+```ts
+import { ClarosOracle } from 'claros-oracle';
+
+const oracle = new ClarosOracle(); // testnet addresses baked in
+
+// Suggested wall-clock tolerance per cadence, in ms.
+const MAX_AGE: Record<string, number> = {
+  hourly: 3 * 3_600_000,
+  daily: 3 * 86_400_000,
+  weekly: 10 * 86_400_000,
+  monthly: 45 * 86_400_000,
+  annual: 400 * 86_400_000,
+};
+
+async function isFresh(feedId: string): Promise<boolean> {
+  const r = await oracle.getReading(feedId);
+  if (!r) return false;                    // never attested
+  const ageMs = Date.now() - r.updated_at; // updated_at is epoch ms
+  return ageMs <= (MAX_AGE[r.frequency] ?? 86_400_000);
+}
+```
+
+</Tabs.Tab>
+<Tabs.Tab>
+
+The [REST API](/docs/reading/rest) returns the same fields as JSON, with `updated_at` in epoch milliseconds:
+
+```http
+GET /v1/feeds/OP-1
+```
+
+```json
+{
+  "feed_id": "OP-1",
+  "value": 2734.2,
+  "amount": "273420",
+  "decimals": 2,
+  "frequency": "daily",
+  "period": 20260623,
+  "source_hash": "…",
+  "updated_at": 1750680000000
+}
+```
+
+Compute `Date.now() - updated_at` against your tolerance, and run `period` through `decodePeriod` to confirm which day it covers.
+
+</Tabs.Tab>
+<Tabs.Tab>
+
+On-chain, read `get_latest` and compare its `timestamp` to the current block time. They share the same clock (epoch ms), so the gap is the value's age:
+
+```rust
+// Inside your Odra contract. Trait wiring is covered on the cross-contract page.
+let att = match self.registry.get_latest(asset_id.clone()) {
+    Some(a) => a,
+    None => self.env().revert(Error::NoData),
+};
+
+let now = self.env().get_block_time(); // epoch ms, same clock the registry stamps with
+if now.saturating_sub(att.timestamp) > MAX_AGE_MS {
+    self.env().revert(Error::StaleData);
+}
+
+// att.amount is the integer value; scale by the feed's decimals as needed.
+```
+
+See [cross-contract reads](/docs/reading/on-chain) for declaring the external contract traits.
+
+</Tabs.Tab>
+</Tabs>
+
+## The agent re-attests only on new data
+
+Claros runs an hourly heartbeat (`agent/src/loop.ts`), but a heartbeat is not an attestation. Each tick the agent checks whether the source has advanced, and runs a full cycle only when it has.
+
+<Steps>
+
+### Heartbeat
+
+The agent wakes on an interval (default `CYCLE_INTERVAL_MS = 3_600_000`, one hour) for each configured asset.
+
+### Read the latest period
+
+It fetches the source's most recent reading and reads off its `period`.
+
+### Compare to the last processed period
+
+It keeps the last attested `period` per asset in a small state file. If `period <= last`, it logs "no new data" and skips: no transaction, no write.
+
+### Run the cycle
+
+Only when `period` strictly advances does it run a cycle (the ZK eligibility gate, an anomaly check, then `attest`, then a treasury decision) and record the new `period`.
+
+</Steps>
+
+<Callout type="warning">
+Casper testnet charges the gas **limit** you set, not the gas consumed, with no refund. Re-attesting an unchanged `period` would burn gas for an identical record, so the agent deduplicates by period. Each feed's history therefore holds at most one attestation per genuinely new period, and stored periods strictly increase.
+</Callout>
+
+Two consequences for consumers:
+
+- **A stale `timestamp` is itself a signal.** Because the agent only writes on a new period, a large gap between `now` and `timestamp` means the upstream source has published nothing new, or the agent has paused. Your freshness check catches both.
+- **New data is necessary, not sufficient.** Even on a fresh period, the cycle declines to `attest` if the ZK eligibility credential is not confirmed or the reading fails the anomaly check. The on-chain value is always the last reading the agent judged eligible and clean.
+
+## Related
+
+<Cards>
+  <Cards.Card title="Reading data: SDK" href="/docs/reading/sdk" arrow />
+  <Cards.Card title="Reading data: REST" href="/docs/reading/rest" arrow />
+  <Cards.Card title="Reading data: cross-contract" href="/docs/reading/on-chain" arrow />
+  <Cards.Card title="Live feeds" href="/docs/feeds" arrow />
+  <Cards.Card title="Data catalog" href="/docs/catalog" arrow />
+</Cards>

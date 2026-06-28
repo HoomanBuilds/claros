@@ -1,0 +1,207 @@
+---
+title: "Choose a method"
+description: "The four ways to read a Claros feed (REST, SDK, cross-contract, x402) and how to pick the one that fits where your code runs."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# Choose a method
+
+Every Claros value lives on-chain on Casper, keyed by a `feed_id` string. Reading
+that data is **free**. There are four ways to read a feed, and they all resolve to the
+same underlying on-chain reading. The right one depends on where your code runs: a
+backend, a browser, another Casper contract, or a metered pay-per-call endpoint.
+
+<Callout type="info">
+  On-chain reads are free. The REST API, the TypeScript SDK, and cross-contract calls
+  cost you nothing (the contract path pays only Casper gas, like any other call).
+  **x402 is the one paid path**: a hosted, metered endpoint where each call is settled
+  in WCSPR. See [contracts and RPC](/docs/network/contracts) for the registry hashes every method
+  reads from.
+</Callout>
+
+## At a glance
+
+| Method | Best for | Cost | Where it runs | Returns |
+| --- | --- | --- | --- | --- |
+| [REST API](/docs/reading/rest) | Any language: apps, dashboards, bots, AI agents | Free | Off-chain HTTP service (run it or use a hosted instance) | JSON reading |
+| [TypeScript SDK](/docs/reading/sdk) | JS / TS backends and frontends | Free | Off-chain, in your JS runtime (Node or browser) | Typed `Reading` / `Feed` / `FeedValue` |
+| [Cross-contract](/docs/reading/on-chain) | Other Casper contracts (DeFi, on-chain logic) | Gas only | On-chain, inside your Casper contract | `Option<Attestation>` / `Option<Feed>` |
+| [x402 metered](/docs/reading/x402) | Pay-per-call hosted access, agent-to-agent commerce | Paid (WCSPR per call) | Off-chain hosted service, settled on-chain | JSON reading with on-chain provenance |
+
+### Which one fits
+
+- **Reading from a server or script?** Use the [REST API](/docs/reading/rest) for any
+  language, or the [SDK](/docs/reading/sdk) if you are already in TypeScript.
+- **Reading from another Casper contract?** Use a [cross-contract](/docs/reading/on-chain)
+  call. It is the only on-chain path and costs only gas.
+- **Want a hosted, metered endpoint you can sell or buy per call?** Use
+  [x402](/docs/reading/x402). It is the paid path, settled in WCSPR.
+
+<Callout type="default">
+  The REST API and the SDK are the same code: `claros-api` is the `claros-oracle` SDK
+  behind plain HTTP. They return identical readings, so the choice is purely whether you
+  want a wire format (REST) or typed objects in-process (SDK).
+</Callout>
+
+## The same read, three free ways
+
+The three free methods return the same reading for the same `feed_id`. Here is
+`EIA.PET.PRICE.WTI.DAILY` (WTI crude oil daily spot price) read each way. The
+[Quickstart](/docs/quickstart) walks through the full example.
+
+<Tabs items={['REST', 'SDK', 'Cross-contract']}>
+
+<Tabs.Tab>
+
+```bash
+curl http://localhost:4030/v1/feeds/EIA.PET.PRICE.WTI.DAILY
+```
+
+Plain HTTP, any language, no key. Returns the reading as JSON.
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+```ts
+import { ClarosOracle } from 'claros-oracle'
+
+const oracle = new ClarosOracle() // Casper testnet defaults baked in
+const wti = await oracle.getReading('EIA.PET.PRICE.WTI.DAILY')
+
+console.log(wti.value, wti.unit) // 78.94 $/bbl
+```
+
+Reads Casper state directly, no server and no indexer.
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+```rust
+// inside your Odra module, with the AttestationRegistry package hash as `registry`:
+let att = ClarosValuesContractRef::new(self.env(), registry)
+    .get_latest("EIA.PET.PRICE.WTI.DAILY".to_string())
+    .unwrap_or_revert(&self.env());
+
+// real price = att.amount / 10^decimals
+```
+
+Runs on-chain. You scale `amount` by `decimals` yourself.
+
+</Tabs.Tab>
+
+</Tabs>
+
+<Callout type="info">
+  In every method the on-chain value is an integer. The human number is
+  `amount / 10^decimals`. REST and the SDK compute `value` for you; on-chain you do the
+  division. See [decimals and scaling](/docs/concepts/decimals).
+</Callout>
+
+## The four methods
+
+### REST API
+
+[`services/claros-api`](/docs/reading/rest) is an Express service (default port `4030`)
+that reads Casper on-chain state through the SDK and serves it as JSON. `GET /v1/feeds`
+lists every live feed with metadata and its latest value, `GET /v1/feeds/:id` returns
+one full reading, and `GET /v1/datasets?q=&family=` searches the EIA discovery
+[catalog](/docs/catalog). Each reading carries `feed_id`, `value`, `amount` (a string,
+U512-safe), `decimals`, `unit`, `title`, `source`, `route`, `frequency`, `period`,
+`source_hash`, and `updated_at`. No key, no wallet, no indexer. This is the best fit
+for apps, dashboards, bots, and AI agents in any language. Read more on
+[the REST API page](/docs/reading/rest).
+
+### TypeScript SDK
+
+The [`claros-oracle`](/docs/reading/sdk) npm package (v0.1.0) reads Casper global state
+directly over JSON-RPC, with the testnet contract addresses baked in. Construct
+`new ClarosOracle(cfg?)`, then call `getReading(id)` for a full typed `Reading`,
+`getValue(id)` and `getFeed(id)` for the value and metadata separately, or
+`feedCount()`, `feedIdAt(i)`, and `listFeedIds()` to enumerate every feed. There is no
+server to run and no indexer to sync. `Reading.amount` is a `bigint` (U512-safe) rather
+than a string. This is the fastest path when your code is already JavaScript or
+TypeScript. Read more on [the SDK page](/docs/reading/sdk).
+
+### Cross-contract
+
+To read Claros from your own Casper contract, declare the registries as external
+contracts and call `AttestationRegistry.get_latest(asset_id: String) -> Option<Attestation>`
+for the value and `FeedRegistry.get_feed(feed_id: String) -> Option<Feed>` for the
+metadata. `Attestation` gives you `period`, `amount` (`U512`), `source_hash`,
+`attester`, and `timestamp`; `Feed` gives you `decimals`, `unit`, `title`, `source`,
+`route`, `frequency`, and `description`. Compute `amount / 10^decimals` in-contract.
+This is the only on-chain path, and it costs gas only with no per-read fee. Read more on
+[the cross-contract page](/docs/reading/on-chain).
+
+<Callout type="warning">
+  Casper testnet bills the gas **limit** you set on a transaction, not the gas consumed,
+  and does not refund the difference. Set tight limits for cross-contract reads. See
+  [the network page](/docs/network/contracts) for details.
+</Callout>
+
+### x402 metered
+
+[`services/oracle-server`](/docs/reading/x402) (default port `4021`) exposes
+`GET /oracle/feed?asset_id=OP-1` behind the x402 HTTP 402 protocol. This is the paid,
+hosted, metered path: each call is settled in WCSPR (demo price `$0.001`, about 1 WCSPR,
+set by `FEED_PRICE_MOTES`). The endpoint serves the latest attested reading with
+on-chain provenance, carrying the same `source_hash` the agent attests, and the WCSPR
+lands with the Claros agent. The flow is:
+
+<Steps>
+
+### Request
+
+The client sends `GET /oracle/feed?asset_id=OP-1` with no payment.
+
+### 402 Payment Required
+
+The server quotes a payment: scheme `exact`, asset WCSPR, the `amount`, the `payTo`
+address, and network `casper-test`.
+
+### Pay and retry
+
+The client signs a WCSPR `transfer_with_authorization` and resends the request with an
+`X-PAYMENT` header. The [`services/consumer`](/docs/reading/x402) example does this
+automatically with `wrapFetchWithPayment` from `@x402/fetch` and `ExactCasperScheme`
+from `@make-software/casper-x402`.
+
+### Settle
+
+The facilitator (default port `4022`) verifies the payment and settles the transfer on
+Casper.
+
+### 200 OK
+
+The server returns the reading with its on-chain provenance, and the WCSPR settles to
+the agent.
+
+</Steps>
+
+This is how the Claros agent monetizes its data and funds its own attestations. Read
+more on [the x402 page](/docs/reading/x402).
+
+## Pick a page
+
+<Cards>
+  <Cards.Card title="REST API" href="/docs/reading/rest" arrow>
+    Free HTTP for any language. Apps, dashboards, bots, and agents.
+  </Cards.Card>
+  <Cards.Card title="TypeScript SDK" href="/docs/reading/sdk" arrow>
+    `claros-oracle` reads Casper state directly. No server, no indexer.
+  </Cards.Card>
+  <Cards.Card title="Cross-contract" href="/docs/reading/on-chain" arrow>
+    Call `get_latest(id)` from your own Casper contract. Gas only.
+  </Cards.Card>
+  <Cards.Card title="x402 (pay-per-call)" href="/docs/reading/x402" arrow>
+    Buy a reading from the hosted feed server, settled in WCSPR per call.
+  </Cards.Card>
+</Cards>
+
+<Callout type="info">
+  New to Claros? Start with the [Quickstart](/docs/quickstart) to read your first feed,
+  then browse the [live feeds](/docs/feeds) and the full [data catalog](/docs/catalog).
+</Callout>

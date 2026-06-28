@@ -1,0 +1,201 @@
+---
+title: "Pay-per-call (x402)"
+description: "The metered, paid way to read Claros, an HTTP 402 endpoint that settles WCSPR on Casper for hosted, agent-to-agent access."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# Pay-per-call (x402)
+
+Claros exposes a **metered, paid** read path on top of the [HTTP 402](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/402) "Payment Required" protocol ([x402](https://x402.org)). One HTTP `GET` either returns the reading or, if no payment is attached, returns a `402` describing exactly what to pay. The client signs a [WCSPR](/docs/network/contracts) `transfer_with_authorization`, retries with the signed payload, and a facilitator settles it on Casper. The reading comes back with on-chain provenance so the buyer can verify it independently.
+
+This path is built for **hosted, agent-to-agent, pay-as-you-go** access: a consumer (often another autonomous agent) calls a hosted Claros endpoint and pays per request with no account, no API key, and no invoice. The payment lands with the Claros agent, so every paid call **funds the oracle** and feeds the agent's on-chain reinvestment loop.
+
+<Callout type="info">
+  Reading Claros is free three other ways: [the REST API](/docs/reading/rest), [the SDK](/docs/reading/sdk), and a [cross-contract call](/docs/reading/on-chain). Reach for x402 only when you want a **hosted, metered** endpoint that an agent can pay for autonomously. The data is identical; x402 just adds settlement and a monetized, hosted surface.
+</Callout>
+
+## How a paid read works
+
+The whole 402 handshake is automatic on the client. The flow below is what happens under one `fetchWithPayment(...)` call.
+
+<Steps>
+
+### `GET /oracle/feed?asset_id=OP-1`
+
+The consumer requests the feed with no payment attached.
+
+### `402 Payment Required`
+
+The oracle server answers `402` with the payment requirements: scheme `exact`, asset `WCSPR`, the amount in motes, the `payTo` agent account, and network `casper:casper-test`. The requirements are surfaced to the client (the `PAYMENT-REQUIRED` response header is CORS-exposed).
+
+### Sign a WCSPR `transfer_with_authorization`
+
+From those requirements the client's Casper `exact` scheme builds and signs an off-chain WCSPR `transfer_with_authorization` (an EIP-3009-style authorization) for the exact amount, payable to the agent. No on-chain transaction yet, just a signature.
+
+### Retry with `X-PAYMENT`
+
+The client re-issues the same `GET`, now carrying the signed authorization in the `X-PAYMENT` header.
+
+### Facilitator verifies and settles on Casper
+
+The oracle server hands the payload plus requirements to the facilitator, which calls `verify`, then `settle`: it submits the WCSPR `transfer_with_authorization` as a Casper transaction (paying the on-chain gas itself) so the WCSPR moves from the consumer to the Claros agent.
+
+### `200 OK` plus provenance
+
+On a successful settle the server returns `200` with the reading and its on-chain provenance (registry package hash, attester, source hash, a `cspr.live` verify link). The settlement result (the on-chain tx) comes back in the payment-response header.
+
+</Steps>
+
+<Callout type="default">
+  The signature is created on the client; the **facilitator** is the only party that touches the chain. That keeps the consumer light: it needs a funded WCSPR key, not a node or a gas budget.
+</Callout>
+
+## Payment parameters
+
+These are the values the hosted resource advertises. They come straight from the oracle server's payment middleware and asset registration.
+
+| Parameter | Value | Notes |
+| --- | --- | --- |
+| Endpoint | `GET /oracle/feed` | The gated resource (oracle server, default port `4021`). |
+| Query | `asset_id` | Which feed to price and serve, for example `OP-1`. Defaults to `OP-1`. |
+| Scheme | `exact` | The x402 exact-amount scheme (`ExactCasperScheme`). The buyer pays a fixed amount. |
+| Asset | `WCSPR` | Wrapped CSPR, package `3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e`, 9 decimals. |
+| Price | `$0.001` (about 1 WCSPR) | The resource is tagged `$0.001`; the settled amount is pinned to `FEED_PRICE_MOTES`, default `1000000000` motes = 1 WCSPR (demo). |
+| Network | `casper:casper-test` | The CAIP-2 id for Casper testnet. |
+| Pay to | agent account (`PAYEE_ADDRESS`) | The WCSPR lands with the Claros agent, the same identity that attests readings on-chain. |
+| Settlement | facilitator (default port `4022`) | Verifies the authorization and submits the WCSPR transfer on Casper. |
+| Request header | `X-PAYMENT` | Carries the signed `transfer_with_authorization` payload (set for you by the client library). |
+| Response header | payment-response | Carries the settlement result (the on-chain tx) on the `200`. Read it with `x402HTTPClient.getPaymentSettleResponse`. |
+
+<Callout type="info">
+  The `$0.001` label and the on-chain amount are decoupled. The resource is priced `$0.001` for display, while the exact scheme settles `FEED_PRICE_MOTES` of WCSPR (1 WCSPR in the demo). Set `FEED_PRICE_MOTES` to change the real per-call charge.
+</Callout>
+
+## The response
+
+A settled call returns the reading plus a `provenance` block. For the civic feed `OP-1` (San Diego parking-meter revenue) the value is reported in cents, and `source_hash` is the **same canonical digest the agent attests on-chain**, so the buyer can match the purchased reading against the [AttestationRegistry](/docs/reading/on-chain).
+
+```json
+{
+  "asset_id": "OP-1",
+  "period": 20260623,
+  "amount_cents": 273420,
+  "txn_count": 4187,
+  "latest_date": "2026-06-23",
+  "source_hash": "9f1c4e7a2b8d05f3a6c1e9d47b20f8a3",
+  "provenance": {
+    "network": "casper:casper-test",
+    "registry_package_hash": "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc",
+    "attester": "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
+    "source": "City of San Diego, parking-meter daily transactions",
+    "source_url": "https://seshat.datasd.org/parking_meters_transactions_daily/treas_meters_2026_pole_by_mo_day_datasd.csv",
+    "verify": "https://testnet.cspr.live/contract-package/236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc"
+  },
+  "served_at": "2026-06-23T18:04:11.512Z"
+}
+```
+
+<Callout type="info">
+  `amount_cents` is the human value in cents (here `273420` = `$2,734.20`). To verify, recompute the canonical hash of the reading and compare it to the on-chain attestation for the same `period`, or open the `verify` link on the explorer. Provenance, not trust.
+</Callout>
+
+## Call it from TypeScript
+
+The consumer needs three packages: `@x402/fetch` for the payment-aware `fetch`, `@make-software/casper-x402` for the Casper `exact` scheme and signer, and `casper-js-sdk` for the key algorithm. `wrapFetchWithPayment` returns a drop-in `fetch` that runs the entire 402 handshake for you.
+
+<Tabs items={['Client (TypeScript)', 'Setup + run']}>
+
+<Tabs.Tab>
+
+```ts
+import {
+  x402Client,
+  x402HTTPClient,
+  wrapFetchWithPayment,
+  type PaymentRequirements,
+} from "@x402/fetch";
+import { createClientCasperSigner } from "@make-software/casper-x402";
+import { ExactCasperScheme } from "@make-software/casper-x402/exact/client";
+import casperSdk from "casper-js-sdk";
+
+const { KeyAlgorithm } = casperSdk;
+
+// A PEM secret key whose account already holds WCSPR (see the next tab).
+const KEY_PATH = process.env.CLIENT_PRIVATE_KEY_PATH!;
+const URL = "http://localhost:4021/oracle/feed?asset_id=OP-1";
+
+// Of the payment options both sides support, prefer any Casper network.
+const selectCasper = (_v: number, options: PaymentRequirements[]): PaymentRequirements =>
+  options.find(o => o.network.startsWith("casper:")) ?? options[0];
+
+// 1. A Casper signer over your key (secp256k1 here, or KeyAlgorithm.ED25519).
+const signer = await createClientCasperSigner(KEY_PATH, KeyAlgorithm.SECP256K1);
+
+// 2. An x402 client that knows how to pay with the Casper exact scheme.
+const client = new x402Client(selectCasper).register("casper:*", new ExactCasperScheme(signer));
+
+// 3. A drop-in fetch that auto-pays on 402 and retries.
+const fetchWithPayment = wrapFetchWithPayment(fetch, client);
+
+// One call. The 402 -> sign -> retry -> settle handshake is automatic.
+const res = await fetchWithPayment(URL, { method: "GET" });
+const feed = await res.json();
+console.log(feed);
+
+// The settlement (the on-chain tx) is returned in the payment-response header.
+const settle = new x402HTTPClient(client).getPaymentSettleResponse(n => res.headers.get(n));
+if (settle) console.log("settled:", settle);
+```
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+```bash
+# Pin to the versions Claros builds against.
+npm i @x402/fetch@2.15.0 @make-software/casper-x402@1.0.0 casper-js-sdk@5.0.12
+
+# Point at the hosted oracle and your funded key.
+export CLIENT_PRIVATE_KEY_PATH=./keys/consumer_secret_key.pem
+export CLIENT_KEY_ALGO=secp256k1
+export SERVER_URL=http://localhost:4021
+export ENDPOINT_PATH=/oracle/feed
+
+# One-time: wrap some CSPR into WCSPR so the key can pay.
+npm run wrap 50
+
+# Call the metered feed. It pays on the 402 automatically.
+npm start
+```
+
+<Callout type="warning">
+  The consumer key must hold **WCSPR**, not plain CSPR. Native CSPR cannot be spent through `transfer_with_authorization`. Wrap it once (the helper above mints WCSPR 1:1), then reuse the balance across calls.
+</Callout>
+
+</Tabs.Tab>
+
+</Tabs>
+
+## Who does what
+
+Three small services make up the paid path. Run them locally for the demo, or host the oracle server and facilitator for real agent-to-agent traffic.
+
+| Component | Default port | Role |
+| --- | --- | --- |
+| Oracle server | `4021` | Gates `GET /oracle/feed` behind x402, builds the reading, attaches on-chain provenance, and delegates settlement to the facilitator. |
+| Facilitator | `4022` | Exposes `verify`, `settle`, and `supported`. Holds a Casper key, submits the WCSPR transfer on testnet, and pays the settlement gas. |
+| Consumer | n/a | Any client. Signs the WCSPR authorization with its own key and retries with `X-PAYMENT`. The reference client is the TypeScript snippet above. |
+
+<Callout type="warning">
+  The facilitator pays the on-chain settlement cost from its own balance, bounded by `TRANSACTION_PAYMENT_MOTES` (default `7000000000` motes = 7 CSPR). Casper testnet charges the gas **limit** you set, not the gas consumed, so this is the budget per settled call. See [the network page](/docs/network/contracts) for gas details and addresses.
+</Callout>
+
+## Related
+
+<Cards>
+  <Cards.Card title="REST API (free)" href="/docs/reading/rest" arrow />
+  <Cards.Card title="SDK (free, off-chain)" href="/docs/reading/sdk" arrow />
+  <Cards.Card title="Cross-contract (on-chain)" href="/docs/reading/on-chain" arrow />
+  <Cards.Card title="Live feeds" href="/docs/feeds" arrow />
+</Cards>

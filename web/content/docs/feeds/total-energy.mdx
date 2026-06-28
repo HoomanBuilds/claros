@@ -1,0 +1,35 @@
+---
+title: "Total energy"
+description: "Live total energy feeds: exact feed ids, routes, facets, and units."
+---
+
+import { Callout } from 'nextra/components'
+
+# Total energy
+
+1 live feed in the total energy family. Each section gives the exact `feed_id`, the EIA route, the frequency, the data column you read, every facet filter (id, the value Claros uses, and what that filter means in the EIA catalog), the unit, and the decimals. To turn an on-chain integer into a human value, compute `amount / 10^decimals`.
+
+<Callout type="info">
+Facet ids are the EIA filters. The "Means" column is taken from the dataset definition in the [data catalog](/docs/catalog). Pick a feed by its `feed_id` and read it with [the SDK](/docs/reading/sdk) or [REST](/docs/reading/rest).
+</Callout>
+
+## PRIMARY_CONS
+
+Total Energy: value (monthly), filtered to msn=TETCBUS, in trillion Btu.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.TOTAL.PRIMARY_CONS.MONTHLY` |
+| EIA route | `total-energy` |
+| Dataset | Total Energy |
+| Frequency | monthly |
+| Data column | `value` |
+| Unit | trillion Btu |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `msn` | `TETCBUS` | Unique series identifier |
+

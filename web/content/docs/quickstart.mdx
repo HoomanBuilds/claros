@@ -1,0 +1,226 @@
+---
+title: "Quickstart"
+description: "Read your first Claros feed in under a minute over REST, the SDK, or a cross-contract call on Casper."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# Quickstart
+
+Claros is a verifiable real-world-data oracle on Casper. It works like Pyth: every
+feed is keyed by a `feed_id` string, the on-chain value is stored as an integer, and
+the human number is `amount / 10^decimals`. The data lives on-chain, you just read it.
+
+This page reads one feed three ways and shows you exactly what comes back. The example
+is **`EIA.PET.PRICE.WTI.DAILY`**, the WTI crude oil daily spot price sourced from the
+U.S. EIA.
+
+<Callout type="info">
+  Everything here points at Casper **testnet** (network id `casper-test`). The contract
+  addresses are baked into the SDK and REST service, so on-chain reads need no key, no
+  wallet, and no indexer. Reads are free.
+</Callout>
+
+## Read your first feed
+
+<Steps>
+
+### Pick a feed
+
+A `feed_id` selects one real-world series. The example feed maps to a single faceted
+EIA query:
+
+| field | value |
+| --- | --- |
+| `feed_id` | `EIA.PET.PRICE.WTI.DAILY` |
+| route | `petroleum/pri/spt` |
+| frequency | `daily` |
+| column | `value` |
+| facet | `series = RWTC` |
+| unit | `$/bbl` |
+| decimals | `6` |
+
+There are 37 feeds live on-chain today. You can enumerate every one with the SDK
+([`listFeedIds()`](/docs/reading/sdk)) or browse the naming scheme on the
+[Feed IDs](/docs/concepts/feeds) page.
+
+### Read it
+
+Pick whichever surface fits where your code runs. All three return the same on-chain
+reading.
+
+<Tabs items={['REST', 'SDK', 'Cross-contract']}>
+
+<Tabs.Tab>
+
+Plain HTTP, any language, no key. Run [`services/claros-api`](/docs/reading/rest) (port
+`4030`) or point at a hosted instance:
+
+```bash
+curl http://localhost:4030/v1/feeds/EIA.PET.PRICE.WTI.DAILY
+```
+
+The endpoint reads Casper state through the SDK and returns the reading as JSON.
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+The fastest path with zero infrastructure: the SDK reads Casper global state directly,
+testnet addresses included.
+
+```bash
+npm i claros-oracle
+```
+
+```ts
+import { ClarosOracle } from 'claros-oracle'
+
+const oracle = new ClarosOracle() // Casper testnet defaults baked in
+
+const wti = await oracle.getReading('EIA.PET.PRICE.WTI.DAILY')
+
+console.log(wti.value, wti.unit) // 78.94 $/bbl
+```
+
+`getReading(id)` returns a typed `Reading | null` (metadata plus value plus the scaled
+human number) in one call. See [the SDK](/docs/reading/sdk) for the full method list.
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+Consume Claros from your own Casper contract. Declare the registry as an external
+contract, then call `get_latest(asset_id)` with the `feed_id`:
+
+```rust
+use odra::prelude::*;
+use odra::casper_types::U512;
+
+#[odra::odra_type]
+pub struct Attestation {
+    pub period: u64,
+    pub amount: U512,        // value × 10^decimals
+    pub source_hash: String,
+    pub attester: Address,
+    pub timestamp: u64,
+}
+
+#[odra::external_contract]
+pub trait ClarosValues {
+    fn get_latest(&self, asset_id: String) -> Option<Attestation>;
+}
+
+// inside your module, with the AttestationRegistry package hash as `registry`:
+let claros = ClarosValuesContractRef::new(self.env(), registry);
+let att = claros
+    .get_latest("EIA.PET.PRICE.WTI.DAILY".to_string())
+    .unwrap_or_revert(&self.env());
+
+// real price = att.amount / 10^6  →  78_940_000 / 1_000_000 = 78.94
+```
+
+The companion `FeedRegistry.get_feed(feed_id)` returns the metadata (including
+`decimals`) so you never have to hardcode the scale. Full pattern on the
+[cross-contract](/docs/reading/on-chain) page.
+
+</Tabs.Tab>
+
+</Tabs>
+
+### Scale the value
+
+On-chain the value is an integer. Divide by `10^decimals` to get the human number:
+
+```
+amount   = 78940000
+decimals = 6
+value    = 78940000 / 10^6 = 78.94  ($/bbl)
+```
+
+The REST response and the SDK `Reading` already compute `value` for you. On-chain, do
+the division yourself with the `decimals` from `FeedRegistry`.
+
+</Steps>
+
+## What you get back
+
+The REST endpoint returns the full reading as JSON:
+
+```json
+{
+  "feed_id": "EIA.PET.PRICE.WTI.DAILY",
+  "value": 78.94,
+  "amount": "78940000",
+  "decimals": 6,
+  "unit": "$/bbl",
+  "title": "Cushing, OK WTI Spot Price FOB",
+  "source": "EIA APIv2",
+  "route": "petroleum/pri/spt",
+  "frequency": "daily",
+  "period": 20260622,
+  "source_hash": "a1b2c3…",
+  "updated_at": 1781740800000
+}
+```
+
+The SDK `getReading()` returns the same shape as a typed object, except `amount` is a
+`bigint` (U512-safe) rather than a string.
+
+| field | type | meaning |
+| --- | --- | --- |
+| `feed_id` | string | the key you requested |
+| `value` | number | human value, `amount / 10^decimals` |
+| `amount` | string (REST), bigint (SDK) | raw integer value, U512-safe |
+| `decimals` | number | scale exponent to divide by |
+| `unit` | string | e.g. `$/bbl` |
+| `title` | string | human-readable title |
+| `source` | string | upstream source, e.g. `EIA APIv2` |
+| `route` | string | upstream EIA dataset route |
+| `frequency` | string | cadence, e.g. `daily` |
+| `period` | number | reporting period (`YYYYMMDD` / `YYYYMM` / `YYYY`) |
+| `source_hash` | string | sha256 provenance of the source row |
+| `updated_at` | number | attestation time, epoch milliseconds |
+
+<Callout type="default">
+  `period` is the period the data describes; `updated_at` is when Claros attested it.
+  Use both to reject stale readings before you trust a value.
+</Callout>
+
+## Go deeper on each method
+
+Every method reads the same on-chain data. Pick the one that matches where your code
+runs, then read its reference page for the full parameter and field tables.
+
+<Cards>
+  <Cards.Card title="REST API" href="/docs/reading/rest" arrow>
+    Free HTTP for any language. Best for apps, dashboards, bots, and AI agents.
+  </Cards.Card>
+  <Cards.Card title="TypeScript SDK" href="/docs/reading/sdk" arrow>
+    `claros-oracle` reads Casper state directly. No indexer, no node to run.
+  </Cards.Card>
+  <Cards.Card title="Cross-contract" href="/docs/reading/on-chain" arrow>
+    Call `get_latest(id)` from your own Casper contract. Gas only.
+  </Cards.Card>
+  <Cards.Card title="x402 (pay-per-call)" href="/docs/reading/x402" arrow>
+    Buy a reading from the hosted feed server, settled in WCSPR per call.
+  </Cards.Card>
+</Cards>
+
+<Callout type="info">
+  REST, the SDK, and cross-contract reads are all **free**. If you want a hosted,
+  metered endpoint where every call is settled in WCSPR over the HTTP 402 protocol, see
+  [x402 metered reads](/docs/reading/x402). That is how the Claros agent funds its own
+  attestations.
+</Callout>
+
+## Next steps
+
+<Cards>
+  <Cards.Card title="Feed IDs" href="/docs/concepts/feeds" arrow>
+    The `EIA.<DATASET>.<METRIC>.<SPECIFIER>.<FREQ>` naming scheme and every live feed.
+  </Cards.Card>
+  <Cards.Card title="Network and contracts" href="/docs/network/contracts" arrow>
+    Registry package hashes, the RPC endpoint, and the testnet gas note.
+  </Cards.Card>
+</Cards>

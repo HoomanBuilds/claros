@@ -1,0 +1,160 @@
+---
+title: "Civic data"
+description: "The non-EIA civic feed: San Diego parking-meter revenue (OP-1), its daily-CSV source, on-chain provenance, and how to read it like any other feed."
+---
+
+import { Callout, Tabs } from 'nextra/components'
+
+# Civic data
+
+One live feed in the civic family. Civic data is everything Claros attests that does **not** come from the EIA energy API, and the flagship civic feed is `OP-1`: daily parking-meter revenue for a single City of San Diego parking pole. It is mapped, attested, and read exactly like an energy feed, because under the hood it is just another `feed_id`.
+
+The point of this family is what it proves: Claros is a general **real-world-data oracle**, not only an energy oracle. The same agent, the same `AttestationRegistry`, and the same provenance model that publish a WTI crude price also publish a municipal parking number sourced from a city government CSV. Add a source, map it to a `feed_id`, and it reads through every Claros path with no special casing.
+
+<Callout type="info">
+`OP-1` is read by `feed_id` like any other feed. Use [the SDK](/docs/reading/sdk), [the REST API](/docs/reading/rest), or [the paid x402 endpoint](/docs/reading/x402). The value is real San Diego parking revenue, attested on Casper testnet.
+</Callout>
+
+## OP-1
+
+Daily parking-meter revenue for one San Diego parking pole, reported in US cents and attested on-chain in the same `AttestationRegistry` as every energy feed.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `OP-1` |
+| Family | Civic |
+| Asset | A single City of San Diego parking-meter pole |
+| Source | City of San Diego open data (`seshat.datasd.org`) |
+| Dataset | Parking-meter daily transactions (one row per pole per day) |
+| Frequency | daily (data lags about 2 days) |
+| Reported amount | US cents |
+| Decimals | 2 |
+| Unit | USD |
+
+The on-chain value is the integer cents, and `decimals` is `2`, so the human value is `amount / 10^2 = amount / 100`. For the period `2026-06-23` the pole took in `273420` cents, that is **$2,734.20**.
+
+| Period | `amount` (cents, on-chain) | `decimals` | Human value |
+| --- | --- | --- | --- |
+| `20260623` | `273420` | 2 | $2,734.20 |
+
+## The source: a daily CSV, no API
+
+The City of San Diego does not expose a queryable parking API. Instead it publishes a pre-aggregated CSV per year, one row per pole per day, with amounts already summed in cents. The Claros adapter (`agent/src/sandiego.ts`) fetches that whole yearly file and caches it, refreshing with a conditional GET so it does not redownload unchanged data.
+
+```text
+https://seshat.datasd.org/parking_meters_transactions_daily/treas_meters_2026_pole_by_mo_day_datasd.csv
+```
+
+How the adapter turns that file into a reading:
+
+- **Whole-file fetch, cached.** There is no per-pole or per-day query, so the adapter pulls the entire year file and keeps it in memory (a one-hour TTL).
+- **Conditional GET.** On refresh it sends `If-Modified-Since` and `If-None-Match`; a `304 Not Modified` reuses the cached copy and avoids re-parsing.
+- **Columns used.** Each row carries `pole_id`, `month`, `day`, `sum_trans_amt` (the day's revenue in cents), and `num_trans` (the transaction count).
+- **Latest reading = max date.** The published data lags about 2 days, so the "latest" value is the row for the most recent day present in the file, keyed to the requested `pole_id`.
+
+<Callout type="warning">
+Because the city's file lags, treat `OP-1` as a daily series that is roughly 2 days behind real time. Always check the reading's `period` (the day it describes) and `updated_at` (when Claros attested it) before you act on the value.
+</Callout>
+
+## Reading OP-1
+
+`OP-1` is just a `feed_id`, so every read path that works for an energy feed works here unchanged. The free paths return the same self-describing reading; the paid x402 path adds settlement and on-chain provenance pointers.
+
+<Tabs items={['REST', 'SDK', 'x402 (paid)']}>
+
+<Tabs.Tab>
+
+A plain HTTP GET, no key, open CORS. See [the REST API](/docs/reading/rest).
+
+```bash
+curl http://localhost:4030/v1/feeds/OP-1
+```
+
+```json
+{
+  "feed_id": "OP-1",
+  "value": 2734.2,
+  "amount": "273420",
+  "decimals": 2,
+  "frequency": "daily",
+  "period": 20260623,
+  "source_hash": "71db7d2dd6edd2a47f3fe27c4c693fa1",
+  "updated_at": 1750680000000
+}
+```
+
+`amount` is the raw integer cents (a string, so it is safe past JavaScript's integer range), `decimals` is `2`, and `value` is the pre-computed `273420 / 100 = 2734.2` USD.
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+TypeScript or JavaScript reads Casper state directly, no server to run. See [the SDK](/docs/reading/sdk).
+
+```ts
+import { ClarosOracle } from 'claros-oracle'
+
+const oracle = new ClarosOracle() // Casper testnet defaults baked in
+const sd = await oracle.getReading('OP-1')
+
+console.log(sd.value, sd.unit) // 2734.2 USD
+```
+
+The call returns the identical reading the REST service wraps, with `amount` as a `bigint` (`273420n`) rather than a string.
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+`OP-1` is also the default asset behind the metered, paid endpoint, where each call settles WCSPR over HTTP 402. See [pay-per-call (x402)](/docs/reading/x402).
+
+```http
+GET /oracle/feed?asset_id=OP-1
+```
+
+A settled call returns the reading plus a `provenance` block whose `source_hash` is the **same digest the agent attested on-chain**, so the buyer can reconcile the two without trusting the server:
+
+```json
+{
+  "asset_id": "OP-1",
+  "period": 20260623,
+  "amount_cents": 273420,
+  "txn_count": 412,
+  "latest_date": "2026-06-23",
+  "source_hash": "71db7d2dd6edd2a47f3fe27c4c693fa1",
+  "provenance": {
+    "network": "casper-test",
+    "registry_package_hash": "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc",
+    "attester": "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
+    "source": "City of San Diego: parking-meter daily transactions",
+    "source_url": "https://seshat.datasd.org/parking_meters_transactions_daily/treas_meters_2026_pole_by_mo_day_datasd.csv",
+    "verify": "https://testnet.cspr.live/contract-package/236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc"
+  },
+  "served_at": "2026-06-23T18:04:11.000Z"
+}
+```
+
+`asset_id` defaults to `OP-1` if you omit the query parameter, and `amount_cents` (`273420`) is the same integer the free paths expose as `amount`.
+
+</Tabs.Tab>
+
+</Tabs>
+
+## On-chain attestation and provenance
+
+`OP-1` is attested into the same `AttestationRegistry` as every energy feed, keyed by the `feed_id` `OP-1`, with the same provenance model. Each reading carries a `source_hash`: a deterministic SHA-256 over the substantive identity of the row, truncated to the first 32 hex characters. For civic data the canonical string is the asset id, period, cents, transaction count, and the exact CSV URL, joined with a literal pipe:
+
+```ts
+const source_hash = createHash('sha256')
+  .update(`${assetId}|${period}|${rec.cents}|${rec.n}|${SOURCE_URL}`)
+  .digest('hex')
+  .slice(0, 32)
+// OP-1|20260623|273420|412|https://seshat.datasd.org/.../treas_meters_2026_pole_by_mo_day_datasd.csv
+// -> 71db7d2dd6edd2a47f3fe27c4c693fa1
+```
+
+The agent computes this once and attests it on-chain, and the x402 server recomputes it with the same function when it sells the feed, so the two digests are equal by construction.
+
+<Callout type="info">
+If the `source_hash` you receive over [the x402 feed](/docs/reading/x402) equals the one stored in the on-chain attestation for the same `period`, the value you paid for is exactly what Claros committed on-chain. That string match is the trust boundary. See [provenance and source hash](/docs/concepts/provenance) for the full reconciliation, including how to reproduce the digest from the raw CSV.
+</Callout>

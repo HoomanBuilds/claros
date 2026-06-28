@@ -1,0 +1,283 @@
+---
+title: "Decimals & scaling"
+description: "Why Claros stores real-world values as scaled integers, how the per-feed decimals exponent works, and how to convert a U512 amount back to a human number."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# Decimals & scaling
+
+Claros never stores a floating-point number on-chain. Every feed value is an
+integer `amount` plus a per-feed `decimals` exponent, exactly the model
+[Pyth](https://docs.pyth.network) uses for prices. The human value is
+`amount / 10^decimals`. This page explains why, how the conversion works in
+both directions, and the one constraint that follows from the integer type: the
+amount is unsigned.
+
+<Callout type="info">
+A reading has two halves, stored in two contracts and keyed by the same
+`feed_id`: the integer `amount` lives in the **AttestationRegistry**, and the
+`decimals` exponent lives in the **FeedRegistry**. You always pair them. See
+[Feeds & metadata](/docs/concepts/feeds).
+</Callout>
+
+## The model
+
+There are two directions, and they are inverses of each other.
+
+| Direction | Formula | Who does it |
+| --- | --- | --- |
+| Encode (human value to integer) | `amount = round(value * 10^decimals)` | the Claros agent, before it calls `attest` |
+| Decode (integer to human value) | `value = amount / 10^decimals` | you, the consumer |
+
+The agent encodes once when it attests. Everyone reading the feed decodes. Most
+of the [reading surfaces](/docs/reading/sdk) decode for you and hand back a
+ready `value`, but the raw `amount` and `decimals` are always available so you
+can redo the math yourself with full precision.
+
+## What is stored on-chain
+
+The value and its exponent are deliberately split across two registries so a
+consumer can interpret a number entirely on-chain, the Pyth approach where a
+price ships with its exponent.
+
+The latest value, in the **AttestationRegistry**:
+
+```rust
+#[odra::odra_type]
+pub struct Attestation {
+    pub period: u64,
+    pub amount: U512,        // the scaled integer
+    pub source_hash: String,
+    pub attester: Address,
+    pub timestamp: u64,
+}
+```
+
+The exponent and unit, in the **FeedRegistry**:
+
+```rust
+#[odra::odra_type]
+pub struct Feed {
+    pub decimals: u8,        // real value = amount / 10^decimals
+    pub unit: String,        // e.g. "$/bbl", "MWh", "percent"
+    pub title: String,
+    pub source: String,
+    pub route: String,
+    pub frequency: String,
+    pub description: String,
+}
+```
+
+A reading pairs one `Attestation.amount` with one `Feed.decimals` for the same
+`feed_id`.
+
+## Worked example: WTI crude
+
+The `EIA.PET.PRICE.WTI.DAILY` feed reports the Cushing WTI spot price in
+`$/bbl` with `decimals = 6`.
+
+| Field | Value |
+| --- | --- |
+| Human value | `78.94` |
+| `decimals` | `6` |
+| `amount` (U512, on-chain) | `78940000` |
+| `unit` | `$/bbl` |
+
+Encode (agent):
+
+```
+amount = round(78.94 * 10^6) = round(78.94 * 1000000) = 78940000
+```
+
+Decode (consumer):
+
+```
+value = 78940000 / 10^6 = 78.94
+```
+
+## Why scaled integers, not floats
+
+<Steps>
+
+### Determinism
+
+Every Casper node validating a transaction must agree on the exact bytes stored
+in contract state. Floating-point results are not portable across platforms, so
+the on-chain value type is an integer.
+
+### The native type is `U512`
+
+Casper's value and amount type is `U512`, a 512-bit unsigned integer, and that
+is what `Attestation.amount` is. It is wide enough that even a count-scale
+metric multiplied by `10^decimals` will not overflow in practice.
+
+### No float drift on encode
+
+The agent does not multiply a JavaScript `number`. It scales the source decimal
+string directly, so binary rounding (the `0.1 + 0.2` problem) never reaches the
+`amount`.
+
+</Steps>
+
+The encoder splits the source on the decimal point, pads or trims the fractional
+part to exactly `decimals` digits, then parses the joined digits as one big
+integer:
+
+```ts
+// Scale a decimal string by 10^k without float drift.
+function scaleDecimalString(s: string, k: number): bigint {
+  let neg = s.startsWith('-');
+  if (neg) s = s.slice(1);
+  let [int, frac = ''] = s.split('.');
+  frac = (frac + '0'.repeat(k)).slice(0, k);
+  const v = BigInt((int || '0') + frac);
+  return neg ? -v : v;
+}
+```
+
+Because `decimals` is chosen to be at least as precise as the source feed, the
+fraction always fits and the scaling is exact, with no rounding loss in
+practice.
+
+## decimals is the exponent (Pyth expo)
+
+`decimals` is a per-feed `u8`, picked to fit the precision of the metric. It
+plays the same role as Pyth's `expo` for a price. Claros uses a small set of
+conventions:
+
+| Metric kind | `decimals` | Example feed | unit |
+| --- | --- | --- | --- |
+| Unit prices | `6` | `EIA.PET.PRICE.WTI.DAILY` | `$/bbl` |
+| Percent | `4` | `EIA.NUC.OUTAGE.US_PCT.DAILY` | `percent` |
+| Volumes and energy | `3` | `EIA.ELEC.DEMAND.US48.HOURLY` | `MWh` |
+| Counts | `0` | `EIA.ELEC.RETAIL.CUSTOMERS.US_RES.MONTHLY` | `count` |
+
+A count uses `decimals = 0`, so its `amount` equals the value exactly with no
+scaling at all.
+
+<Callout type="warning">
+Each feed picks its own `decimals`. Never assume `6`. Always read `decimals`
+from the FeedRegistry (or the `decimals` field the SDK and REST return) before
+you divide.
+</Callout>
+
+## The amount is unsigned
+
+`U512` is an **unsigned** integer, so it cannot represent a negative number.
+Claros only attests metrics that are non-negative: prices, volumes, counts,
+revenue, and percentages. The off-chain encoder can represent a negative number
+(it has a sign branch), but the on-chain type cannot hold one, so the live
+catalog contains only non-negative feeds.
+
+<Callout type="warning">
+Signed metrics are out of scope for the current registry. A value that can drop
+below zero (for example a net storage change, or a temperature in degrees) is
+not published as a Claros feed today.
+</Callout>
+
+## Reading a value back
+
+Whichever surface you use, you can either take the pre-divided `value` or take
+the raw `amount` plus `decimals` and divide yourself.
+
+<Tabs items={['SDK', 'REST', 'Cross-contract']}>
+<Tabs.Tab>
+
+The [SDK](/docs/reading/sdk) divides for you in `getReading`, and also returns
+the raw `amount` as a `BigInt` and the `decimals` so you can redo it.
+
+```ts
+import { ClarosOracle } from 'claros-oracle';
+
+const claros = new ClarosOracle();
+const wti = await claros.getReading('EIA.PET.PRICE.WTI.DAILY');
+
+// wti.value    -> 78.94       (already amount / 10^decimals)
+// wti.amount   -> 78940000n   (raw U512, as a BigInt)
+// wti.decimals -> 6
+```
+
+`getValue` returns only the raw `amount`; `getReading` is the helper that also
+reads `decimals` and does the division.
+
+</Tabs.Tab>
+<Tabs.Tab>
+
+The [REST API](/docs/reading/rest) returns `amount` as a **string** (a U512 can
+exceed JavaScript's safe integer range), alongside a pre-divided `value` and the
+`decimals`.
+
+```bash
+curl http://localhost:4030/v1/feeds/EIA.PET.PRICE.WTI.DAILY
+```
+
+```json
+{
+  "feed_id": "EIA.PET.PRICE.WTI.DAILY",
+  "value": 78.94,
+  "amount": "78940000",
+  "decimals": 6,
+  "unit": "$/bbl",
+  "period": 20260622,
+  "source_hash": "…",
+  "updated_at": 1750636800000
+}
+```
+
+Parse `amount` with `BigInt(...)` before doing any math on it. Do not pass it
+through `Number(...)` first.
+
+</Tabs.Tab>
+<Tabs.Tab>
+
+From your own Casper contract you read the raw `U512` and the `u8` and divide in
+integer space. See [Cross-contract reads](/docs/reading/on-chain).
+
+```rust
+let a = AttestationRegistryRef::new(env, registry).get_latest(feed_id.clone());
+let f = FeedRegistryRef::new(env, feed_registry).get_feed(feed_id);
+
+let amount: U512 = a.unwrap().amount;     // raw scaled integer
+let decimals: u8 = f.unwrap().decimals;   // exponent
+
+// real value = amount / 10^decimals, for example:
+let scale = U512::from(10u64).pow(U512::from(decimals));
+let whole = amount / scale;               // integer part
+```
+
+On-chain you usually stay in integer space: keep `amount` and `decimals` and
+compare two readings in their scaled form rather than producing a fraction.
+
+</Tabs.Tab>
+</Tabs>
+
+## Convert an amount by hand
+
+<Steps>
+
+### Read `decimals`
+
+Fetch the feed's `decimals` from the FeedRegistry. It is per-feed metadata and
+rarely changes, so you can cache it.
+
+### Read the latest `amount`
+
+Fetch the latest `amount` (a `U512`) from the AttestationRegistry for the same
+`feed_id`.
+
+### Divide
+
+Compute `value = amount / 10^decimals`. For WTI that is
+`78940000 / 10^6 = 78.94`.
+
+</Steps>
+
+## Related
+
+<Cards>
+  <Cards.Card title="Feeds & metadata" href="/docs/concepts/feeds" />
+  <Cards.Card title="Read with the SDK" href="/docs/reading/sdk" />
+  <Cards.Card title="Read over REST" href="/docs/reading/rest" />
+  <Cards.Card title="Read from a contract" href="/docs/reading/on-chain" />
+</Cards>

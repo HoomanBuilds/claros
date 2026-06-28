@@ -1,0 +1,309 @@
+---
+title: "How it works"
+description: "How the Claros agent turns real-world data into a signed, self-describing on-chain attestation, and how any consumer reads it back."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# How it works
+
+Claros is a verifiable real-world-data oracle on Casper testnet. An autonomous agent
+fetches data from an upstream source, normalizes it to an exact integer, hashes the
+provenance, and signs an on-chain attestation. Two contracts, keyed by a shared
+`feed_id`, hold the result: the **AttestationRegistry** stores the value, and the
+**FeedRegistry** stores the metadata that tells you how to read it. Any consumer
+reads both by `feed_id` and reconstructs the human number with one formula:
+
+```
+value = amount / 10^decimals
+```
+
+This is the Pyth model. The price ships with its exponent, so a consumer can
+interpret the integer entirely on-chain, with no off-chain schema.
+
+## Architecture at a glance
+
+```text
+  UPSTREAM                       AGENT                          ON-CHAIN (Casper)
+  --------                       -----                          -----------------
+  EIA API v2          fetch      1. scale to integer
+  (energy markets)   ------->    2. hash provenance    attest   ----->  AttestationRegistry
+  City of San Diego              3. sign TransactionV1                   (value, by feed_id)
+  (parking revenue)              4. submit          register_feed --->   FeedRegistry
+                                                                         (metadata, by feed_id)
+
+  CONSUMERS  ----- read both by feed_id ----->   value = amount / 10^decimals
+  (REST / SDK / cross-contract / x402)
+```
+
+The agent runs on an hourly heartbeat and only attests when the upstream source
+publishes a period it has not processed yet, so it never spends gas re-attesting the
+same reading. The data path below is one step inside a larger autonomous cycle that
+also clears a zero-knowledge eligibility gate and manages a treasury (see
+[the agent](/docs/network/agent)).
+
+## The attestation pipeline
+
+Every value on Claros is produced by the same five steps.
+
+<Steps>
+
+### Fetch the upstream reading
+
+The agent pulls the latest reading from the feed's provider. Claros uses a single
+generic adapter for the entire EIA API v2 (electricity, natural gas, petroleum, coal,
+nuclear, and more), plus a dedicated reader for the City of San Diego parking-revenue
+dataset. Each reading carries a period, a raw value, and the exact request parameters
+used to obtain it.
+
+### Scale the value to an integer
+
+Smart contracts have no native floating point, so Claros stores every value as a
+scaled integer at the feed's fixed `decimals`. The value is multiplied by
+`10^decimals` and rounded, using exact decimal-string math so there is no float drift.
+
+```ts
+// EIA: a decimal string like "78.94" at the feed's fixed decimals (6)
+amount = scaleDecimalString('78.94', 6);   // 78940000n  (value * 10^6)
+
+// San Diego: parking revenue already arrives as integer cents, so decimals = 2
+amount = 273420n;                          // $2,734.20
+```
+
+### Hash the provenance
+
+The agent computes a deterministic `source_hash`: a SHA-256 over only the stable
+provenance fields (route, frequency, sorted facets, period, value, unit for EIA; the
+asset, period, amount, transaction count, and source URL for San Diego), truncated to
+a 32-character (128-bit) hex prefix. Because it is computed from canonical fields, the
+same reading hashes identically wherever it is produced, so the on-chain attestation
+and the same feed sold over [x402](/docs/reading/x402) share one verifiable digest.
+
+```ts
+source_hash = sha256(canonical).slice(0, 32);   // 32 hex chars, deterministic
+```
+
+See [provenance](/docs/concepts/provenance) for how the canonical digest is built and
+how a consumer reproduces it to verify a reading.
+
+### Sign a Casper TransactionV1
+
+The agent builds a Casper 2.0 (Condor) `TransactionV1` with casper-js-sdk v5, signs it
+with the attester key, and submits it to the AttestationRegistry's `attest` entry point.
+
+```ts
+const tx = new ContractCallBuilder()
+  .byPackageHash(ATTESTATION_REGISTRY)
+  .entryPoint('attest')
+  .runtimeArgs(Args.fromMap({
+    asset_id:    CLValue.newCLString('EIA.PET.PRICE.WTI.DAILY'),
+    period:      CLValue.newCLUint64(20260623),
+    amount:      CLValue.newCLUInt512(78940000),
+    source_hash: CLValue.newCLString(sourceHash),
+  }))
+  .chainName('casper-test')
+  .payment(20_000_000_000, 1)   // gas limit in motes
+  .from(agentKey.publicKey)
+  .build();
+
+tx.sign(agentKey);
+await rpc.putTransaction(tx);
+```
+
+<Callout type="warning">
+Casper testnet charges the gas **limit** you set, not the gas actually consumed (there
+is no refund). The agent sizes each call's limit deliberately. See
+[Network and addresses](/docs/network/contracts) for the gas model.
+</Callout>
+
+### Store the attestation on-chain
+
+`attest` writes the value into the AttestationRegistry, appends it to that feed's
+history, bumps the per-feed and global counters, and emits a `RevenueAttested` event.
+The contract records who signed it and the block time, so the reading is permanent and
+auditable. See [the attestation record](/docs/concepts/attestation) for the full
+on-chain shape and its events.
+
+</Steps>
+
+## Two registries, one feed_id
+
+Claros splits a feed into two on-chain records that share a single key. The value
+changes every period; the metadata describes how to interpret it and rarely changes.
+
+| Contract | Holds | Keyed by | Updated |
+| --- | --- | --- | --- |
+| **AttestationRegistry** | the latest value plus full history | `feed_id` | every new period |
+| **FeedRegistry** | self-describing metadata (decimals, unit, source) | `feed_id` | once, when the feed is registered |
+
+<Callout type="info">
+In the AttestationRegistry source the key parameter is named `asset_id`, while the
+FeedRegistry calls it `feed_id`. They are the **same string**. A feed's value and its
+metadata live under one identifier, so `get_latest("EIA.PET.PRICE.WTI.DAILY")` and
+`get_feed("EIA.PET.PRICE.WTI.DAILY")` describe the same feed.
+</Callout>
+
+### What an attestation stores
+
+`AttestationRegistry.get_latest(feed_id)` returns an `Attestation`:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `period` | `u64` | Reporting period, for example `20260623` for a daily reading (epoch seconds for hourly feeds) |
+| `amount` | `U512` | The reading scaled to an integer (`value * 10^decimals`) |
+| `source_hash` | `String` | 32-char SHA-256 prefix over the canonical upstream fields (provenance) |
+| `attester` | `Address` | The account that signed the attestation |
+| `timestamp` | `u64` | Casper block time when attested (epoch milliseconds) |
+
+The registry also keeps every historical reading: `get_at(feed_id, index)` returns a
+past attestation, `get_count(feed_id)` is that feed's history length, and
+`total_attestations()` is the global count across all feeds.
+
+### What a feed's metadata stores
+
+`FeedRegistry.get_feed(feed_id)` returns a `Feed`:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `decimals` | `u8` | Scale exponent: `real value = amount / 10^decimals` |
+| `unit` | `String` | Human unit, for example `$/bbl`, `MWh`, or `percent` |
+| `title` | `String` | Human title |
+| `source` | `String` | Provider, for example `EIA` or `City of San Diego` |
+| `route` | `String` | Provider route, for example `petroleum/pri/spt` |
+| `frequency` | `String` | One of `daily`, `weekly`, `monthly`, `annual`, `hourly`, `quarterly` |
+| `description` | `String` | Longer human description |
+
+To browse what is registered, `feed_count()` returns the number of feeds and
+`get_feed_at(index)` returns the `feed_id` at each position. The mapping from a
+`feed_id` to its provider route, frequency, column, and facet filters is covered in
+[the feed model](/docs/feeds).
+
+<Callout type="info">
+**Trust model.** Only the registered attester account may call `attest`, and only the
+owner may call `register_feed`; any other caller reverts with `Unauthorized`. On the
+Claros testnet deployment both roles are held by the agent account, so every value
+carries a verifiable `attester` you can check on each `Attestation`.
+</Callout>
+
+## Self-describing feeds, and why value = amount / 10^decimals
+
+A consumer should never need to know out-of-band that "WTI is quoted in dollars with
+six decimals." That fact lives on-chain in the FeedRegistry, alongside the value in the
+AttestationRegistry. This is what "self-describing" means: the chain ships the value
+**and** the exponent and unit to read it.
+
+Storing the value as a scaled integer (`U512`) rather than a float is what makes this
+work:
+
+- **Exact.** Integers have no floating-point rounding error, so the value is the same
+  byte-for-byte for everyone.
+- **Deterministic and language-agnostic.** A Rust contract, the TypeScript SDK, and a
+  REST client all apply the identical `amount / 10^decimals` formula.
+- **Overflow-safe.** `U512` is a 512-bit unsigned integer, large enough for any feed
+  Claros attests.
+
+The scale is fixed per feed and stored once, so the value is just the raw integer and
+`decimals` is the exponent that turns it back into a human number.
+
+### Worked examples
+
+| Feed | Upstream value | `decimals` | `amount` (on-chain integer) | `value = amount / 10^decimals` |
+| --- | --- | --- | --- | --- |
+| WTI crude (`EIA.PET.PRICE.WTI.DAILY`) | 78.94 | 6 | `78940000` | 78.94 `$/bbl` |
+| Henry Hub (`EIA.NG.PRICE.HENRYHUB.DAILY`) | 3.16 | 6 | `3160000` | 3.16 `$/MMBtu` |
+| San Diego parking (`OP-1`) | $2,734.20 | 2 | `273420` | 2,734.20 USD |
+
+## Reading a value back
+
+Consumers pull both records by `feed_id` and divide. There are four ways to do it,
+depending on whether you want a free off-chain read, a free on-chain read, a hosted
+REST endpoint, or a metered pay-per-call feed.
+
+<Tabs items={['SDK', 'REST', 'Cross-contract']}>
+
+<Tabs.Tab>
+
+The [`claros-oracle` SDK](/docs/reading/sdk) reads Casper state directly (no indexer)
+and returns the human value already computed.
+
+```ts
+import { ClarosOracle } from 'claros-oracle';
+
+const oracle = new ClarosOracle();                       // testnet addresses baked in
+const r = await oracle.getReading('EIA.PET.PRICE.WTI.DAILY');
+// r = { value: 78.94, amount: 78940000n, decimals: 6, unit: '$/bbl', period: 20260623, ... }
+```
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+The [REST API](/docs/reading/rest) returns the same fields as JSON, including both the
+raw `amount` (a U512-safe string) and the computed `value`.
+
+```http
+GET /v1/feeds/EIA.PET.PRICE.WTI.DAILY
+```
+
+```json
+{
+  "feed_id": "EIA.PET.PRICE.WTI.DAILY",
+  "value": 78.94,
+  "amount": "78940000",
+  "decimals": 6,
+  "unit": "$/bbl",
+  "title": "WTI crude spot",
+  "source": "EIA",
+  "period": 20260623,
+  "source_hash": "…",
+  "updated_at": 1750636800000
+}
+```
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+From your own Casper contract, declare external traits and call both registries, then
+do the scaling in `U512`. Full details are in
+[reading from a contract](/docs/reading/on-chain).
+
+```rust
+let a = attestations.get_latest(feed_id.clone()).unwrap(); // Attestation { amount, .. }
+let f = feeds.get_feed(feed_id).unwrap();                  // Feed { decimals, unit, .. }
+
+// Keep working in scaled integers for exactness; divide only for a whole-unit figure.
+// real value = a.amount / 10^f.decimals
+```
+
+</Tabs.Tab>
+
+</Tabs>
+
+For a paid, per-request feed gated by the HTTP 402 protocol, see
+[pay-per-call with x402](/docs/reading/x402).
+
+## Where this fits in the agent cycle
+
+The attestation pipeline is steps 1 and 2 of the agent's autonomous cycle. Before it
+attests, the agent confirms its on-chain zero-knowledge eligibility credential and
+anomaly-checks the reading against the feed's typical range; after it attests, it
+decides whether to reinvest treasury into a yield venue and records that decision
+on-chain.
+
+<Callout type="info">
+The agent never attests data it cannot verify. If the eligibility gate is not cleared,
+or the reading is anomalous, the cycle stops without writing anything. See
+[the autonomous agent](/docs/network/agent) and [the ZK eligibility gate](/docs/network/zk-gate).
+</Callout>
+
+## Related
+
+<Cards>
+  <Cards.Card title="The attestation record" href="/docs/concepts/attestation" />
+  <Cards.Card title="Provenance hashing" href="/docs/concepts/provenance" />
+  <Cards.Card title="Reading data" href="/docs/reading" />
+  <Cards.Card title="Read with the SDK" href="/docs/reading/sdk" />
+  <Cards.Card title="Read from a contract" href="/docs/reading/on-chain" />
+  <Cards.Card title="The autonomous agent" href="/docs/network/agent" />
+</Cards>

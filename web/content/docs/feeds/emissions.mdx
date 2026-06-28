@@ -1,0 +1,37 @@
+---
+title: "Emissions"
+description: "Live emissions feeds: exact feed ids, routes, facets, and units."
+---
+
+import { Callout } from 'nextra/components'
+
+# Emissions
+
+1 live feed in the emissions family. Each section gives the exact `feed_id`, the EIA route, the frequency, the data column you read, every facet filter (id, the value Claros uses, and what that filter means in the EIA catalog), the unit, and the decimals. To turn an on-chain integer into a human value, compute `amount / 10^decimals`.
+
+<Callout type="info">
+Facet ids are the EIA filters. The "Means" column is taken from the dataset definition in the [data catalog](/docs/catalog). Pick a feed by its `feed_id` and read it with [the SDK](/docs/reading/sdk) or [REST](/docs/reading/rest).
+</Callout>
+
+## AGG.US_TOTAL
+
+Total CO2 Emissions by Sector and Fuel - deprecated: see SEDS: value (annual), filtered to stateId=US, fuelId=TO, sectorId=TT, in MMT CO2.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.CO2.AGG.US_TOTAL.ANNUAL` |
+| EIA route | `co2-emissions/co2-emissions-aggregates` |
+| Dataset | Total CO2 Emissions by Sector and Fuel - deprecated: see SEDS |
+| Frequency | annual |
+| Data column | `value` |
+| Unit | MMT CO2 |
+| Decimals | 6 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `stateId` | `US` | State |
+| `fuelId` | `TO` | Fuel Type |
+| `sectorId` | `TT` | Sector |
+

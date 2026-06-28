@@ -1,0 +1,363 @@
+---
+title: "The autonomous agent"
+description: "How the Claros agent runs: an hourly DeepSeek tool-calling heartbeat that clears a ZK gate, attests only new data, and reinvests treasury, signing Casper TransactionV1 with casper-js-sdk v5."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# The autonomous agent
+
+Claros is not just a set of contracts, it is an autonomous operator that runs them. A
+**DeepSeek tool-calling agent** wakes on a fixed heartbeat, decides what to do, and acts
+through a small set of tools that read public data and sign Casper transactions. No
+human approves any step: the agent clears a zero-knowledge compliance gate, attests
+fresh real-world data on-chain, then decides whether to put idle treasury to work in a
+yield venue and records that decision on-chain.
+
+The agent has two layers:
+
+| Layer | File | Job |
+| --- | --- | --- |
+| **Heartbeat** | `agent/src/loop.ts` | Wakes on an interval and starts a cycle only when the upstream source has genuinely new data. |
+| **Cycle** | `agent/src/agent-cycle.ts` | One end-to-end run: the model reasons over tool outputs and chooses each action (gate, read, attest, treasury, record). |
+| **Tools** | `agent/src/tools.ts` | The concrete actions the model can call: data reads, balance reads, and the three on-chain writes. |
+
+<Callout type="info">
+The agent is the only account authorized to write Claros data. `attest` and
+`record_reinvest` revert `Unauthorized` for any caller but the agent (account-hash
+`43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4`), so every on-chain
+value carries a verifiable signer. See [the attestation record](/docs/concepts/attestation).
+</Callout>
+
+## The heartbeat: run only on new data
+
+The heartbeat (`agent/src/loop.ts`) is deliberately dumb. It wakes on an interval, asks
+the upstream source for the latest reporting `period`, and starts a full cycle only when
+that period is strictly newer than the last one it processed. Re-attesting an unchanged
+period would write an identical record and waste gas, so the agent deduplicates by
+period and keeps the last processed period per asset in a small state file.
+
+```ts
+async function tick() {
+  const state = loadState();                  // { "OP-1": 20260622, ... }
+  for (const asset of ASSETS) {
+    const { period } = await latestRevenue(asset);
+    const last = state[asset];
+    if (last && period <= last) continue;      // no new data: skip, spend no gas
+    if (!DRY_RUN) await runCycle(asset);       // a full autonomous cycle
+    state[asset] = period;
+    saveState(state);
+  }
+}
+
+await tick();                                  // run once on startup
+setInterval(tick, INTERVAL_MS);                // then every INTERVAL_MS (default 1 hour)
+```
+
+<Callout type="warning">
+Casper testnet charges the gas **limit** you set, not the gas consumed, with no refund.
+Because the agent only runs a cycle on a strictly newer `period`, each feed's history
+holds at most one attestation per genuinely new period, and stored periods strictly
+increase. See [attestation and freshness](/docs/concepts/attestation) for what this
+means for consumers, and [network and contracts](/docs/network/contracts) for the gas model.
+</Callout>
+
+The heartbeat is configured entirely through the environment, so an operator can point
+it at different assets, change the cadence, or rehearse without writing anything.
+
+| Env var | Default | Meaning |
+| --- | --- | --- |
+| `CYCLE_ASSETS` | `OP-1` | Comma-separated assets to process each heartbeat. |
+| `CYCLE_INTERVAL_MS` | `3600000` | Heartbeat interval in milliseconds (one hour). |
+| `CYCLE_STATE_FILE` | `.cycle-state.json` | Where the last processed `period` per asset is persisted. |
+| `CYCLE_DRY_RUN` | unset | Set to `1` to detect new data and log it, but skip the cycle (no signing, no writes). |
+
+## The cycle
+
+When the heartbeat sees new data it calls `runCycle(asset)` (`agent/src/agent-cycle.ts`).
+This is a standard tool-calling loop against an OpenAI-compatible DeepSeek endpoint
+(model `deepseek-chat`). The agent is seeded with a system policy and a single user
+turn (`Run one autonomous cycle for asset "<asset>". Decide and act.`), then it loops:
+the model returns either a message or one or more tool calls, each tool call is
+dispatched to the matching function in `tools.ts`, and the JSON result is fed back as a
+`tool` message. The loop runs until the model stops calling tools, up to 14 steps.
+
+```ts
+for (let step = 0; step < 14; step++) {
+  const res = await client.chat.completions.create({
+    model: MODEL,                  // deepseek-chat
+    messages,
+    tools: toolSchemas,
+    tool_choice: 'auto',
+  });
+  const msg = res.choices[0].message;
+  messages.push(msg);
+  if (!msg.tool_calls?.length) break;          // model is done
+  for (const tc of msg.tool_calls) {
+    const result = await dispatch[tc.function.name](JSON.parse(tc.function.arguments || '{}'));
+    messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(result) });
+  }
+}
+```
+
+The system policy instructs the model to treat tool outputs as ground truth and to act
+in a fixed order. One cycle proceeds through these stages.
+
+<Steps>
+
+### Compliance gate (ZK eligibility)
+
+The first call is `read_eligibility`. The agent confirms its on-chain zero-knowledge
+eligibility credential: a Groth16 proof it verified once against the
+[EligibilityGate](/docs/network/zk-gate) contract. If the credential is not confirmed on-chain,
+the agent **stops the cycle**. It does not attest and it does not move capital. Only an
+eligible agent operates the regulation-ready oracle.
+
+### Read the value and its history
+
+The agent calls `read_revenue` for the latest reading (the reporting `period`, the
+`amount`, and the provenance `source_hash`) and `read_attestation_history` for the
+asset's typical range. For the flagship civic feed `OP-1` this is San Diego parking
+revenue, with the per-day range computed across the year's data.
+
+### Anomaly check, then attest
+
+The agent compares the new reading to the typical range. If the value is outside that
+range or looks unverifiable, it does **not** attest and explains why. Otherwise it calls
+`attest` with the exact `period`, `amount`, and `source_hash` from `read_revenue`,
+writing the value to the [AttestationRegistry](/docs/concepts/attestation). This is the
+[attestation pipeline](/docs/how-it-works) step.
+
+### Read the treasury
+
+The agent calls `read_treasury` (liquid CSPR and the 500 CSPR stake minimum),
+`read_x402_earnings` (WCSPR earned by selling the feed over x402), and `read_venue_state`
+(the available yield venues). The x402 income counts as treasury available to reinvest.
+
+### Decide
+
+The agent reinvests only if it holds at least the 500 CSPR stake minimum liquid. It
+prefers a WiseLending stake (CSPR to sCSPR, a growing yield), with native delegation as
+the fallback. Restraint is a valid outcome: if conditions do not clearly warrant moving
+capital this cycle, the agent **holds**. Any amount is kept conservative.
+
+### Act and record
+
+If the agent reinvests, it calls `reinvest(action, amount_cspr)` and then `record_reinvest`
+with a one-sentence justification. If it holds, it calls `record_reinvest` with
+`venue = "hold"`, `amount_in = 0`, `amount_out = 0`, and its reasoning. Either way the
+decision is logged to the [TreasuryVault](#staking-idle-treasury).
+
+### Summarize
+
+The agent finishes with a short summary of what it did and why, and the loop ends.
+
+</Steps>
+
+<Callout type="info">
+Two independent guards make the cycle safe to run unattended: the **ZK gate** must be
+cleared before anything is written, and the **anomaly check** must pass before a value
+is attested. New data is necessary but not sufficient. The on-chain value is always the
+last reading the agent judged both eligible and clean.
+</Callout>
+
+## The tools it has
+
+The model can only act through the tools wired into the cycle. Six are read-only and
+inform the model's decisions, three sign Casper transactions. Reads never touch the
+chain state-changing path: they query public data or account balances. Writes each sign
+and submit a `TransactionV1`.
+
+| Tool | Purpose | On-chain write |
+| --- | --- | --- |
+| `read_eligibility` | Confirm the agent's ZK eligibility credential (the compliance gate). | No |
+| `read_revenue` | Latest reading for the asset: `period`, `amount`, `source_hash`. | No |
+| `read_attestation_history` | The asset's typical range, for the anomaly check. | No |
+| `read_treasury` | Liquid CSPR and the 500 CSPR stake minimum. | No |
+| `read_x402_earnings` | WCSPR earned by selling the feed via x402. | No |
+| `read_venue_state` | Available yield venues (WiseLending stake, native delegation). | No |
+| `attest` | Write a clean reading to the AttestationRegistry. | Yes (gas limit 20 CSPR) |
+| `reinvest` | Move treasury into a venue (`stake` / `delegate`), or `hold`. | Yes for stake/delegate; `hold` writes nothing |
+| `record_reinvest` | Log the treasury decision and reasoning to the TreasuryVault. | Yes (gas limit 20 CSPR) |
+
+<Callout type="default">
+The gas figures are the limits the agent sets per call: `attest` and `record_reinvest`
+at 20 CSPR, a WiseLending `stake` at 15 CSPR, a native `delegate` at 2.5 CSPR. On
+testnet the full limit is billed whether or not it is consumed, so the agent sizes each
+call deliberately. See [network and contracts](/docs/network/contracts).
+</Callout>
+
+## Signing Casper TransactionV1
+
+Every write is a Casper 2.0 (Condor) `TransactionV1`, built and signed with
+**casper-js-sdk v5** (`agent/src/signer.ts`). The signer loads the agent's key from a
+PEM file (secp256k1 by default, ed25519 optional), builds the transaction against a
+contract **package hash** (so writes survive contract upgrades), signs it, and submits
+it over JSON-RPC.
+
+<Tabs items={['Contract call', 'Native delegate', 'Session (staking)']}>
+
+<Tabs.Tab>
+
+`attest` and `record_reinvest` are contract calls via `ContractCallBuilder`:
+
+```ts
+const tx = new ContractCallBuilder()
+  .byPackageHash(ATTESTATION_REGISTRY)   // package hash: upgrade-safe
+  .entryPoint('attest')
+  .runtimeArgs(args)                     // asset_id, period, amount (U512), source_hash
+  .chainName('casper-test')
+  .payment(20_000_000_000, 1)            // gas limit in motes (1 CSPR = 1e9 motes)
+  .from(key.publicKey)
+  .build();
+
+tx.sign(key);                            // signed with the attester key
+const res = await rpc.putTransaction(tx);
+return res.transactionHash.toHex();
+```
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+The native-delegation fallback uses `NativeDelegateBuilder` to stake CSPR directly with
+a validator:
+
+```ts
+const tx = new NativeDelegateBuilder()
+  .validator(PublicKey.fromHex(validatorHex))
+  .amount(amountMotes)
+  .chainName('casper-test')
+  .payment(2_500_000_000, 1)             // 2.5 CSPR gas limit
+  .from(key.publicKey)
+  .build();
+
+tx.sign(key);
+await rpc.putTransaction(tx);
+```
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+A WiseLending stake attaches native CSPR to a payable entry point, which Casper requires
+to flow through a session purse. The signer ships a small cargo-purse proxy Wasm via
+`SessionBuilder`: the proxy creates a purse, funds it with the attached value, and
+forwards to `package_hash::stake`.
+
+```ts
+const tx = new SessionBuilder()
+  .wasm(proxyWasm)                       // wiselending-proxy.wasm
+  .runtimeArgs(args)                     // package_hash, entry_point, attached_value, ...
+  .chainName('casper-test')
+  .payment(15_000_000_000, 1)            // 15 CSPR gas limit
+  .from(key.publicKey)
+  .build();
+
+tx.sign(key);
+await rpc.putTransaction(tx);
+```
+
+</Tabs.Tab>
+
+</Tabs>
+
+Each call returns the transaction hash, which the tool surfaces with a
+`https://testnet.cspr.live/transaction/<hash>` explorer link, so every autonomous action
+is publicly auditable.
+
+## Funding itself via x402
+
+The agent pays for its own gas with revenue from the data it produces. The same feed it
+attests on-chain is also sold over the [x402 metered endpoint](/docs/reading/x402): a
+client that wants a fresh reading is quoted a price in WCSPR, signs a WCSPR
+`transfer_with_authorization`, and the facilitator settles that payment on Casper. The
+WCSPR lands with the agent.
+
+During the cycle, `read_x402_earnings` queries the agent's WCSPR balance and reports it
+as treasury available to reinvest. The model is told to count this income as part of the
+treasury, so the loop is closed: selling the oracle feed funds the attestations and the
+yield operations that follow.
+
+<Callout type="info">
+This is the agent-to-agent commerce loop. The oracle sells verified data over x402,
+collects WCSPR, and recycles it into more attestations and yield. See
+[pay-per-call with x402](/docs/reading/x402) for the full HTTP 402 flow.
+</Callout>
+
+## Staking idle treasury
+
+When the agent has more than the 500 CSPR stake minimum liquid, it puts the idle balance
+to work rather than letting it sit. The `reinvest` tool has three outcomes.
+
+<Tabs items={['Stake (preferred)', 'Delegate (fallback)', 'Hold']}>
+
+<Tabs.Tab>
+
+Stake CSPR into **WiseLending**, receiving sCSPR (a liquid staking token with a growing
+redemption rate). This is the preferred venue. The call attaches native CSPR through the
+session-proxy purse described above, at a 15 CSPR gas limit.
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+If WiseLending is not the right choice, the agent falls back to **native delegation** to
+a configured testnet validator via `NativeDelegateBuilder`, at a 2.5 CSPR gas limit and
+the same 500 CSPR minimum.
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+Restraint is a first-class outcome. If conditions do not clearly warrant moving capital,
+the agent **holds**: `reinvest('hold', ...)` submits no transaction, and the decision is
+still recorded with `venue = "hold"` and zero amounts so the reasoning is on the record.
+
+</Tabs.Tab>
+
+</Tabs>
+
+Whatever the agent decides, it calls `record_reinvest` to write the decision to the
+**TreasuryVault** contract. Each record is a `Reinvestment { venue, amount_in, amount_out,
+reasoning, timestamp }`; the contract appends it, bumps the count, and accumulates the
+per-venue and total amounts, emitting a `Reinvested` event. Only the agent may call it.
+The result is an on-chain, auditable ledger of every capital decision the agent has made
+and why.
+
+```rust
+pub struct Reinvestment {
+    pub venue: String,        // "wiselending", "native_delegation", or "hold"
+    pub amount_in: U512,
+    pub amount_out: U512,
+    pub reasoning: String,    // the agent's one-sentence justification
+    pub timestamp: u64,       // chain block time, epoch ms
+}
+```
+
+## Why this design is safe to run unattended
+
+The agent acts without human approval, so its safety comes from structure, not
+supervision:
+
+- **Gated.** Nothing is written until the on-chain [ZK eligibility credential](/docs/network/zk-gate)
+  is confirmed. An ineligible agent stops the cycle.
+- **Validated.** A value is attested only if it passes the anomaly check against the
+  feed's typical range. Suspect data is skipped with an explanation.
+- **Deduplicated.** The heartbeat runs a cycle only on a strictly newer `period`, so the
+  agent never burns gas re-writing an unchanged value.
+- **Authorized.** Only the agent account may call `attest` and `record_reinvest`; every
+  on-chain value and decision carries a verifiable signer.
+- **Conservative.** Treasury moves require a 500 CSPR liquid minimum, are kept small, and
+  holding is always a valid choice.
+
+## Related
+
+<Cards>
+  <Cards.Card title="How it works (the pipeline)" href="/docs/how-it-works" arrow />
+  <Cards.Card title="Attestation and freshness" href="/docs/concepts/attestation" arrow />
+  <Cards.Card title="The ZK eligibility gate" href="/docs/network/zk-gate" arrow />
+  <Cards.Card title="Pay-per-call with x402" href="/docs/reading/x402" arrow />
+  <Cards.Card title="Network and contracts" href="/docs/network/contracts" arrow />
+  <Cards.Card title="Provenance hashing" href="/docs/concepts/provenance" arrow />
+</Cards>

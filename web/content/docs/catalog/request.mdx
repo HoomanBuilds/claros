@@ -1,0 +1,250 @@
+---
+title: "Request a feed"
+description: "How any dataset in the 232-dataset EIA catalog becomes a live on-chain feed, and how to run the open-source agent to attest one yourself."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# Request a feed
+
+Claros serves **36 EIA energy feeds** plus the civic **OP-1** feed live on-chain, but
+those are drawn from a crawled catalog of **232 EIA datasets**. Any dataset in that
+catalog can become a live feed. Turning one into an on-chain feed is a small mapping
+plus two access-controlled calls, and because the agent is open source you can run it
+yourself.
+
+<Callout type="info">
+  The catalog is the menu, not the limit. Browse the 232 datasets on the
+  [catalog page](/docs/catalog), or query them with `GET /v1/datasets` on the
+  [REST API](/docs/reading/rest). Each one can be mapped to a `feed_id` and attested.
+</Callout>
+
+## What a feed is, exactly
+
+A live feed is a catalog dataset pinned down to a single series and given an on-chain
+identity. The mapping (an `EiaFeed` row in `agent/src/eia-feeds.ts`) carries everything
+the adapter and the registries need:
+
+| Field | What it is | Example (`EIA.PET.PRICE.WTI.DAILY`) |
+| --- | --- | --- |
+| `asset_id` | the `feed_id`, the on-chain key | `EIA.PET.PRICE.WTI.DAILY` |
+| `route` | the dataset's EIA route, from the catalog | `petroleum/pri/spt` |
+| `frequency` | one of the dataset's frequencies | `daily` |
+| `data_col` | the column you read | `value` |
+| `facets` | the filters that isolate one series (facet id to value) | `{ series: "RWTC" }` |
+| `unit` | human unit for display | `$/bbl` |
+| `decimals` | on-chain scale (`amount = value * 10^decimals`) | `6` |
+
+That single row is the whole definition:
+
+```ts
+// agent/src/eia-feeds.ts
+{ asset_id: 'EIA.PET.PRICE.WTI.DAILY', route: 'petroleum/pri/spt', frequency: 'daily',
+  data_col: 'value', facets: { series: 'RWTC' }, unit: '$/bbl', decimals: 6 }
+```
+
+<Callout type="info">
+  **Picking `decimals`.** The convention Claros uses: unit prices `6`, percentages `4`,
+  volumes and energy (Bcf, MWh, Btu) `3`, plain counts `0`. The value is scaled to an
+  integer at this exponent, so a consumer recovers it with `amount / 10^decimals`. See
+  [decimals and scaling](/docs/concepts/decimals).
+</Callout>
+
+See [the data model](/docs/concepts/data-model) for what route, frequency, columns, and
+facets mean, and [feed IDs](/docs/concepts/feeds) for the `EIA.<DATASET>.<METRIC>.<SPECIFIER>.<FREQ>`
+naming scheme.
+
+## From catalog dataset to live feed
+
+<Steps>
+
+### Map the dataset
+
+Pick a catalog leaf and choose one `frequency`, one `data_col`, and the facet filters
+that isolate the series you want. The catalog already lists each dataset's available
+frequencies, columns, and facet ids, so the mapping is a selection, not a guess. That
+selection becomes one `EiaFeed` row.
+
+### Fetch with the generic adapter
+
+One adapter (`agent/src/eia.ts`, `fetchLatest`) serves every EIA dataset, because EIA
+APIv2 is one uniform faceted API. It builds the request from the mapping, takes the
+single latest row, scales the value to an integer at the feed's `decimals` with exact
+decimal-string math (no float drift), and computes the deterministic `source_hash`.
+
+```http
+GET https://api.eia.gov/v2/petroleum/pri/spt/data
+  ?api_key=...&frequency=daily&data[0]=value
+  &facets[series][]=RWTC
+  &sort[0][column]=period&sort[0][direction]=desc&offset=0&length=1
+```
+
+The `source_hash` commits to the route, frequency, sorted facets, period, value, and
+unit, so the same reading hashes identically wherever it is produced. See
+[provenance](/docs/concepts/provenance).
+
+### Register the metadata (owner-gated)
+
+The agent calls `FeedRegistry.register_feed` with the self-describing metadata. The
+scripts derive `title` and `description` from the mapping and set `source` to `EIA`, so
+a feed only needs the row above. Re-registering the same `feed_id` updates it in place
+and never double-counts.
+
+```ts
+// agent/src/tools.ts: owner-only entry point
+await registerFeed(
+  asset_id, decimals, unit, title, /* source */ 'EIA', route, frequency, description,
+); // -> FeedRegistry.register_feed (gas limit 8 CSPR)
+```
+
+### Attest the value (attester-gated)
+
+The agent reads the latest value back through the adapter and calls
+`AttestationRegistry.attest` with the exact `period`, `amount` (the scaled integer), and
+`source_hash`.
+
+```ts
+const r = await readEiaFeed(asset_id);            // adapter: latest row, scaled + hashed
+await attest(r.asset_id, r.period, r.amount, r.source_hash); // gas limit 20 CSPR
+```
+
+</Steps>
+
+<Callout type="warning">
+  **Access control.** `register_feed` is **owner-only** and `attest` is **attester-only**;
+  any other caller reverts with `Unauthorized`. On the Claros testnet deployment both
+  roles are held by the agent account `43d7dd06...a21d4`, so feeds on the canonical
+  registries are added by the Claros agent. To attest against your own registries, deploy
+  the open-source contracts (they are upgradable) and hold both roles yourself.
+</Callout>
+
+## Request a feed on the live oracle
+
+If you want a dataset added to the canonical Claros registries, the easy path is two
+steps.
+
+<Steps>
+
+### Find the dataset
+
+Search the catalog by keyword or family (route prefix) to confirm the route, the
+frequencies, the columns, and the facet ids you can filter on:
+
+```bash
+curl 'http://localhost:4030/v1/datasets?q=diesel&family=petroleum'
+# { "total": ..., "datasets": [
+#   { "route": "petroleum/pri/gnd", "name": "...", "frequencies": ["weekly"],
+#     "columns": ["value"], "facets": ["series", "duoarea", "product"] }, ... ] }
+```
+
+### Open a request
+
+Specify the mapping fields below. The operator adds one `EiaFeed` row and runs the
+populate script, and the feed goes live on-chain.
+
+</Steps>
+
+A complete request is just the mapping:
+
+| You provide | From | Example |
+| --- | --- | --- |
+| `route` | the catalog dataset | `petroleum/pri/gnd` |
+| `frequency` | one of its frequencies | `weekly` |
+| `data_col` | one of its columns | `value` |
+| `facets` | facet id to value, the filters | `{ series: "EMD_EPD2D_PTE_NUS_DPG" }` |
+| `unit` | the human unit | `$/gal` |
+| `decimals` | the on-chain scale | `6` |
+
+## Run it yourself
+
+The agent is open source, so you can attest **any** indexed dataset. You need a Casper
+key that holds the attester (and owner) role on the registries you target, the registry
+package hashes, and an EIA API key. To attest a dataset that is not yet in
+`eia-feeds.ts`, add one `EiaFeed` row (the mapping above) and rerun: that single row is
+the entire change, since the adapter and scripts are generic.
+
+<Tabs items={['register-eia-feed', 'attest-eia-once', 'populate-feeds']}>
+  <Tabs.Tab>
+
+Register the metadata and attest the value for one feed in a single run:
+
+```bash
+cd agent
+npm run register-eia-feed -- EIA.PET.PRICE.WTI.DAILY
+# 1) register feed metadata (FeedRegistry)...   tx: ...
+# 2) read EIA + attest value (AttestationRegistry)...
+#    attested 78.94 $/bbl @ 20260623 | tx: ...
+```
+
+This calls `register_feed` then `attest`. The `asset_id` must exist in
+`agent/src/eia-feeds.ts`.
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+Attest a fresh value when the metadata is already registered:
+
+```bash
+cd agent
+npm run attest-eia-once -- EIA.NG.PRICE.HENRYHUB.DAILY
+# attested EIA.NG.PRICE.HENRYHUB.DAILY = 3.16 $/MMBtu (period 20260623)
+# tx: ...
+```
+
+This calls `attest` only, using the latest reading from the adapter.
+
+  </Tabs.Tab>
+  <Tabs.Tab>
+
+Register and attest every feed defined in `eia-feeds.ts` in one pass:
+
+```bash
+cd agent
+npm run populate-feeds
+# OK   EIA.PET.PRICE.WTI.DAILY = 78.94 $/bbl
+# OK   EIA.NG.PRICE.HENRYHUB.DAILY = 3.16 $/MMBtu
+# ...
+# registered + attested 36 feeds on-chain, 0 failed.
+```
+
+Use `npm run eia-feeds` first to list the mappings without writing anything on-chain.
+
+  </Tabs.Tab>
+</Tabs>
+
+<Callout type="info">
+  The autonomous hourly cycle (the DeepSeek [agent](/docs/network/agent)) drives the civic
+  **OP-1** feed end to end. EIA datasets are pushed through the same agent's generic
+  adapter and the CLI scripts above, so attesting a new energy series is one mapping row
+  plus one command.
+</Callout>
+
+<Callout type="warning">
+  Casper testnet charges the gas **limit** you set, not the gas consumed, with no refund.
+  The scripts set `8 CSPR` for `register_feed` and `20 CSPR` for `attest`. Each run signs
+  a Casper 2.0 `TransactionV1` with the attester key, so it spends real testnet CSPR. See
+  [network and contracts](/docs/network/contracts) for the package hashes and gas guidance.
+</Callout>
+
+## Related
+
+<Cards>
+  <Cards.Card title="Data catalog" href="/docs/catalog" arrow>
+    The 232-dataset EIA universe you can request from.
+  </Cards.Card>
+  <Cards.Card title="The data model" href="/docs/concepts/data-model" arrow>
+    Routes, frequencies, columns, and facet filters.
+  </Cards.Card>
+  <Cards.Card title="Feed IDs" href="/docs/concepts/feeds" arrow>
+    The `EIA.<DATASET>.<METRIC>.<SPECIFIER>.<FREQ>` scheme.
+  </Cards.Card>
+  <Cards.Card title="How it works" href="/docs/how-it-works" arrow>
+    The full attest pipeline, from upstream row to on-chain record.
+  </Cards.Card>
+  <Cards.Card title="The autonomous agent" href="/docs/network/agent" arrow>
+    The cycle that fetches, attests, and reinvests.
+  </Cards.Card>
+  <Cards.Card title="Network and contracts" href="/docs/network/contracts" arrow>
+    Package hashes, the attester account, and the gas note.
+  </Cards.Card>
+</Cards>

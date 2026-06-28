@@ -1,0 +1,326 @@
+---
+title: "x402 earn rail"
+description: "The earn side of Claros: the oracle server (resource), the facilitator (verify and settle on Casper), and the consumer (payer), and how WCSPR read fees fund the autonomous agent."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# x402 earn rail
+
+Claros does not only publish data, it sells it. The **x402 earn rail** is the paid surface
+where the oracle's own attested readings are sold per call over [HTTP 402](https://x402.org),
+settled in [WCSPR](/docs/network/contracts) on Casper, with the proceeds landing in the autonomous
+[agent's](/docs/network/agent) account. This page is the **architecture and economics** of
+that earn side: the three services that compose the rail, who touches the chain, who custodies
+funds, and how each paid read feeds the agent's on-chain reinvestment loop.
+
+<Callout type="info">
+  This is the **seller's** view. For the **buyer's** view (the 402 handshake step by step, the
+  payment parameters, and copy-pasteable client code), see [pay-per-call (x402)](/docs/reading/x402).
+  The free read paths ([REST](/docs/reading/rest), the [SDK](/docs/reading/sdk),
+  [cross-contract](/docs/reading/on-chain)) return the same data without payment; the rail
+  exists to **monetize** that data and fund the agent.
+</Callout>
+
+## The rail at a glance
+
+Three small services make up the paid path. Each is a standalone process with one job, and they
+communicate over plain HTTP. Run all three locally for the demo, or host the oracle server and
+facilitator for real agent-to-agent traffic.
+
+| Component | Source | Default port | Role |
+| --- | --- | --- | --- |
+| **Oracle server** | `services/oracle-server` | `4021` | The **resource**. Gates `GET /oracle/feed` behind x402, advertises the price, asset, and `payTo`, builds the reading with on-chain provenance, and delegates settlement to the facilitator. |
+| **Facilitator** | `services/facilitator` | `4022` | **Verify and settle on Casper.** Holds a Casper signing key, verifies the signed authorization, and submits the WCSPR transfer on testnet. The only component that touches the chain. |
+| **Consumer** | `services/consumer` | n/a | The **payer**. Signs a WCSPR `transfer_with_authorization` off-chain and retries with `X-PAYMENT`. Any client can fill this role. |
+
+The resource server never talks to Casper directly. It holds a **facilitator client**
+(`HTTPFacilitatorClient`) pointed at `FACILITATOR_URL` and asks the facilitator to verify and
+settle. That separation is the whole architecture: the resource server stays stateless and
+chain-free, while a single facilitator (the only process with a funded key, a node connection,
+and a gas budget) can settle for many resource servers.
+
+```text
+  consumer (payer)          oracle server :4021       facilitator :4022       Casper testnet
+  services/consumer         services/oracle-server    services/facilitator
+        |                          |                         |                      |
+        | 1. GET /oracle/feed      |                         |                      |
+        |------------------------->|                         |                      |
+        | 2. 402 Payment Required  |                         |                      |
+        |    exact, WCSPR, amount, |                         |                      |
+        |    payTo=agent, network  |                         |                      |
+        |<-------------------------|                         |                      |
+        | 3. sign WCSPR transfer_with_authorization          |                      |
+        |    retry with X-PAYMENT  |                         |                      |
+        |------------------------->| 4. verify + settle      |                      |
+        |                          |------------------------>| 5. submit transfer   |
+        |                          |                         |--------------------->|
+        |                          |                         |   WCSPR: payer to agent
+        |                          |     settle result       |<---------------------|
+        |                          |<------------------------|                      |
+        | 6. 200 OK: reading + provenance (PAYMENT-RESPONSE) |                      |
+        |<-------------------------|                         |                      |
+```
+
+<Callout type="default">
+  The handshake is automatic on the client: steps 1 through 6 happen inside one
+  `fetchWithPayment(...)` call. The full client walkthrough lives on the
+  [pay-per-call page](/docs/reading/x402); here we focus on what each server does and where the
+  money goes.
+</Callout>
+
+## Trust and custody boundaries
+
+The three roles are deliberately unequal in what they can touch. Understanding the boundaries is
+the key to the rail's economics.
+
+| Concern | Consumer (payer) | Oracle server (resource) | Facilitator |
+| --- | --- | --- | --- |
+| Touches Casper | No (signs off-chain) | No (delegates over HTTP) | **Yes** (submits `settle`) |
+| Needs a node + gas | No | No | **Yes** |
+| Custodies the WCSPR | Spends its own | Never | **Never** |
+| Holds a key | Its own payer key | None for payment | Its own facilitator key |
+| Trusts whom | No one (verifies via `source_hash`) | The facilitator's verify/settle result | The signed authorization |
+
+Two facts fall out of this table and matter for the economics below:
+
+- **The facilitator pays gas but never custodies the payment.** A WCSPR
+  `transfer_with_authorization` moves funds straight from the consumer (the authorizer) to
+  `payTo` (the agent). The facilitator only relays and submits that authorization, so the WCSPR
+  is never in its hands. It bears the settlement **gas**, nothing more.
+- **The consumer trusts no one.** The reading comes back with the same `source_hash` the agent
+  attested on-chain, so the buyer reconciles the purchased value against the registry rather than
+  trusting the server. See [provenance and source hash](/docs/concepts/provenance).
+
+## The resource: oracle server
+
+The oracle server (`services/oracle-server`, port `4021`) is the paid product. It wraps one
+route, `GET /oracle/feed?asset_id=OP-1`, in x402 payment middleware. The product it sells is the
+latest attested reading plus a `provenance` block that points back to the
+[AttestationRegistry](/docs/concepts/attestation), so the buyer can verify the value independently.
+
+It advertises the payment in `accepts` and pins the **exact** settled amount with a money parser.
+The `$0.001` price is a display label; the parser resolves it to `FEED_PRICE_MOTES` of WCSPR.
+
+```ts
+// services/oracle-server/index.ts (trimmed)
+const facilitatorClient = new HTTPFacilitatorClient({ url: cfg.facilitatorURL });
+
+// The exact amount the buyer pays, independent of the "$0.001" label.
+const assetAmount: AssetAmount = {
+  asset: cfg.assetPackage,            // WCSPR package hash
+  amount: cfg.priceMotes,            // FEED_PRICE_MOTES, default 1_000_000_000 = 1 WCSPR
+  extra: { name: cfg.assetName, symbol: 'WCSPR', version: '1', decimals: '9' },
+};
+
+const casperScheme = new ExactCasperScheme()
+  .registerAsset(chainID, cfg.assetPackage, 9)            // WCSPR, 9 decimals
+  .registerMoneyParser(() => Promise.resolve(assetAmount));
+
+app.use(
+  paymentMiddleware(
+    {
+      'GET /oracle/feed': {
+        accepts: [{ scheme: 'exact', price: '$0.001', network: chainID, payTo: cfg.payeeAddress }],
+        description: 'Claros: latest attested parking-revenue reading for an asset',
+        mimeType: 'application/json',
+      },
+    },
+    new x402ResourceServer(facilitatorClient).register(chainID, casperScheme),
+  ),
+);
+```
+
+<Callout type="info">
+  `payTo` is `PAYEE_ADDRESS`, the **agent's** account
+  (`account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4`), the same
+  identity that attests the reading on-chain. Selling the data therefore pays the oracle that
+  produced it. That is the link the whole rail exists to create.
+</Callout>
+
+### Configuration
+
+Every payment parameter the resource advertises comes from its environment.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `PORT` | `4021` | Listen port. |
+| `PAYEE_ADDRESS` | required | The `payTo` account. WCSPR lands here (the agent). |
+| `FACILITATOR_URL` | required | Where to reach the facilitator's `verify` and `settle`. |
+| `FACILITATOR_API_KEY` | `""` | Optional bearer sent on the facilitator calls. |
+| `CAIP2_CHAIN_ID` | required | The CAIP-2 network id, `casper:casper-test`. |
+| `ASSET_PACKAGE` | required | WCSPR package hash (`3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e`). |
+| `ASSET_NAME` | required | The asset's display name, `Wrapped CSPR`. |
+| `FEED_PRICE_MOTES` | `1000000000` | The settled price in motes (1 WCSPR, 9 decimals). |
+| `ATTESTATION_REGISTRY_PACKAGE` | required | Registry hash stamped into the `provenance` block. |
+| `SAN_DIEGO_YEAR` | `2026` | Which civic CSV year the `OP-1` reading is built from. |
+
+## The facilitator: verify and settle on Casper
+
+The facilitator (`services/facilitator`, port `4022`) is the rail's gateway to Casper. It exposes
+a tiny, stateless API and holds the only key in the rail that signs a settlement transaction. The
+resource server calls it; it never calls the resource server.
+
+| Endpoint | Method | Purpose | On-chain |
+| --- | --- | --- | --- |
+| `/verify` | `POST` | Check a signed payload satisfies the payment requirements. Returns `VerifyResponse`. | No |
+| `/settle` | `POST` | Submit the WCSPR `transfer_with_authorization` on Casper, moving funds payer to agent. Returns `SettleResponse`. | **Yes** |
+| `/supported` | `GET` | The schemes and networks this facilitator can settle (`facilitator.getSupported()`). | No |
+| `/health` | `GET` | Liveness. | No |
+
+It builds one signer per configured network from a PEM key and an RPC URL, then registers the
+Casper `exact` scheme. The `limitedPaymentMotes` option is the gas budget it will spend per
+settlement.
+
+```ts
+// services/facilitator/index.ts (trimmed)
+const facilitator = new x402Facilitator()
+  .onBeforeSettle(async () => console.log('settling payment...'))
+  .onAfterSettle(async ctx => console.log('settled', ctx))
+  .onSettleFailure(async ctx => console.log('settle failure', ctx));
+
+for (const network of cfg.networks) {
+  const key = cfg.keys[network];               // PEM + algorithm + rpcUrl, per network
+  const signer = await buildSigner(key);       // toFacilitatorCasperSigner(privateKey, rpcUrl)
+  facilitator.register(
+    network,
+    new ExactCasperScheme(signer, { limitedPaymentMotes: cfg.transactionPaymentMotes }),
+  );
+}
+
+// verify(payload, requirements) -> VerifyResponse   (read-only)
+// settle(payload, requirements) -> SettleResponse   (submits the transfer on Casper)
+```
+
+A failed settlement is reported, not thrown past the API: when the scheme aborts, `/settle`
+returns `{ success: false, errorReason, network }` so the resource server can answer the buyer
+cleanly instead of paying for an undelivered reading.
+
+### Configuration
+
+The facilitator is keyed per network. The env-var suffix for each network is its CAIP-2 id,
+uppercased with `:` and `-` rewritten to `_`, so `casper:casper-test` becomes `CASPER_CASPER_TEST`.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `PORT` | `4022` | Listen port. |
+| `CASPER_NETWORKS` | `casper:casper-test` | Comma-separated CAIP-2 networks to settle on. |
+| `SECRET_KEY_PATH_<NET>` | required | PEM key path for that network (or `SECRET_KEY_PEM_<NET>` inline). |
+| `SECRET_KEY_ALGO_<NET>` | `ed25519` | `ed25519` or `secp256k1`. |
+| `RPCURL_<NET>` | required | Casper JSON-RPC endpoint for that network. |
+| `TRANSACTION_PAYMENT_MOTES` | `7000000000` | Gas budget per settlement (7 CSPR). |
+| `LOG_LEVEL` | `info` | Log verbosity. |
+
+<Callout type="warning">
+  `TRANSACTION_PAYMENT_MOTES` is a gas **limit**, and Casper testnet bills the limit you set, not
+  the gas actually consumed, with no refund. So each settled call costs the facilitator operator
+  up to 7 CSPR regardless of the WCSPR price. See [network and contracts](/docs/network/contracts) for the
+  gas model.
+</Callout>
+
+## The consumer: the payer
+
+The consumer is any client that holds a funded **WCSPR** key. It signs a
+`transfer_with_authorization` (an EIP-3009-style off-chain authorization) for the exact amount,
+payable to the agent, and retries the request with the signature in the `X-PAYMENT` header. It
+never submits a transaction itself, so it needs no node and no gas budget, only WCSPR.
+
+The reference client is `services/consumer`, which wraps `fetch` with `wrapFetchWithPayment` from
+`@x402/fetch` and an `ExactCasperScheme` from `@make-software/casper-x402`, turning the entire
+402 handshake into one call.
+
+<Callout type="info">
+  The full payer how-to (client code, wrapping CSPR into WCSPR, reading the settlement receipt
+  from the `PAYMENT-RESPONSE` header) is the [pay-per-call (x402)](/docs/reading/x402) page. This
+  page does not repeat it; the consumer is shown here only to complete the architecture.
+</Callout>
+
+## Economics: how read fees fund the agent
+
+Every settled call moves a fixed amount of WCSPR from the payer to the agent. The three roles map
+to three distinct Casper identities, and the money flow per call is:
+
+| Identity | Account | Role | Spends per call | Receives per call |
+| --- | --- | --- | --- | --- |
+| **Agent** (payee + attester) | `43d7dd06...` | The `payTo`; the oracle that attested the data | nothing on the rail | **+ `FEED_PRICE_MOTES` WCSPR** |
+| **Facilitator** signer | `ecf70a7f...` | Signs and submits the settlement | up to `TRANSACTION_PAYMENT_MOTES` CSPR (gas) | nothing (no custody) |
+| **Consumer** (payer) | any funded WCSPR key | Signs the authorization | `FEED_PRICE_MOTES` WCSPR | the reading + provenance |
+
+The full account hashes for each identity are on the [network page](/docs/network/contracts).
+
+### The price knob and the gas budget are separate
+
+The amount the buyer pays is `FEED_PRICE_MOTES` (default `1000000000` motes, or 1 WCSPR at 9
+decimals), set on the resource server. The amount the facilitator can spend to settle it is
+`TRANSACTION_PAYMENT_MOTES` (default 7 CSPR), set on the facilitator. They are independent dials:
+
+- **`FEED_PRICE_MOTES`** is the revenue knob. Raise it to charge more per reading.
+- **`TRANSACTION_PAYMENT_MOTES`** is the cost ceiling per settlement (billed as a limit on
+  testnet, not as consumption).
+
+<Callout type="default">
+  At the demo price the per-call WCSPR revenue is intentionally nominal (`$0.001`, about 1 WCSPR),
+  below the testnet gas ceiling, because it exists to demonstrate the rail end to end. For a
+  production deployment, `FEED_PRICE_MOTES` is the single value to set so that read revenue clears
+  settlement cost.
+</Callout>
+
+### The funding loop
+
+The earn rail closes a loop with the [autonomous agent](/docs/network/agent). The same feed the
+agent attests on-chain is what the oracle server sells, so the agent is paid in WCSPR for its own
+data. During each cycle the agent's `read_x402_earnings` tool reads that WCSPR balance and counts
+it as treasury available to reinvest. The agent then decides whether to stake the idle balance
+into [WiseLending](/docs/network/agent) (CSPR to sCSPR), delegate it natively, or hold, and writes
+the decision to the `TreasuryVault`.
+
+```text
+  upstream data  ->  agent attests on-chain  ->  oracle server sells the reading over x402
+        ^                                                        |
+        |                                                        v
+  more attestations  <-  agent reinvests (sCSPR yield)  <-  consumer pays WCSPR to the agent
+```
+
+The result is a **self-funding oracle**: selling verifiable data pays for producing it. The
+attestation gas, the treasury, and the yield operations are all fed by the WCSPR the rail
+collects. See [the autonomous agent](/docs/network/agent) for the reinvestment cycle in detail.
+
+## Why x402 for the earn side
+
+x402 fits the earn rail for reasons specific to an autonomous, on-chain oracle:
+
+- **Agent-to-agent commerce.** The payer is often another autonomous agent. There is no account,
+  no API key, and no invoice: a `GET` either returns the data or returns a `402` that says exactly
+  what to pay, and the client pays in one step.
+- **Settlement is on-chain and final.** Payment is a real WCSPR transfer on Casper, settled by the
+  facilitator, not a promise or an off-chain credit.
+- **The asset is already on Casper.** WCSPR is a CEP-18 token that supports
+  `transfer_with_authorization`, so the payer can authorize a transfer off-chain and let the
+  facilitator submit it. The payer never needs gas.
+- **The data is verifiable, so trust is not required.** Because the sold reading carries the same
+  `source_hash` the agent attested, the buyer reconciles it against the chain. The rail monetizes
+  data whose correctness the buyer can check independently. See
+  [provenance and source hash](/docs/concepts/provenance).
+
+## Related
+
+<Cards>
+  <Cards.Card title="Pay-per-call (x402): the buyer how-to" href="/docs/reading/x402" arrow>
+    The 402 handshake, payment parameters, and client code for consumers.
+  </Cards.Card>
+  <Cards.Card title="The autonomous agent" href="/docs/network/agent" arrow>
+    How earned WCSPR funds attestations and the treasury reinvestment loop.
+  </Cards.Card>
+  <Cards.Card title="Network and contracts" href="/docs/network/contracts" arrow>
+    Package hashes, the account identities, and the gas model.
+  </Cards.Card>
+  <Cards.Card title="Provenance and source hash" href="/docs/concepts/provenance" arrow>
+    Why a buyer can verify a purchased reading without trusting the server.
+  </Cards.Card>
+  <Cards.Card title="The attestation record" href="/docs/concepts/attestation" arrow>
+    The on-chain value the rail sells, and who is authorized to write it.
+  </Cards.Card>
+  <Cards.Card title="Free read paths" href="/docs/reading/rest" arrow>
+    The same data without payment: REST, the SDK, and cross-contract.
+  </Cards.Card>
+</Cards>

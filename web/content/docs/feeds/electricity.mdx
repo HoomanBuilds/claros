@@ -1,0 +1,141 @@
+---
+title: "Electricity"
+description: "Live electricity feeds: exact feed ids, routes, facets, and units."
+---
+
+import { Callout } from 'nextra/components'
+
+# Electricity
+
+6 live feeds in the electricity family. Each section gives the exact `feed_id`, the EIA route, the frequency, the data column you read, every facet filter (id, the value Claros uses, and what that filter means in the EIA catalog), the unit, and the decimals. To turn an on-chain integer into a human value, compute `amount / 10^decimals`.
+
+<Callout type="info">
+Facet ids are the EIA filters. The "Means" column is taken from the dataset definition in the [data catalog](/docs/catalog). Pick a feed by its `feed_id` and read it with [the SDK](/docs/reading/sdk) or [REST](/docs/reading/rest).
+</Callout>
+
+## DEMAND.US48
+
+Hourly Demand, Demand Forecast, Generation, and Interchange: value (hourly), filtered to respondent=US48, type=D, in MWh.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.ELEC.DEMAND.US48.HOURLY` |
+| EIA route | `electricity/rto/region-data` |
+| Dataset | Hourly Demand, Demand Forecast, Generation, and Interchange |
+| Frequency | hourly |
+| Data column | `value` |
+| Unit | MWh |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `respondent` | `US48` | Balancing Authority / Region |
+| `type` | `D` | Metric |
+
+## GEN_NG.US48
+
+Hourly Generation by Energy Source: value (hourly), filtered to respondent=US48, fueltype=NG, in MWh.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.ELEC.GEN_NG.US48.HOURLY` |
+| EIA route | `electricity/rto/fuel-type-data` |
+| Dataset | Hourly Generation by Energy Source |
+| Frequency | hourly |
+| Data column | `value` |
+| Unit | MWh |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `respondent` | `US48` | Balancing Authority / Region |
+| `fueltype` | `NG` | Energy Source |
+
+## RETAIL.PRICE.US_ALL
+
+Electricity Sales to Ultimate Customers: price (monthly), filtered to stateid=US, sectorid=ALL, in cents/kWh.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.ELEC.RETAIL.PRICE.US_ALL.MONTHLY` |
+| EIA route | `electricity/retail-sales` |
+| Dataset | Electricity Sales to Ultimate Customers |
+| Frequency | monthly |
+| Data column | `price` |
+| Unit | cents/kWh |
+| Decimals | 6 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `stateid` | `US` | State / Census Region |
+| `sectorid` | `ALL` | Sector |
+
+## RETAIL.SALES.US_ALL
+
+Electricity Sales to Ultimate Customers: sales (monthly), filtered to stateid=US, sectorid=ALL, in million kWh.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.ELEC.RETAIL.SALES.US_ALL.MONTHLY` |
+| EIA route | `electricity/retail-sales` |
+| Dataset | Electricity Sales to Ultimate Customers |
+| Frequency | monthly |
+| Data column | `sales` |
+| Unit | million kWh |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `stateid` | `US` | State / Census Region |
+| `sectorid` | `ALL` | Sector |
+
+## RETAIL.REVENUE.US_ALL
+
+Electricity Sales to Ultimate Customers: revenue (monthly), filtered to stateid=US, sectorid=ALL, in million $.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.ELEC.RETAIL.REVENUE.US_ALL.MONTHLY` |
+| EIA route | `electricity/retail-sales` |
+| Dataset | Electricity Sales to Ultimate Customers |
+| Frequency | monthly |
+| Data column | `revenue` |
+| Unit | million $ |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `stateid` | `US` | State / Census Region |
+| `sectorid` | `ALL` | Sector |
+
+## RETAIL.CUSTOMERS.US_RES
+
+Electricity Sales to Ultimate Customers: customers (monthly), filtered to stateid=US, sectorid=RES, in count.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.ELEC.RETAIL.CUSTOMERS.US_RES.MONTHLY` |
+| EIA route | `electricity/retail-sales` |
+| Dataset | Electricity Sales to Ultimate Customers |
+| Frequency | monthly |
+| Data column | `customers` |
+| Unit | count |
+| Decimals | 0 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `stateid` | `US` | State / Census Region |
+| `sectorid` | `RES` | Sector |
+

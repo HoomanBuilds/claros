@@ -1,0 +1,47 @@
+---
+title: "Biomass"
+description: "Live biomass feeds: exact feed ids, routes, facets, and units."
+---
+
+import { Callout } from 'nextra/components'
+
+# Biomass
+
+2 live feeds in the biomass family. Each section gives the exact `feed_id`, the EIA route, the frequency, the data column you read, every facet filter (id, the value Claros uses, and what that filter means in the EIA catalog), the unit, and the decimals. To turn an on-chain integer into a human value, compute `amount / 10^decimals`.
+
+<Callout type="info">
+Facet ids are the EIA filters. The "Means" column is taken from the dataset definition in the [data catalog](/docs/catalog). Pick a feed by its `feed_id` and read it with [the SDK](/docs/reading/sdk) or [REST](/docs/reading/rest).
+</Callout>
+
+## PROD.US
+
+Production by Region: production (monthly), filtered to none (whole-dataset series), in short tons.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.DBF.PROD.US.MONTHLY` |
+| EIA route | `densified-biomass/production-by-region` |
+| Dataset | Production by Region |
+| Frequency | monthly |
+| Data column | `production` |
+| Unit | short tons |
+| Decimals | 3 |
+
+Facets: none. This route exposes a single series, so no filter is required.
+
+## SALES_PRICE.US
+
+Sales and Price by Region: average-price (monthly), filtered to none (whole-dataset series), in $/short ton.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.DBF.SALES_PRICE.US.MONTHLY` |
+| EIA route | `densified-biomass/sales-and-price-by-region` |
+| Dataset | Sales and Price by Region |
+| Frequency | monthly |
+| Data column | `average-price` |
+| Unit | $/short ton |
+| Decimals | 6 |
+
+Facets: none. This route exposes a single series, so no filter is required.
+

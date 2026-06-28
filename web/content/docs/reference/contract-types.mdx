@@ -1,0 +1,249 @@
+---
+title: "Contract types"
+description: "Reference for the on-chain Odra types and read entry points a Claros consumer needs: the Attestation and Feed structs, get_latest and get_feed, and feed enumeration."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# Contract types
+
+Claros publishes data through two small Odra contracts on Casper testnet (`casper-test`). Both are keyed by the same `feed_id` string, and both follow the Pyth model: on-chain values are integers, and the human value is `amount / 10^decimals`.
+
+- **AttestationRegistry** stores the feed VALUES. Its read methods return an [`Attestation`](#attestation).
+- **FeedRegistry** stores self-describing METADATA. Its read methods return a [`Feed`](#feed).
+
+This page is the type reference: the exact struct fields with their Rust types, the read entry points, the `Option` returns, and the feed-enumeration methods. For the full integration walkthrough (declaring `external_contract` traits and wiring a `ContractRef`), see [cross-contract reads](/docs/reading/on-chain). For off-chain access, see [the TypeScript SDK](/docs/reading/sdk) and [the REST API](/docs/reading/rest).
+
+<Callout type="info">
+  These types come straight from `contracts/src/attestation_registry.rs` and `contracts/src/feed_registry.rs`. If you read Claros from your own contract, re-declare them verbatim under `#[odra::odra_type]`, because Odra derives the on-chain serialization from the field order and types. Any drift will misparse the bytes.
+</Callout>
+
+## The two registries
+
+These are the live package addresses on `casper-test`. Cross-contract callers pass them as `Address` arguments (Casper contract package addresses); the SDK and REST service have them baked in.
+
+| Registry | Stores | Read returns | Package address (`casper-test`) |
+| --- | --- | --- | --- |
+| `AttestationRegistry` | feed values, by `feed_id` | [`Attestation`](#attestation) | `hash-236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc` |
+| `FeedRegistry` | feed metadata, by `feed_id` | [`Feed`](#feed) | `hash-dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46` |
+
+<Callout type="info">
+  `AttestationRegistry` names its read parameter `asset_id` while `FeedRegistry` names it `feed_id`, but both take the identical Claros `feed_id` string (for example `OP-1` or `EIA.PET.PRICE.WTI.DAILY`). They are the same key into two different stores.
+</Callout>
+
+## Attestation
+
+A single recorded value plus its provenance. Returned by `get_latest` and `get_at` on `AttestationRegistry`.
+
+```rust
+use odra::casper_types::U512;
+use odra::prelude::*;
+
+#[odra::odra_type]
+pub struct Attestation {
+    pub period: u64,
+    pub amount: U512,
+    pub source_hash: String,
+    pub attester: Address,
+    pub timestamp: u64,
+}
+```
+
+| Field | Rust type | Meaning |
+| --- | --- | --- |
+| `period` | `u64` | Provider period key the value covers, encoded as an integer (for example `20260623` for 2026-06-23, or epoch seconds for hourly feeds). See [attestation and freshness](/docs/concepts/attestation) for the per-cadence encoding. |
+| `amount` | `U512` | The integer value. The human value is `amount / 10^decimals`, where `decimals` comes from the matching [`Feed`](#feed). |
+| `source_hash` | `String` | A deterministic provenance digest of the canonical source row. Recompute it from the upstream data to verify the on-chain number was not altered. |
+| `attester` | `Address` | The account that wrote the record: the Claros agent (account-hash `43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4`). |
+| `timestamp` | `u64` | The on-chain commit time in epoch **milliseconds**, stamped by the chain via `get_block_time()` at inclusion, not supplied by the caller. |
+
+<Callout type="info">
+  `period` and `timestamp` answer different questions. `period` is what the value describes (the real-world interval); `timestamp` is when it was written. A robust freshness check uses both, as covered on [the attestation page](/docs/concepts/attestation).
+</Callout>
+
+## Feed
+
+Self-describing metadata for a feed, so a consumer reading a value can interpret it (decimals, unit, source) entirely on-chain. Returned by `get_feed` on `FeedRegistry`.
+
+```rust
+#[odra::odra_type]
+pub struct Feed {
+    pub decimals: u8,
+    pub unit: String,
+    pub title: String,
+    pub source: String,
+    pub route: String,
+    pub frequency: String,
+    pub description: String,
+}
+```
+
+| Field | Rust type | Meaning |
+| --- | --- | --- |
+| `decimals` | `u8` | The scale exponent. Real value = `amount / 10^decimals`. Per-feed, so always read it rather than assuming a fixed scale. |
+| `unit` | `String` | Display unit, for example `$/bbl`, `MWh`, or `percent`. |
+| `title` | `String` | Human title, for example `WTI crude spot`. |
+| `source` | `String` | Upstream source, for example `EIA` or `City of San Diego`. |
+| `route` | `String` | Provider route, for example `petroleum/pri/spt`. |
+| `frequency` | `String` | One of `daily`, `weekly`, `monthly`, `annual`, `hourly`, `quarterly`. |
+| `description` | `String` | A longer human description of the feed. |
+
+<Callout type="info">
+  Values (`AttestationRegistry`) and metadata (`FeedRegistry`) are separate stores, registered and attested independently. A feed can exist in `FeedRegistry` (so `get_feed` returns `Some`) before it has any value (so `get_latest` returns `None`). Read both, with the same id, before you scale.
+</Callout>
+
+## Read entry points
+
+These are the methods a consumer calls. All are `&self` views: free to call off-chain (SDK, REST) and gas-only on-chain. The write methods (`attest`, `register_feed`) are restricted, see [write entry points](#write-entry-points).
+
+<Tabs items={['AttestationRegistry', 'FeedRegistry']}>
+<Tabs.Tab>
+
+| Entry point | Signature | Returns |
+| --- | --- | --- |
+| `get_latest` | `get_latest(asset_id: String)` | `Option<Attestation>`, the most recent value for the feed |
+| `get_at` | `get_at(asset_id: String, index: u64)` | `Option<Attestation>`, the historical value at `index` (0-based) |
+| `get_count` | `get_count(asset_id: String)` | `u64`, number of attestations recorded for the feed |
+| `total_attestations` | `total_attestations()` | `u64`, total attestations across every feed |
+| `get_attester` | `get_attester()` | `Address`, the single authorized attester (the Claros agent) |
+
+</Tabs.Tab>
+<Tabs.Tab>
+
+| Entry point | Signature | Returns |
+| --- | --- | --- |
+| `get_feed` | `get_feed(feed_id: String)` | `Option<Feed>`, metadata for the feed |
+| `get_feed_at` | `get_feed_at(index: u64)` | `Option<String>`, the `feed_id` at registration `index`, for enumeration |
+| `feed_count` | `feed_count()` | `u64`, number of registered feeds |
+
+</Tabs.Tab>
+</Tabs>
+
+<Callout type="info">
+  As of the latest on-chain verification, `feed_count()` returns **37** and `total_attestations()` returns **72**. Both grow as the agent registers feeds and attests new periods, so read them live rather than hardcoding.
+</Callout>
+
+## The `Option` returns
+
+`get_latest`, `get_at`, `get_feed`, and `get_feed_at` all return `Option<...>`. `None` is a normal, expected outcome, not an error condition:
+
+| Call | Returns `None` when |
+| --- | --- |
+| `get_feed(feed_id)` | the `feed_id` is not registered in `FeedRegistry` |
+| `get_latest(asset_id)` | the feed has never been attested |
+| `get_at(asset_id, index)` | no attestation exists at that `index` |
+| `get_feed_at(index)` | `index >= feed_count()` |
+
+On-chain, unwrap deliberately with a meaningful revert (`unwrap_or_revert` or a `match`) rather than assuming a value exists. Off-chain, the SDK mirrors this: `getReading`, `getValue`, `getFeed`, and `feedIdAt` each return `T | null`.
+
+```rust
+// Cross-contract: handle the None case explicitly.
+let att = match AttestationRegistryContractRef::new(self.env(), areg).get_latest(feed_id) {
+    Some(a) => a,
+    None => self.env().revert(Error::NoData), // feed unknown or not yet attested
+};
+```
+
+## Feed enumeration
+
+`FeedRegistry` keeps an index so you can list every feed without an off-chain catalog. Read `feed_count()` for the total, then walk `get_feed_at(i)` from `0` to `count - 1` to get each `feed_id`, and `get_feed(id)` for its metadata.
+
+<Callout type="warning">
+  The on-chain method is `get_feed_at(index)`. The TypeScript SDK surfaces the same call as `feedIdAt(i)`, and adds `listFeedIds()` as a convenience that loops it for you. Same underlying read, two names.
+</Callout>
+
+<Tabs items={['Cross-contract', 'SDK']}>
+<Tabs.Tab>
+
+```rust
+let freg = FeedRegistryContractRef::new(self.env(), feed_registry);
+
+let n = freg.feed_count(); // u64, e.g. 37
+for i in 0..n {
+    if let Some(id) = freg.get_feed_at(i) {
+        let feed = freg.get_feed(id).unwrap_or_revert(&self.env());
+        // feed.decimals, feed.unit, feed.frequency, ...
+    }
+}
+```
+
+</Tabs.Tab>
+<Tabs.Tab>
+
+```ts
+import { ClarosOracle } from 'claros-oracle'
+
+const oracle = new ClarosOracle() // testnet addresses baked in
+
+const n = await oracle.feedCount()        // 37
+const first = await oracle.feedIdAt(0)    // get_feed_at(0)
+const ids = await oracle.listFeedIds()    // string[], loops feedIdAt for you
+
+for (const id of ids) {
+  const feed = await oracle.getFeed(id)   // get_feed(id) -> Feed | null
+}
+```
+
+</Tabs.Tab>
+</Tabs>
+
+## Scaling: `amount / 10^decimals`
+
+Every value is an integer. To get the human number, read `decimals` from the [`Feed`](#feed) and divide. `decimals` is per-feed, so never assume a fixed scale. On-chain, keep the math in integers (`wasm` contracts are `no_std`, so there are no floats):
+
+```rust
+// EIA.PET.PRICE.WTI.DAILY: decimals = 6, amount = 78_940_000  ($78.94/bbl)
+let scale = U512::from(10u64).pow(U512::from(feed.decimals as u32)); // 1_000_000
+let whole = att.amount / scale;                                      // 78
+```
+
+The worked example, including how to recover the fractional part without floats, is on [cross-contract reads](/docs/reading/on-chain). Off-chain, the SDK and REST compute `value` for you.
+
+## Method names across surfaces
+
+The same on-chain entry point has a different name in each reading surface. This table maps them:
+
+| On-chain (Odra) | SDK (`claros-oracle`) | REST (`claros-api`) |
+| --- | --- | --- |
+| `get_latest(asset_id)` | `getValue(id)` | `GET /v1/feeds/:id` |
+| `get_feed(feed_id)` | `getFeed(id)` | (folded into `GET /v1/feeds/:id`) |
+| `get_latest` + `get_feed` | `getReading(id)` | `GET /v1/feeds/:id` |
+| `feed_count()` | `feedCount()` | length of `GET /v1/feeds` |
+| `get_feed_at(index)` | `feedIdAt(i)` | (enumerated by `GET /v1/feeds`) |
+| `get_at(asset_id, index)` | (not exposed) | (not exposed) |
+
+<Callout type="info">
+  The SDK's `Attestation` equivalent is its `FeedValue` interface (`period`, `amount` as a `bigint`, `source_hash`, `attester` as a string, `timestamp`), and `getReading` returns a `Reading` that bundles `Feed` + `FeedValue` + the scaled `value`. Field meanings are identical; see [the SDK](/docs/reading/sdk) for the TypeScript types.
+</Callout>
+
+## Events
+
+If you index attestations instead of polling `get_latest`, both contracts emit a typed event on write:
+
+| Contract | Event | Fields |
+| --- | --- | --- |
+| `AttestationRegistry` | `RevenueAttested` | `asset_id: String`, `period: u64`, `amount: U512`, `source_hash: String`, `index: u64`, `timestamp: u64` |
+| `FeedRegistry` | `FeedRegistered` | `feed_id: String`, `decimals: u8`, `unit: String`, `source: String` |
+
+`RevenueAttested.index` is the 0-based position the new value took in that feed's history, so you can fetch it later with `get_at(asset_id, index)`.
+
+## Write entry points
+
+These exist for completeness. They are restricted to the Claros agent and owner, so a third-party contract cannot call them (both revert `Unauthorized = 1` for any other caller).
+
+| Entry point | Contract | Caller | Effect |
+| --- | --- | --- | --- |
+| `attest(asset_id, period, amount, source_hash)` | `AttestationRegistry` | attester only | Writes the `latest` value, appends to `history`, bumps the counts |
+| `register_feed(feed_id, decimals, unit, title, source, route, frequency, description)` | `FeedRegistry` | owner only | Registers or updates a feed; re-registering an existing id updates it without double-counting |
+
+Both the attester and the owner are the Claros agent account-hash `43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4`.
+
+## Related
+
+<Cards>
+  <Cards.Card title="Cross-contract reads" href="/docs/reading/on-chain" arrow />
+  <Cards.Card title="TypeScript SDK" href="/docs/reading/sdk" arrow />
+  <Cards.Card title="REST API" href="/docs/reading/rest" arrow />
+  <Cards.Card title="Attestation & freshness" href="/docs/concepts/attestation" arrow />
+  <Cards.Card title="Network & addresses" href="/docs/network/contracts" arrow />
+</Cards>

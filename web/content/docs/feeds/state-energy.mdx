@@ -1,0 +1,57 @@
+---
+title: "State energy (SEDS)"
+description: "Live state energy (seds) feeds: exact feed ids, routes, facets, and units."
+---
+
+import { Callout } from 'nextra/components'
+
+# State energy (SEDS)
+
+2 live feeds in the state energy (seds) family. Each section gives the exact `feed_id`, the EIA route, the frequency, the data column you read, every facet filter (id, the value Claros uses, and what that filter means in the EIA catalog), the unit, and the decimals. To turn an on-chain integer into a human value, compute `amount / 10^decimals`.
+
+<Callout type="info">
+Facet ids are the EIA filters. The "Means" column is taken from the dataset definition in the [data catalog](/docs/catalog). Pick a feed by its `feed_id` and read it with [the SDK](/docs/reading/sdk) or [REST](/docs/reading/rest).
+</Callout>
+
+## TOTAL_CONS.CA
+
+State Energy Data System (SEDS): value (annual), filtered to seriesId=TETCB, stateId=CA, in billion Btu.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.SEDS.TOTAL_CONS.CA.ANNUAL` |
+| EIA route | `seds` |
+| Dataset | State Energy Data System (SEDS) |
+| Frequency | annual |
+| Data column | `value` |
+| Unit | billion Btu |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `seriesId` | `TETCB` | Unique series identifier |
+| `stateId` | `CA` | State name |
+
+## PROD.CA
+
+State Energy Data System (SEDS): value (annual), filtered to seriesId=TEPRB, stateId=CA, in billion Btu.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.SEDS.PROD.CA.ANNUAL` |
+| EIA route | `seds` |
+| Dataset | State Energy Data System (SEDS) |
+| Frequency | annual |
+| Data column | `value` |
+| Unit | billion Btu |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `seriesId` | `TEPRB` | Unique series identifier |
+| `stateId` | `CA` | State name |
+

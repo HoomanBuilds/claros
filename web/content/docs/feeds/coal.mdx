@@ -1,0 +1,76 @@
+---
+title: "Coal"
+description: "Live coal feeds: exact feed ids, routes, facets, and units."
+---
+
+import { Callout } from 'nextra/components'
+
+# Coal
+
+3 live feeds in the coal family. Each section gives the exact `feed_id`, the EIA route, the frequency, the data column you read, every facet filter (id, the value Claros uses, and what that filter means in the EIA catalog), the unit, and the decimals. To turn an on-chain integer into a human value, compute `amount / 10^decimals`.
+
+<Callout type="info">
+Facet ids are the EIA filters. The "Means" column is taken from the dataset definition in the [data catalog](/docs/catalog). Pick a feed by its `feed_id` and read it with [the SDK](/docs/reading/sdk) or [REST](/docs/reading/rest).
+</Callout>
+
+## PROD.US
+
+Aggregate Production: production (annual), filtered to stateRegionId=US, in short tons.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.COAL.PROD.US.ANNUAL` |
+| EIA route | `coal/aggregate-production` |
+| Dataset | Aggregate Production |
+| Frequency | annual |
+| Data column | `production` |
+| Unit | short tons |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `stateRegionId` | `US` | State / Region |
+
+## PRICE.MARKET.US
+
+Market Sales Price: price (annual), filtered to stateRegionId=US, in $/short ton.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.COAL.PRICE.MARKET.US.ANNUAL` |
+| EIA route | `coal/market-sales-price` |
+| Dataset | Market Sales Price |
+| Frequency | annual |
+| Data column | `price` |
+| Unit | $/short ton |
+| Decimals | 6 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `stateRegionId` | `US` | State / Region |
+
+## PRICE.BITUMINOUS
+
+Price by Rank: price (annual), filtered to stateRegionId=US, coalRankId=BIT, in $/short ton.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.COAL.PRICE.BITUMINOUS.ANNUAL` |
+| EIA route | `coal/price-by-rank` |
+| Dataset | Price by Rank |
+| Frequency | annual |
+| Data column | `price` |
+| Unit | $/short ton |
+| Decimals | 6 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `stateRegionId` | `US` | State / Region |
+| `coalRankId` | `BIT` | Coal Rank |
+

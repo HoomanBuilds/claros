@@ -1,0 +1,248 @@
+---
+title: "On-chain (cross-contract)"
+description: "Consume Claros oracle values from your own Casper or Odra contract using external_contract traits and ContractRef."
+---
+
+import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+
+# On-chain (cross-contract)
+
+The on-chain path lets your own Casper or Odra contract read a Claros feed inside the same transaction it acts on. You declare the registries as `external_contract` traits, instantiate a `ContractRef` with each registry address, call `get_latest` for the value and `get_feed` for its metadata, then scale with `amount / 10^decimals`. No indexer, no off-chain call, gas only.
+
+<Callout type="info">
+  Reading from another contract costs gas and runs entirely on-chain, so the value your logic sees is the value the network agreed on. If you only need to read Claros off-chain, prefer [the TypeScript SDK](/docs/reading/sdk) or [the REST API](/docs/reading/rest), which are free and need no contract of your own.
+</Callout>
+
+## How it works
+
+Claros follows the Pyth model: on-chain values are integers, and the human value is `amount / 10^decimals`. Two contracts split the job, and both are keyed by the same `feed_id` string:
+
+- **AttestationRegistry** holds the feed VALUES. `get_latest(feed_id)` returns the most recent [`Attestation`](#attestation) (the integer `amount`, its `period`, and provenance).
+- **FeedRegistry** holds self-describing METADATA. `get_feed(feed_id)` returns the [`Feed`](#feed) (the `decimals` you scale by, plus `unit`, `title`, `source`, and more).
+
+You read both with the same id, then divide. Because `decimals` ships on-chain next to the value, your contract can interpret any feed without hardcoding its scale.
+
+## Registry addresses
+
+These are the live package addresses on `casper-test`. Pass them to your contract as `Address` arguments (Casper contract package addresses), for example at `init`.
+
+| Registry | Stores | Package address (`casper-test`) |
+| --- | --- | --- |
+| `AttestationRegistry` | feed values, by `feed_id` | `hash-236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc` |
+| `FeedRegistry` | feed metadata, by `feed_id` | `hash-dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46` |
+
+<Callout type="info">
+  `AttestationRegistry` names the read parameter `asset_id` while `FeedRegistry` names it `feed_id`, but both take the identical Claros `feed_id` string (for example `OP-1` or `EIA.PET.PRICE.WTI.DAILY`).
+</Callout>
+
+## Consume a feed from your contract
+
+<Steps>
+
+### Declare the external contracts and return types
+
+Re-declare the two return structs in your crate with `#[odra::odra_type]`, then declare the slice of each registry you want to call as an `#[odra::external_contract]` trait. Odra generates `AttestationRegistryContractRef` and `FeedRegistryContractRef` from these traits.
+
+```rust
+use odra::casper_types::U512;
+use odra::prelude::*;
+
+// Return types. Field order and types must match the Claros registries exactly,
+// because #[odra::odra_type] derives the on-chain serialization from them.
+// (Alternatively, depend on the Claros contracts crate and import these.)
+#[odra::odra_type]
+pub struct Attestation {
+    pub period: u64,
+    pub amount: U512,
+    pub source_hash: String,
+    pub attester: Address,
+    pub timestamp: u64,
+}
+
+#[odra::odra_type]
+pub struct Feed {
+    pub decimals: u8,
+    pub unit: String,
+    pub title: String,
+    pub source: String,
+    pub route: String,
+    pub frequency: String,
+    pub description: String,
+}
+
+// Only the entry points you actually call need to appear in the trait.
+#[odra::external_contract]
+pub trait AttestationRegistry {
+    fn get_latest(&self, asset_id: String) -> Option<Attestation>;
+}
+
+#[odra::external_contract]
+pub trait FeedRegistry {
+    fn get_feed(&self, feed_id: String) -> Option<Feed>;
+}
+```
+
+### Store the registry addresses
+
+Hold each registry address in your module so callers wire them in once at deploy time. A plain `Var<Address>` keeps things explicit; the [`External` wrapper](#alternative-the-external-wrapper) is a tidier alternative.
+
+```rust
+#[odra::module]
+pub struct PriceConsumer {
+    attestation_registry: Var<Address>,
+    feed_registry: Var<Address>,
+}
+
+#[odra::module]
+impl PriceConsumer {
+    // attestation_registry = hash-236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc
+    // feed_registry        = hash-dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46
+    pub fn init(&mut self, attestation_registry: Address, feed_registry: Address) {
+        self.attestation_registry.set(attestation_registry);
+        self.feed_registry.set(feed_registry);
+    }
+}
+```
+
+### Read the value and scale it
+
+Instantiate each `ContractRef` with `ContractRef::new(self.env(), address)`, call `get_latest` and `get_feed` with the same `feed_id`, then compute `amount / 10^decimals`. Keep the math in integers (`wasm` contracts are `no_std`, so there are no floats).
+
+```rust
+#[odra::module]
+impl PriceConsumer {
+    /// Latest value for `feed_id`, scaled to whole units by integer division.
+    /// Reverts if the feed is unknown or has no attestation yet.
+    pub fn latest_whole(&self, feed_id: String) -> U512 {
+        let areg = self.attestation_registry.get().unwrap_or_revert(&self.env());
+        let freg = self.feed_registry.get().unwrap_or_revert(&self.env());
+
+        // value (AttestationRegistry) + metadata (FeedRegistry), same feed_id
+        let att = AttestationRegistryContractRef::new(self.env(), areg)
+            .get_latest(feed_id.clone())
+            .unwrap_or_revert(&self.env());
+        let feed = FeedRegistryContractRef::new(self.env(), freg)
+            .get_feed(feed_id)
+            .unwrap_or_revert(&self.env());
+
+        // human value = amount / 10^decimals
+        let scale = U512::from(10u64).pow(U512::from(feed.decimals as u32));
+        att.amount / scale
+    }
+}
+```
+
+</Steps>
+
+### Alternative: the `External` wrapper
+
+Instead of a raw `Var<Address>`, you can wrap each ref in Odra's `External` component and call its methods directly. Set the address once at `init`, then call as if the entry point were local.
+
+```rust
+#[odra::module]
+pub struct PriceConsumer {
+    attestation_registry: External<AttestationRegistryContractRef>,
+    feed_registry: External<FeedRegistryContractRef>,
+}
+
+#[odra::module]
+impl PriceConsumer {
+    pub fn init(&mut self, attestation_registry: Address, feed_registry: Address) {
+        self.attestation_registry.set(attestation_registry);
+        self.feed_registry.set(feed_registry);
+    }
+
+    pub fn latest(&self, feed_id: String) -> Option<Attestation> {
+        self.attestation_registry.get_latest(feed_id)
+    }
+}
+```
+
+## Entry points
+
+Consumers call the read entry points below. The write entry points (`attest` on `AttestationRegistry`, `register_feed` on `FeedRegistry`) are restricted to the Claros attester and owner respectively, so a third-party contract cannot call them.
+
+<Tabs items={['AttestationRegistry', 'FeedRegistry']}>
+<Tabs.Tab>
+
+| Entry point | Signature | Returns |
+| --- | --- | --- |
+| `get_latest` | `get_latest(asset_id: String)` | `Option<Attestation>`, most recent value for the feed |
+| `get_at` | `get_at(asset_id: String, index: u64)` | `Option<Attestation>`, historical value at `index` |
+| `get_count` | `get_count(asset_id: String)` | `u64`, number of attestations for the feed |
+| `total_attestations` | `total_attestations()` | `u64`, total attestations across all feeds |
+| `get_attester` | `get_attester()` | `Address`, the authorized attester (the Claros agent) |
+
+</Tabs.Tab>
+<Tabs.Tab>
+
+| Entry point | Signature | Returns |
+| --- | --- | --- |
+| `get_feed` | `get_feed(feed_id: String)` | `Option<Feed>`, metadata for the feed |
+| `get_feed_at` | `get_feed_at(index: u64)` | `Option<String>`, `feed_id` at `index`, for enumeration |
+| `feed_count` | `feed_count()` | `u64`, number of registered feeds |
+
+</Tabs.Tab>
+</Tabs>
+
+## Return types
+
+### Attestation
+
+Returned by `get_latest` and `get_at`.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `period` | `u64` | Provider period key the value covers (for example `20260623` for 2026-06-23) |
+| `amount` | `U512` | Integer value; the human value is `amount / 10^decimals` |
+| `source_hash` | `String` | Hash of the upstream source payload (provenance) |
+| `attester` | `Address` | Account that wrote the attestation (the Claros agent) |
+| `timestamp` | `u64` | Block time the value was written, in epoch milliseconds |
+
+### Feed
+
+Returned by `get_feed`.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `decimals` | `u8` | Scale exponent; real value is `amount / 10^decimals` |
+| `unit` | `String` | Display unit, for example `$/bbl`, `MWh`, `percent` |
+| `title` | `String` | Human title |
+| `source` | `String` | Upstream source, for example `EIA` or `City of San Diego` |
+| `route` | `String` | Provider route, for example `petroleum/pri/spt` |
+| `frequency` | `String` | One of `daily`, `weekly`, `monthly`, `annual`, `hourly`, `quarterly` |
+| `description` | `String` | Longer description of the feed |
+
+## Scaling: `amount / 10^decimals`
+
+`decimals` is per-feed, so always read it from the `Feed` rather than assuming a fixed scale. Compute the divisor with `pow` and keep everything in integers. Take WTI crude (`EIA.PET.PRICE.WTI.DAILY`), which has `decimals = 6`:
+
+```rust
+// EIA.PET.PRICE.WTI.DAILY: decimals = 6, amount = 78_940_000  ($78.94/bbl)
+let scale  = U512::from(10u64).pow(U512::from(6u32)); // 1_000_000
+let whole  = att.amount / scale;                      // 78  (whole dollars)
+let micros = att.amount % scale;                      // 940_000  (the .94 part, in 1e-6 units)
+```
+
+<Callout type="warning">
+  Do not reintroduce floats to recover the fractional part. To compare a value against a threshold, scale the threshold up to the feed's `decimals` and compare integers, for example require `att.amount >= U512::from(80u64) * scale` for "at least $80".
+</Callout>
+
+## Gotchas
+
+<Callout type="warning">
+  - **`Option` is real.** `get_latest` and `get_feed` return `None` when the `feed_id` is unknown (FeedRegistry) or has not been attested yet (AttestationRegistry). Handle `None` rather than assuming a value exists.
+  - **Structs must match exactly.** Your local `Attestation` and `Feed` must keep the same field order and types as the registries, because `#[odra::odra_type]` derives serialization from them. Re-declare them verbatim or depend on the Claros contracts crate.
+  - **Same id, two parameter names.** Pass the identical `feed_id` string to both registries even though `AttestationRegistry` calls the parameter `asset_id`.
+  - **Units of time.** `timestamp` is epoch milliseconds; `period` is the provider period key, not a Unix time.
+  - **Gas is the limit, not the spend.** Casper testnet charges the gas limit you set, not the gas actually consumed (there is no refund), so size your limit sensibly. See [the network reference](/docs/network/contracts).
+</Callout>
+
+## Related
+
+<Cards>
+  <Cards.Card title="TypeScript SDK" href="/docs/reading/sdk" />
+  <Cards.Card title="REST API" href="/docs/reading/rest" />
+  <Cards.Card title="x402 metered access" href="/docs/reading/x402" />
+  <Cards.Card title="Network and addresses" href="/docs/network/contracts" />
+</Cards>

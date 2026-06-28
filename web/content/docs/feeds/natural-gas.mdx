@@ -1,0 +1,157 @@
+---
+title: "Natural gas"
+description: "Live natural gas feeds: exact feed ids, routes, facets, and units."
+---
+
+import { Callout } from 'nextra/components'
+
+# Natural gas
+
+7 live feeds in the natural gas family. Each section gives the exact `feed_id`, the EIA route, the frequency, the data column you read, every facet filter (id, the value Claros uses, and what that filter means in the EIA catalog), the unit, and the decimals. To turn an on-chain integer into a human value, compute `amount / 10^decimals`.
+
+<Callout type="info">
+Facet ids are the EIA filters. The "Means" column is taken from the dataset definition in the [data catalog](/docs/catalog). Pick a feed by its `feed_id` and read it with [the SDK](/docs/reading/sdk) or [REST](/docs/reading/rest).
+</Callout>
+
+## PRICE.HENRYHUB
+
+natural-gas/pri/fut: value (daily), filtered to series=RNGWHHD, in $/MMBtu.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.NG.PRICE.HENRYHUB.DAILY` |
+| EIA route | `natural-gas/pri/fut` |
+| Dataset | natural-gas/pri/fut |
+| Frequency | daily |
+| Data column | `value` |
+| Unit | $/MMBtu |
+| Decimals | 6 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `series` | `RNGWHHD` | Series |
+
+## PRICE.HENRYHUB_FUT1
+
+natural-gas/pri/fut: value (daily), filtered to series=RNGC1, in $/MMBtu.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.NG.PRICE.HENRYHUB_FUT1.DAILY` |
+| EIA route | `natural-gas/pri/fut` |
+| Dataset | natural-gas/pri/fut |
+| Frequency | daily |
+| Data column | `value` |
+| Unit | $/MMBtu |
+| Decimals | 6 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `series` | `RNGC1` | Series |
+
+## STORAGE.L48_WORKING
+
+natural-gas/stor/wkly: value (weekly), filtered to series=NW2_EPG0_SWO_R48_BCF, in Bcf.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.NG.STORAGE.L48_WORKING.WEEKLY` |
+| EIA route | `natural-gas/stor/wkly` |
+| Dataset | natural-gas/stor/wkly |
+| Frequency | weekly |
+| Data column | `value` |
+| Unit | Bcf |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `series` | `NW2_EPG0_SWO_R48_BCF` | Series |
+
+## PROD.MARKETED
+
+natural-gas/prod/sum: value (monthly), filtered to process=VGM, duoarea=NUS, in MMcf.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.NG.PROD.MARKETED.MONTHLY` |
+| EIA route | `natural-gas/prod/sum` |
+| Dataset | natural-gas/prod/sum |
+| Frequency | monthly |
+| Data column | `value` |
+| Unit | MMcf |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `process` | `VGM` | Process |
+| `duoarea` | `NUS` | DuoArea |
+
+## CONS.TOTAL
+
+natural-gas/cons/sum: value (monthly), filtered to process=VGT, duoarea=NUS, in MMcf.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.NG.CONS.TOTAL.MONTHLY` |
+| EIA route | `natural-gas/cons/sum` |
+| Dataset | natural-gas/cons/sum |
+| Frequency | monthly |
+| Data column | `value` |
+| Unit | MMcf |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `process` | `VGT` | Process |
+| `duoarea` | `NUS` | DuoArea |
+
+## RESERVES.DRY
+
+natural-gas/enr/dry: value (annual), filtered to duoarea=NUS, in Bcf.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.NG.RESERVES.DRY.ANNUAL` |
+| EIA route | `natural-gas/enr/dry` |
+| Dataset | natural-gas/enr/dry |
+| Frequency | annual |
+| Data column | `value` |
+| Unit | Bcf |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `duoarea` | `NUS` | DuoArea |
+
+## IMPORTS.TOTAL
+
+natural-gas/move/impc: value (monthly), filtered to process=IM0, in MMcf.
+
+| Field | Value |
+| --- | --- |
+| Feed ID | `EIA.NG.IMPORTS.TOTAL.MONTHLY` |
+| EIA route | `natural-gas/move/impc` |
+| Dataset | natural-gas/move/impc |
+| Frequency | monthly |
+| Data column | `value` |
+| Unit | MMcf |
+| Decimals | 3 |
+
+Facets (the filters):
+
+| Facet id | Value used | Means |
+| --- | --- | --- |
+| `process` | `IM0` | Process |
+
