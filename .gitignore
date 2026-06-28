@@ -1,6 +1,6 @@
-# planning & reference (local only — never committed). Root-anchored so app
-# routes like web/app/docs are NOT swallowed by these.
-/docs/
+# planning & reference (local only, never committed). docs/ is now the
+# user-facing docs site (Fumadocs); internal planning lives in planning/.
+/planning/
 /inspiration/
 
 # secrets & keys
