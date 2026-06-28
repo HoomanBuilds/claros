@@ -5,7 +5,50 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "scripts": { "build": "tsc", "typecheck": "tsc --noEmit" },
-  "dependencies": { "@noble/hashes": "^1.3.0" },
-  "devDependencies": { "@types/node": "^22.5.0", "typescript": "^5.6.0", "tsx": "^4.19.0" }
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "casper",
+    "oracle",
+    "pyth",
+    "real-world-data",
+    "rwa",
+    "eia",
+    "on-chain",
+    "price-feed",
+    "claros"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HoomanBuilds/claros.git",
+    "directory": "sdk"
+  },
+  "homepage": "https://github.com/HoomanBuilds/claros/tree/main/sdk#readme",
+  "bugs": {
+    "url": "https://github.com/HoomanBuilds/claros/issues"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@noble/hashes": "^1.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "typescript": "^5.6.0",
+    "tsx": "^4.19.0"
+  }
 }
