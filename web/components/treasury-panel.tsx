@@ -27,7 +27,7 @@ export function TreasuryPanel({ snapshot }: { snapshot: TreasurySnapshot }) {
       label: "WiseLending",
       token: "sCSPR",
       icon: Coins,
-      role: "Liquid staking — stake CSPR, hold yield-bearing sCSPR that compounds over time.",
+      role: "Liquid staking: stake CSPR and hold yield-bearing sCSPR that compounds over time.",
       href: cspr(`contract-package/${WISELENDING_PKG}`),
     },
     {
@@ -43,7 +43,7 @@ export function TreasuryPanel({ snapshot }: { snapshot: TreasurySnapshot }) {
       label: "CSPR.trade",
       token: "DEX",
       icon: TrendingUp,
-      role: "DEX swap rates are evaluated every cycle — staking currently wins, so the agent stakes.",
+      role: "DEX swap rates are evaluated every cycle, but staking currently wins, so the agent stakes.",
       href: "https://www.cspr.trade",
     },
   ]
@@ -62,7 +62,7 @@ export function TreasuryPanel({ snapshot }: { snapshot: TreasurySnapshot }) {
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
         <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl">
           Read live from the <span className="text-foreground">TreasuryVault</span> on Casper. The agent
-          earns x402 read fees and routes idle treasury into on-chain yield — and every decision, with its
+          earns x402 read fees and routes idle treasury into on-chain yield. Every decision, with its
           reasoning, is recorded on-chain.
         </p>
         <a
@@ -155,7 +155,7 @@ export function TreasuryPanel({ snapshot }: { snapshot: TreasurySnapshot }) {
         ))}
       </div>
       <p className="mt-4 text-[10px] tracking-[0.15em] uppercase text-muted-foreground font-mono">
-        * testnet figures. each entry is a Reinvested event the agent wrote to the TreasuryVault — reasoning included.
+        * testnet figures. each entry is a Reinvested event the agent wrote to the TreasuryVault, reasoning included.
       </p>
     </section>
   )

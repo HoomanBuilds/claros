@@ -7,7 +7,7 @@ import { getAllReadings, getStats } from "@/lib/claros"
 export const revalidate = 60
 
 export const metadata: Metadata = {
-  title: "Live Feeds — Claros Oracle",
+  title: "Live Feeds: Claros Oracle",
   description: "Every Claros feed live on Casper: energy markets and civic data, attested on-chain with provenance hashes. Search, filter, and verify each value.",
 }
 
@@ -33,7 +33,7 @@ export default async function FeedsPage() {
           </h1>
           <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl">
             {stats.feedsLive} feeds attested on Casper {stats.network}, drawn from {stats.datasets} indexed
-            datasets. Each value is read straight from on-chain state — self-describing, hashed, and
+            datasets. Each value is read straight from on-chain state: self-describing, hashed, and
             verifiable by anyone.
           </p>
         </section>

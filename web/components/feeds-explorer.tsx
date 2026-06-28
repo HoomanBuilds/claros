@@ -39,7 +39,7 @@ export function FeedsExplorer({ initialFeeds, initialStats }: { initialFeeds: Fe
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="search feeds — wti, coal, henry hub…"
+              placeholder="search feeds: wti, coal, henry hub…"
               className="w-full bg-transparent outline-none text-xs font-mono tracking-wide placeholder:text-muted-foreground/60"
             />
           </div>
@@ -129,7 +129,7 @@ export function FeedsExplorer({ initialFeeds, initialStats }: { initialFeeds: Fe
       </div>
 
       <p className="mt-4 text-[10px] tracking-[0.15em] uppercase text-muted-foreground font-mono">
-        * every row is an attestation on Casper — click to verify the registry on-chain.
+        * every row is an attestation on Casper; click to verify the registry on-chain.
       </p>
     </section>
   )

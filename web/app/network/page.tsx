@@ -11,7 +11,7 @@ import { getTreasury } from "@/lib/treasury"
 export const revalidate = 300
 
 export const metadata: Metadata = {
-  title: "Network — Claros On-Chain & Autonomous Agent",
+  title: "Network: Claros On-Chain & Autonomous Agent",
   description: "The Claros on-chain footprint: deployed Casper contracts, an autonomous attestation agent, an x402 earn rail, on-chain yield, and a ZK eligibility gate.",
 }
 
@@ -28,7 +28,7 @@ const PILLARS = [
   {
     tag: "AUTONOMOUS_AGENT",
     title: "Runs itself",
-    body: "A DeepSeek-driven agent loops on a heartbeat: fetch EIA data, scale to integers, hash provenance, sign a Casper TransactionV1, and attest on-chain — no human in the loop.",
+    body: "A DeepSeek-driven agent loops on a heartbeat: fetch EIA data, scale to integers, hash provenance, sign a Casper TransactionV1, and attest on-chain, with no human in the loop.",
   },
   {
     tag: "X402_EARN_RAIL",
@@ -69,7 +69,7 @@ export default async function NetworkPage() {
           </h1>
           <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl">
             Claros is an autonomous oracle on Casper {stats.network}. Four upgradable contracts, an agent
-            that attests on a heartbeat, an earn rail to fund itself, and a ZK gate for private access —
+            that attests on a heartbeat, an earn rail to fund itself, and a ZK gate for private access,
             all verifiable on-chain.
           </p>
         </section>

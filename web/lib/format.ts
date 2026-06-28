@@ -88,7 +88,7 @@ const nf = (max: number) => new Intl.NumberFormat("en-US", { maximumFractionDigi
 
 // Human value: prices keep precision, big counts get grouped, no trailing noise.
 export function formatValue(value: number, decimals: number): string {
-  if (!isFinite(value)) return "—"
+  if (!isFinite(value)) return "-"
   const abs = Math.abs(value)
   if (abs >= 1000) return nf(0).format(Math.round(value))
   if (abs >= 1) return nf(decimals >= 4 ? 2 : 3).format(value)
@@ -113,7 +113,7 @@ export function formatPeriod(period: number, frequency: string): string {
 
 export function timeAgo(ms: number): string {
   const diff = Date.now() - ms
-  if (diff < 0 || !isFinite(diff)) return "—"
+  if (diff < 0 || !isFinite(diff)) return "-"
   const s = Math.floor(diff / 1000)
   if (s < 60) return `${s}s ago`
   const m = Math.floor(s / 60)

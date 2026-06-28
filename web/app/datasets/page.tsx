@@ -8,7 +8,7 @@ import { getAllReadings } from "@/lib/claros"
 export const revalidate = 300
 
 export const metadata: Metadata = {
-  title: "Datasets — Claros Oracle Coverage",
+  title: "Datasets: Claros Oracle Coverage",
   description: "The full EIA dataset universe Claros can attest on-chain: 232 datasets across petroleum, natural gas, electricity, coal, nuclear, emissions and more. Search, filter, and see what's already live.",
 }
 
@@ -33,7 +33,7 @@ export default async function DatasetsPage() {
             DATASETS
           </h1>
           <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl">
-            Claros crawled the entire EIA APIv2 metadata tree — {datasets.length} leaf datasets across
+            Claros crawled the entire EIA APIv2 metadata tree: {datasets.length} leaf datasets across
             every energy family. A generic adapter means any of them can be attested on-chain on request;
             the ones marked <span className="text-[#ea580c]">live</span> already are.
           </p>

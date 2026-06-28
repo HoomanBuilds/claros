@@ -13,7 +13,7 @@ export interface FeedRef {
 }
 
 // The "for this data, use these parameters" table: every feed_id with its ticker,
-// decimals (the 10^k scale), unit and cadence — copy the feed_id straight into any
+// decimals (the 10^k scale), unit and cadence. Copy the feed_id straight into any
 // of the three read methods.
 export function FeedReference({ feeds }: { feeds: FeedRef[] }) {
   const [query, setQuery] = useState("")
@@ -38,7 +38,7 @@ export function FeedReference({ feeds }: { feeds: FeedRef[] }) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="filter feeds — wti, coal, henry hub…"
+          placeholder="filter feeds: wti, coal, henry hub…"
           className="w-full bg-transparent outline-none text-xs font-mono tracking-wide placeholder:text-muted-foreground/60"
         />
       </div>

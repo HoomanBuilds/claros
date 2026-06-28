@@ -11,9 +11,9 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Claros — Verifiable Real-World Data Oracle on Casper',
+  title: 'Claros: Verifiable Real-World Data Oracle on Casper',
   description:
-    'Claros is a verifiable real-world-data oracle on Casper. Energy markets (EIA: petroleum, natural gas, electricity, coal, nuclear, emissions) and civic data, attested on-chain as self-describing feeds. Read prices and metrics directly from your contract, via SDK, or over a free REST API — Pyth-style, sub-cent reads.',
+    'Claros is a verifiable real-world-data oracle on Casper. Energy markets (EIA: petroleum, natural gas, electricity, coal, nuclear, emissions) and civic data, attested on-chain as self-describing feeds. Read prices and metrics directly from your contract, via SDK, or over a free REST API. Pyth-style, sub-cent reads.',
   keywords: [
     'oracle',
     'Casper oracle',
@@ -48,14 +48,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    title: 'Claros — Verifiable Real-World Data Oracle on Casper',
+    title: 'Claros: Verifiable Real-World Data Oracle on Casper',
     description:
       'Real-world data, attested on-chain. 37 live feeds across 232 EIA datasets, self-describing and Pyth-style. Read from your contract, the SDK, or a free REST API on Casper.',
     siteName: 'Claros',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Claros — Verifiable Real-World Data Oracle on Casper',
+    title: 'Claros: Verifiable Real-World Data Oracle on Casper',
     description:
       'Real-world data, attested on-chain. 37 live feeds across 232 EIA datasets, self-describing and Pyth-style. Read from your contract, the SDK, or a free REST API on Casper.',
     creator: '@claros',

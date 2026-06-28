@@ -106,7 +106,7 @@ export function LiveFeeds({ initialFeeds, initialStats }: { initialFeeds: FeedRe
             Live on-chain feeds
           </h2>
           <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-md">
-            Read straight from Casper global state — every value is an attestation with a
+            Read straight from Casper global state. Every value is an attestation with a
             provenance hash. No middleware, no API key.
           </p>
         </div>

@@ -193,14 +193,14 @@ export function AboutSection({ stats }: { stats: OracleStats }) {
                 className="flex flex-col gap-4"
               >
                 <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed">
-                  Claros pulls authoritative real-world data — energy markets from the U.S.
-                  EIA, plus civic feeds — scales each value to an integer, hashes its
+                  Claros pulls authoritative real-world data (energy markets from the U.S.
+                  EIA, plus civic feeds), scales each value to an integer, hashes its
                   provenance, and attests it on Casper. No floats, no trust-me APIs.
                 </p>
                 <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed">
                   Every feed is self-describing: decimals, unit, source and cadence live
                   on-chain next to the value, Pyth-style. Read it from your contract, our SDK,
-                  or a free REST endpoint — the same numbers, verifiable by anyone.
+                  or a free REST endpoint: the same numbers, verifiable by anyone.
                 </p>
               </motion.div>
 

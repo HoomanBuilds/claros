@@ -40,7 +40,7 @@ const TIERS: Tier[] = [
     price: "FREE",
     period: "/ forever",
     tag: null,
-    description: "The Hermes of Claros. Read feeds over plain HTTP — no wallet, no key.",
+    description: "The Hermes of Claros. Read feeds over plain HTTP. No wallet, no key.",
     features: [
       { text: "GET /v1/feeds (all live feeds)", included: true },
       { text: "GET /v1/feeds/:id (one reading)", included: true },
@@ -59,7 +59,7 @@ const TIERS: Tier[] = [
     price: "FREE",
     period: "/ forever",
     tag: "RECOMMENDED",
-    description: "Read directly from Casper state — off-chain via the SDK or on-chain from your contract.",
+    description: "Read directly from Casper state, off-chain via the SDK or on-chain from your contract.",
     features: [
       { text: "claros-oracle npm SDK", included: true },
       { text: "getReading(id) → value + metadata", included: true },
@@ -240,7 +240,7 @@ export function PricingSection() {
             Three ways to consume
           </h2>
           <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-md">
-            On-chain reads are free — REST, the SDK, or a cross-contract call. Or pay per call with
+            On-chain reads are free: REST, the SDK, or a cross-contract call. Or pay per call with
             x402 for a hosted, metered feed.
           </p>
         </div>

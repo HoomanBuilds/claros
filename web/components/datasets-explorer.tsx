@@ -38,7 +38,7 @@ export function DatasetsExplorer({ datasets, liveRoutes }: { datasets: DatasetRo
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="search 232 datasets — crude, storage, retail…"
+              placeholder="search 232 datasets: crude, storage, retail…"
               className="w-full bg-transparent outline-none text-xs font-mono tracking-wide placeholder:text-muted-foreground/60"
             />
           </div>
@@ -130,7 +130,7 @@ export function DatasetsExplorer({ datasets, liveRoutes }: { datasets: DatasetRo
       </div>
 
       <p className="mt-4 text-[10px] tracking-[0.15em] uppercase text-muted-foreground font-mono">
-        * any indexed dataset can be attested on-chain via the Claros agent — c = columns, f = facets.
+        * any indexed dataset can be attested on-chain via the Claros agent (c = columns, f = facets).
       </p>
     </section>
   )

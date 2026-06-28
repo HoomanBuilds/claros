@@ -50,7 +50,7 @@ export function HeroSection() {
         >
           Claros is a verifiable real-world-data oracle on Casper. Energy markets and civic
           data, attested on-chain as self-describing feeds. Read them from your contract, the
-          SDK, or a free REST API — Pyth-style, sub-cent reads.
+          SDK, or a free REST API. Pyth-style, sub-cent reads.
         </motion.p>
 
         {/* CTA Button */}

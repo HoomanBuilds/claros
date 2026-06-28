@@ -11,7 +11,7 @@ import { flagshipFirst } from "@/lib/format"
 export const revalidate = 300
 
 export const metadata: Metadata = {
-  title: "Docs — Consume the Claros Oracle",
+  title: "Docs: Consume the Claros Oracle",
   description: "Read Claros real-world-data feeds three ways: a free REST API, the claros-oracle SDK, or a cross-contract call from your own Casper contract. With parameter tables and a full feed reference.",
 }
 
@@ -138,9 +138,9 @@ export default async function DocsPage() {
 
   const quickstart = [
     { tag: "01 · REST", title: "HTTP, no key", body: "Read any feed over plain HTTP. Best for apps, dashboards, bots.", href: "#rest" },
-    { tag: "02 · SDK", title: "claros-oracle", body: "Read Casper state directly in TypeScript — no indexer, no node.", href: "#sdk" },
+    { tag: "02 · SDK", title: "claros-oracle", body: "Read Casper state directly in TypeScript. No indexer, no node.", href: "#sdk" },
     { tag: "03 · On-chain", title: "Cross-contract", body: "Call get_latest(id) from your own Casper contract.", href: "#onchain" },
-    { tag: "04 · x402", title: "Pay-per-call", body: "Buy a reading over x402 — settled in WCSPR, per call.", href: "#x402" },
+    { tag: "04 · x402", title: "Pay-per-call", body: "Buy a reading over x402, settled in WCSPR per call.", href: "#x402" },
   ]
 
   return (
@@ -199,7 +199,7 @@ export default async function DocsPage() {
           <Label tag="// REST_API" n="002" />
           <H2 id="rest">REST API</H2>
           <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl mb-6">
-            The Hermes of Claros — a read service that returns on-chain feeds as JSON. No wallet, no key,
+            The Hermes of Claros: a read service that returns on-chain feeds as JSON. No wallet, no key,
             CORS open. Run <span className="text-foreground">services/claros-api</span> or point at a hosted
             instance.
           </p>
@@ -244,7 +244,7 @@ export default async function DocsPage() {
           <H2 id="sdk">TypeScript SDK</H2>
           <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl mb-6">
             <span className="text-foreground">claros-oracle</span> reads feed metadata and values directly
-            from Casper global state — no indexer, no running node. The same numbers an on-chain consumer
+            from Casper global state. No indexer, no running node. The same numbers an on-chain consumer
             sees.
           </p>
 
@@ -331,11 +331,11 @@ export default async function DocsPage() {
           <Label tag="// PAY_PER_CALL · X402" n="005" />
           <H2 id="x402">Pay-per-call (x402)</H2>
           <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl mb-6">
-            On-chain reads are free — but you can also buy a reading from the hosted feed server, where{" "}
+            On-chain reads are free, but you can also buy a reading from the hosted feed server, where{" "}
             <span className="text-foreground">every call is settled in WCSPR</span> over the x402 protocol
             (HTTP 402). It's built for AI agents and apps that want a hosted, pay-as-you-go endpoint, and
-            it's how the Claros agent funds its own attestations —{" "}
-            <Link href="/network" className="text-foreground underline decoration-[#ea580c] underline-offset-4">see the earnings</Link>.
+            it's how the Claros agent funds its own attestations.{" "}
+            <Link href="/network" className="text-foreground underline decoration-[#ea580c] underline-offset-4">See the earnings</Link>.
           </p>
 
           <Sub>How a call is paid</Sub>
@@ -358,10 +358,10 @@ export default async function DocsPage() {
               ["query", <span key="v"><code>?asset_id</code> (e.g. OP-1)</span>],
               ["scheme", <span key="v"><code>exact</code> (ExactCasperScheme)</span>],
               ["asset", <span key="v">WCSPR <span className="muted">(9 decimals)</span></span>],
-              ["price", <span key="v">per call — demo <code>$0.001</code> / ~1 WCSPR <span className="muted">(FEED_PRICE_MOTES)</span></span>],
+              ["price", <span key="v"><code>$0.001</code> / ~1 WCSPR per call <span className="muted">(demo; FEED_PRICE_MOTES)</span></span>],
               ["network", <span key="v"><code>casper:casper-test</code> <span className="muted">(CAIP-2)</span></span>],
               ["pay to", <span key="v" className="muted">the Claros agent payee</span>],
-              ["settlement", <span key="v" className="muted">x402 facilitator — verify + settle on Casper</span>],
+              ["settlement", <span key="v" className="muted">x402 facilitator (verify + settle on Casper)</span>],
               ["headers", <span key="v"><code>X-PAYMENT</code> req · <code>PAYMENT-RESPONSE</code> resp</span>],
             ]}
           />
