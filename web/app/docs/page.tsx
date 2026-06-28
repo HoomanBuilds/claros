@@ -110,6 +110,28 @@ const DATASETS_CODE = `# search the 232 indexed datasets Claros can attest
 GET /v1/datasets?q=coal
 GET /v1/datasets?family=natural-gas`
 
+const X402_CODE = `import { x402Client, wrapFetchWithPayment } from "@x402/fetch"
+import { createClientCasperSigner } from "@make-software/casper-x402"
+import { ExactCasperScheme } from "@make-software/casper-x402/exact/client"
+import { KeyAlgorithm } from "casper-js-sdk"
+
+// your Casper key funds the per-call payment (paid in WCSPR)
+const signer = await createClientCasperSigner(KEY_PATH, KeyAlgorithm.SECP256K1)
+const client = new x402Client().register("casper:*", new ExactCasperScheme(signer))
+const pay = wrapFetchWithPayment(fetch, client)   // auto-pays on HTTP 402
+
+// each call settles a small WCSPR payment, then returns the reading
+const res  = await pay("https://api.claros.example/oracle/feed?asset_id=OP-1")
+const feed = await res.json()   // { asset_id, amount_cents, source_hash, provenance, ... }`
+
+const X402_STEPS = [
+  "Client requests GET /oracle/feed?asset_id=… (no payment yet).",
+  "Server replies 402 Payment Required with the requirements: scheme exact, asset WCSPR, amount, payTo, network casper-test.",
+  "Client signs a WCSPR transfer_with_authorization for that amount and retries with the X-PAYMENT header.",
+  "The x402 facilitator verifies and settles the transfer on Casper.",
+  "Server returns 200 with the reading + on-chain provenance; the WCSPR lands with the Claros agent.",
+]
+
 export default async function DocsPage() {
   const [stats, readings] = await Promise.all([getStats(), getAllReadings()])
   const feedRefs = flagshipFirst(readings).map((r) => ({ feed_id: r.feed_id, decimals: r.decimals, unit: r.unit, frequency: r.frequency }))
@@ -118,6 +140,7 @@ export default async function DocsPage() {
     { tag: "01 · REST", title: "HTTP, no key", body: "Read any feed over plain HTTP. Best for apps, dashboards, bots.", href: "#rest" },
     { tag: "02 · SDK", title: "claros-oracle", body: "Read Casper state directly in TypeScript — no indexer, no node.", href: "#sdk" },
     { tag: "03 · On-chain", title: "Cross-contract", body: "Call get_latest(id) from your own Casper contract.", href: "#onchain" },
+    { tag: "04 · x402", title: "Pay-per-call", body: "Buy a reading over x402 — settled in WCSPR, per call.", href: "#x402" },
   ]
 
   return (
@@ -134,27 +157,29 @@ export default async function DocsPage() {
             Claros is a Pyth-style oracle: values are integers scaled by{" "}
             <span className="text-foreground">10^decimals</span>, stored next to self-describing
             metadata, keyed by <span className="text-foreground">feed_id</span>. Pick a method below, grab a{" "}
-            <span className="text-foreground">feed_id</span> from the reference table, and read — all reads
-            are free.
+            <span className="text-foreground">feed_id</span> from the reference table, and read. On-chain
+            reads are free; or pay per call with <span className="text-foreground">x402</span> for a hosted,
+            metered feed.
           </p>
 
           {/* Which method? */}
           <Sub>Which method should I use?</Sub>
           <DocTable
-            headers={["method", "best for", "auth", "runs", "returns"]}
-            cols="1.1fr 1.9fr 0.8fr 1.3fr 1.4fr"
-            minWidth={760}
+            headers={["method", "best for", "cost", "runs", "returns"]}
+            cols="1.2fr 1.9fr 1fr 1.3fr 1.4fr"
+            minWidth={780}
             rows={[
-              [<b key="m">REST API</b>, "web apps, dashboards, bots, AI agents", <span key="a" className="muted">none</span>, "off-chain (HTTP)", "JSON"],
-              [<b key="m">SDK</b>, "TypeScript / JS backends & scripts", <span key="a" className="muted">none</span>, "off-chain (reads node)", "typed Reading object"],
-              [<b key="m">Cross-contract</b>, "your own Casper smart contract", <span key="a" className="muted">n/a</span>, "on-chain (Casper VM)", "Attestation + Feed"],
+              [<b key="m">REST API</b>, "web apps, dashboards, bots, AI agents", <span key="a" className="muted">free</span>, "off-chain (HTTP)", "JSON"],
+              [<b key="m">SDK</b>, "TypeScript / JS backends & scripts", <span key="a" className="muted">free</span>, "off-chain (reads node)", "typed Reading object"],
+              [<b key="m">Cross-contract</b>, "your own Casper smart contract", <span key="a" className="muted">gas only</span>, "on-chain (Casper VM)", "Attestation + Feed"],
+              [<b key="m">x402 metered</b>, "hosted, pay-as-you-go; agent-to-agent", <span key="a"><b>WCSPR / call</b></span>, "off-chain (HTTP + settle)", "JSON + provenance"],
             ]}
           />
         </section>
 
         {/* Quickstart */}
         <section className="w-full py-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border-l-2 border-t-2 border-foreground">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-0 border-l-2 border-t-2 border-foreground">
             {quickstart.map((q) => (
               <Link
                 key={q.tag}
@@ -301,9 +326,54 @@ export default async function DocsPage() {
           </div>
         </section>
 
+        {/* x402 metered */}
+        <section className="w-full py-12 border-t border-border">
+          <Label tag="// PAY_PER_CALL · X402" n="005" />
+          <H2 id="x402">Pay-per-call (x402)</H2>
+          <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl mb-6">
+            On-chain reads are free — but you can also buy a reading from the hosted feed server, where{" "}
+            <span className="text-foreground">every call is settled in WCSPR</span> over the x402 protocol
+            (HTTP 402). It's built for AI agents and apps that want a hosted, pay-as-you-go endpoint, and
+            it's how the Claros agent funds its own attestations —{" "}
+            <Link href="/network" className="text-foreground underline decoration-[#ea580c] underline-offset-4">see the earnings</Link>.
+          </p>
+
+          <Sub>How a call is paid</Sub>
+          <div className="border-2 border-foreground mb-6">
+            {X402_STEPS.map((s, i) => (
+              <div key={i} className={`flex gap-4 px-4 py-3 ${i > 0 ? "border-t-2 border-foreground" : ""}`}>
+                <span className="text-[#ea580c] font-mono font-bold text-xs tabular-nums">{String(i + 1).padStart(2, "0")}</span>
+                <span className="text-xs font-mono text-muted-foreground leading-relaxed">{s}</span>
+              </div>
+            ))}
+          </div>
+
+          <Sub>Payment parameters</Sub>
+          <DocTable
+            headers={["parameter", "value"]}
+            cols="1.1fr 2.6fr"
+            minWidth={640}
+            rows={[
+              ["endpoint", <code key="v">GET /oracle/feed</code>],
+              ["query", <span key="v"><code>?asset_id</code> (e.g. OP-1)</span>],
+              ["scheme", <span key="v"><code>exact</code> (ExactCasperScheme)</span>],
+              ["asset", <span key="v">WCSPR <span className="muted">(9 decimals)</span></span>],
+              ["price", <span key="v">per call — demo <code>$0.001</code> / ~1 WCSPR <span className="muted">(FEED_PRICE_MOTES)</span></span>],
+              ["network", <span key="v"><code>casper:casper-test</code> <span className="muted">(CAIP-2)</span></span>],
+              ["pay to", <span key="v" className="muted">the Claros agent payee</span>],
+              ["settlement", <span key="v" className="muted">x402 facilitator — verify + settle on Casper</span>],
+              ["headers", <span key="v"><code>X-PAYMENT</code> req · <code>PAYMENT-RESPONSE</code> resp</span>],
+            ]}
+          />
+
+          <div className="mt-6">
+            <CodeBlock lang="typescript" code={X402_CODE} />
+          </div>
+        </section>
+
         {/* Feed reference */}
         <section className="w-full py-12 border-t border-border">
-          <Label tag="// FEED_REFERENCE" n="005" />
+          <Label tag="// FEED_REFERENCE" n="006" />
           <H2 id="feeds">Feed reference</H2>
           <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl mb-6">
             For each dataset, here is the exact <span className="text-foreground">feed_id</span> to pass and
@@ -315,7 +385,7 @@ export default async function DocsPage() {
 
         {/* Datasets */}
         <section className="w-full py-12 border-t border-border">
-          <Label tag="// DISCOVERY" n="006" />
+          <Label tag="// DISCOVERY" n="007" />
           <H2 id="datasets">Datasets</H2>
           <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl mb-6">
             {stats.feedsLive} feeds are live today, crawled from {stats.datasets} indexed EIA datasets across
@@ -328,7 +398,7 @@ export default async function DocsPage() {
 
         {/* Addresses */}
         <section className="w-full py-12 border-t border-border">
-          <Label tag="// CONTRACTS" n="007" />
+          <Label tag="// CONTRACTS" n="008" />
           <H2>Addresses</H2>
           <DocTable
             headers={["key", "value"]}

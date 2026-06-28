@@ -11,7 +11,7 @@ function StatusLine() {
   return (
     <div className="flex items-center gap-2 text-[10px] tracking-widest text-muted-foreground uppercase font-mono">
       <span className="h-1.5 w-1.5 bg-[#ea580c] animate-blink" />
-      <span>reads are free · no API key · no rate limit</span>
+      <span>free on-chain reads · x402 for metered access</span>
     </div>
   )
 }
@@ -73,22 +73,22 @@ const TIERS: Tier[] = [
     highlighted: true,
   },
   {
-    id: "node",
-    name: "RUN_A_NODE",
-    price: "OSS",
-    period: "",
-    tag: null,
-    description: "Operate or extend the oracle. Attest any of the 232 indexed datasets yourself.",
+    id: "x402",
+    name: "X402_METERED",
+    price: "WCSPR",
+    period: "/ call",
+    tag: "PAID",
+    description: "Pay-per-read from the hosted feed server, settled in WCSPR over x402. For agents & apps.",
     features: [
-      { text: "Open-source attestation agent", included: true },
-      { text: "Attest any EIA / civic dataset", included: true },
-      { text: "FeedRegistry self-describing metadata", included: true },
-      { text: "Your own attester key", included: true },
-      { text: "Generic APIv2 adapter included", included: true },
-      { text: "Casper testnet, upgradable contracts", included: true },
+      { text: "HTTP 402 → auto-pay → data", included: true },
+      { text: "Settled in WCSPR, per call", included: true },
+      { text: "transfer_with_authorization", included: true },
+      { text: "On-chain provenance in response", included: true },
+      { text: "Agent-to-agent micropayments", included: true },
+      { text: "Funds the oracle's attestations", included: true },
     ],
-    cta: "VIEW SOURCE",
-    href: "https://testnet.cspr.live/contract-package/236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc",
+    cta: "X402 DOCS",
+    href: "/docs#x402",
     highlighted: false,
   },
 ]
@@ -210,7 +210,7 @@ function PricingCard({ tier, index }: { tier: Tier; index: number }) {
 
 export function PricingSection() {
   return (
-    <section className="w-full px-6 py-20 lg:px-12">
+    <section id="consume" className="w-full px-6 py-20 lg:px-12 scroll-mt-24">
       {/* Section label */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
@@ -240,8 +240,8 @@ export function PricingSection() {
             Three ways to consume
           </h2>
           <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-md">
-            Reads are always free. Pick HTTP for apps, the SDK or a cross-contract call for
-            on-chain, or run the agent yourself.
+            On-chain reads are free — REST, the SDK, or a cross-contract call. Or pay per call with
+            x402 for a hosted, metered feed.
           </p>
         </div>
         <StatusLine />
