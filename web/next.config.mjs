@@ -1,6 +1,8 @@
 import nextra from 'nextra'
 
-const withNextra = nextra({})
+const withNextra = nextra({
+  defaultShowCopyCode: true,
+})
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

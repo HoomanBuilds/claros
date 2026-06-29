@@ -29,3 +29,38 @@ html {
 html.dark {
   --nextra-primary-lightness: 58% !important;
 }
+
+/* "Copy page" action bar, injected at the top of every docs page. */
+.nextra-scope .copy-page-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -1.5rem;
+}
+.nextra-scope .copy-page-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1;
+  border-radius: 0.4rem;
+  border: 1px solid hsl(0 0% 0% / 0.12);
+  color: hsl(0 0% 30%);
+  background: hsl(0 0% 100% / 0.6);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.nextra-scope .copy-page-btn:hover {
+  color: #ea580c;
+  border-color: #ea580c;
+}
+html.dark .nextra-scope .copy-page-btn {
+  border-color: hsl(0 0% 100% / 0.15);
+  color: hsl(0 0% 70%);
+  background: hsl(0 0% 100% / 0.04);
+}
+html.dark .nextra-scope .copy-page-btn:hover {
+  color: #fb923c;
+  border-color: #fb923c;
+}
