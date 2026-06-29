@@ -4,6 +4,7 @@ description: "Claros is a verifiable real-world-data oracle on Casper. Read live
 ---
 
 import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+import { Rss, Boxes, Database, Rocket, Workflow, Globe, Code2, FileCode2, CreditCard, Network } from 'lucide-react'
 
 # Claros
 
@@ -92,13 +93,13 @@ Recent values include WTI at **$78.94/bbl** and Henry Hub at **$3.16/MMBtu**. Th
 The EIA APIv2 is one uniform faceted API, and a `feed_id` pins down a single series within it: a `route` (for example `petroleum/pri/spt`), one `frequency`, a data column, and a set of facet filters (for example `series`, `duoarea`, `stateid`, or `fueltype`). That mapping is covered in [the data model](/docs/concepts/data-model). Beyond the 36 live energy feeds, any dataset in the [catalog](/docs/catalog) can be registered and attested on demand.
 
 <Cards>
-  <Cards.Card title="Live feeds" href="/docs/feeds" arrow>
+  <Cards.Card icon={<Rss />} title="Live feeds" href="/docs/feeds" arrow>
     All 36 EIA feeds, grouped by family, with units and decimals.
   </Cards.Card>
-  <Cards.Card title="The data model" href="/docs/concepts/data-model" arrow>
+  <Cards.Card icon={<Boxes />} title="The data model" href="/docs/concepts/data-model" arrow>
     Routes, frequencies, columns, and the facet filters that define a feed.
   </Cards.Card>
-  <Cards.Card title="Data catalog" href="/docs/catalog" arrow>
+  <Cards.Card icon={<Database />} title="Data catalog" href="/docs/catalog" arrow>
     The full 232-dataset EIA universe you can attest on demand.
   </Cards.Card>
 </Cards>
@@ -184,31 +185,31 @@ Everything is live on the Casper testnet (network `casper-test`), reachable at t
 ## Where to go next
 
 <Cards>
-  <Cards.Card title="Quickstart" href="/docs/quickstart" arrow>
+  <Cards.Card icon={<Rocket />} title="Quickstart" href="/docs/quickstart" arrow>
     Read your first feed three ways in under a minute.
   </Cards.Card>
-  <Cards.Card title="How it works" href="/docs/how-it-works" arrow>
+  <Cards.Card icon={<Workflow />} title="How it works" href="/docs/how-it-works" arrow>
     The attestation pipeline and the two-registry model end to end.
   </Cards.Card>
-  <Cards.Card title="The data model" href="/docs/concepts/data-model" arrow>
+  <Cards.Card icon={<Boxes />} title="The data model" href="/docs/concepts/data-model" arrow>
     Routes, frequencies, and facets, and how a feed_id is defined.
   </Cards.Card>
-  <Cards.Card title="Data catalog" href="/docs/catalog" arrow>
+  <Cards.Card icon={<Database />} title="Data catalog" href="/docs/catalog" arrow>
     The 232-dataset EIA universe Claros can attest.
   </Cards.Card>
-  <Cards.Card title="Read with REST" href="/docs/reading/rest" arrow>
+  <Cards.Card icon={<Globe />} title="Read with REST" href="/docs/reading/rest" arrow>
     Free HTTP for any language, app, or agent.
   </Cards.Card>
-  <Cards.Card title="Read with the SDK" href="/docs/reading/sdk" arrow>
+  <Cards.Card icon={<Code2 />} title="Read with the SDK" href="/docs/reading/sdk" arrow>
     `claros-oracle` reads Casper state directly, no indexer.
   </Cards.Card>
-  <Cards.Card title="Read cross-contract" href="/docs/reading/on-chain" arrow>
+  <Cards.Card icon={<FileCode2 />} title="Read cross-contract" href="/docs/reading/on-chain" arrow>
     Consume a feed from your own Casper contract.
   </Cards.Card>
-  <Cards.Card title="Read with x402" href="/docs/reading/x402" arrow>
+  <Cards.Card icon={<CreditCard />} title="Read with x402" href="/docs/reading/x402" arrow>
     Metered, pay-per-call reads settled in WCSPR.
   </Cards.Card>
-  <Cards.Card title="Network and contracts" href="/docs/network/contracts" arrow>
+  <Cards.Card icon={<Network />} title="Network and contracts" href="/docs/network/contracts" arrow>
     Package hashes, the RPC endpoint, and the gas note.
   </Cards.Card>
 </Cards>

@@ -73,6 +73,20 @@ const FAMILY_LABEL = {
   emissions: 'Emissions',
   international: 'International',
 };
+// lucide-react icon per family (imported in feeds/index.mdx).
+const FAMILY_ICON = {
+  'natural-gas': 'Flame',
+  petroleum: 'Fuel',
+  electricity: 'Zap',
+  coal: 'Factory',
+  biomass: 'Leaf',
+  nuclear: 'Atom',
+  outlooks: 'LineChart',
+  'total-energy': 'BarChart3',
+  'state-energy': 'Map',
+  emissions: 'Cloud',
+  international: 'Globe2',
+};
 function familyOf(assetId) {
   for (const [p, fam] of PREFIX_FAMILY) if (assetId.startsWith(p)) return fam;
   return 'other';
@@ -112,9 +126,10 @@ function mdEscape(s) {
   return String(s).replace(/\|/g, '\\|');
 }
 
-// frontmatter
+// frontmatter (always quote: descriptions contain colons, which break YAML unquoted)
 function fm(title, description) {
-  return `---\ntitle: ${title}\ndescription: ${description}\n---\n\n`;
+  const q = (s) => `"${String(s).replace(/"/g, '\\"')}"`;
+  return `---\ntitle: ${q(title)}\ndescription: ${q(description)}\n---\n\n`;
 }
 
 function ensureDir(p) {
@@ -144,10 +159,11 @@ function genFeedsIndex() {
   );
 
   let out = fm('Live feeds', `All ${FEEDS.length} live Claros feeds, grouped by family.`);
-  out += `import { Callout, Cards } from 'nextra/components'\n\n`;
+  out += `import { Callout, Cards } from 'nextra/components'\n`;
+  out += `import { Flame, Fuel, Zap, Factory, Leaf, Atom, LineChart, BarChart3, Map, Cloud, Globe2 } from 'lucide-react'\n\n`;
   out += `# Live feeds\n\n`;
   out += `Claros publishes ${FEEDS.length} live feeds on Casper testnet. Each feed has a stable \`feed_id\`, and on-chain values are integers: the human value is \`amount / 10^decimals\` (Pyth-style). Every feed maps to one EIA APIv2 dataset (a route, a frequency, a data column, and a set of facet filters). See [the data catalog](/docs/catalog) for all 232 datasets you can request.\n\n`;
-  out += `<Callout type="info">\nValues are read by \`feed_id\`. Use [the SDK](/docs/reading/sdk), [the REST API](/docs/reading/rest), or a [cross-contract call](/docs/reading/cross-contract) to read them.\n</Callout>\n\n`;
+  out += `<Callout type="info">\nValues are read by \`feed_id\`. Use [the SDK](/docs/reading/sdk), [the REST API](/docs/reading/rest), or a [cross-contract call](/docs/reading/on-chain) to read them.\n</Callout>\n\n`;
 
   // family cards / links
   out += `## Families\n\n`;
@@ -155,7 +171,8 @@ function genFeedsIndex() {
   for (const fam of fams) {
     const label = FAMILY_LABEL[fam] || fam;
     const n = byFam.get(fam).length;
-    out += `  <Cards.Card title="${label} (${n})" href="/docs/feeds/${fam}" arrow />\n`;
+    const icon = FAMILY_ICON[fam] || 'Zap';
+    out += `  <Cards.Card icon={<${icon} />} title="${label} (${n})" href="/docs/feeds/${fam}" arrow />\n`;
   }
   out += `</Cards>\n\n`;
 

@@ -1,0 +1,29 @@
+---
+title: "Concepts"
+description: "The building blocks of a Claros reading: feeds and feed_id, the EIA data model, decimals and scaling, provenance, and attestation freshness."
+---
+
+import { Cards } from 'nextra/components'
+import { Tag, Boxes, Calculator, Fingerprint, BadgeCheck } from 'lucide-react'
+
+# Concepts
+
+These pages explain the ideas behind a Claros reading. A value is an integer on Casper, keyed by a `feed_id` and paired with self-describing metadata, so the same five concepts apply no matter how you read it. Start here, then pick a [reading method](/docs/reading).
+
+<Cards>
+  <Cards.Card icon={<Tag />} title="Feeds and feed_id" href="/docs/concepts/feeds" arrow>
+    What a feed is, how a `feed_id` is structured, and how it keys both registries.
+  </Cards.Card>
+  <Cards.Card icon={<Boxes />} title="The EIA data model" href="/docs/concepts/data-model" arrow>
+    Routes, frequencies, columns, and the facet filters that pin a feed to one series.
+  </Cards.Card>
+  <Cards.Card icon={<Calculator />} title="Decimals and scaling" href="/docs/concepts/decimals" arrow>
+    Why values are integers and how `amount / 10^decimals` gives the human number.
+  </Cards.Card>
+  <Cards.Card icon={<Fingerprint />} title="Provenance and source hash" href="/docs/concepts/provenance" arrow>
+    The `source_hash`, `attester`, and reporting `period` that make a value verifiable.
+  </Cards.Card>
+  <Cards.Card icon={<BadgeCheck />} title="Attestation and freshness" href="/docs/concepts/attestation" arrow>
+    How a value is written on-chain and how to reason about how current it is.
+  </Cards.Card>
+</Cards>

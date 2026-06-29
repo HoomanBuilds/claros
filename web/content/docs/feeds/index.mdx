@@ -4,6 +4,7 @@ description: "All 36 live Claros feeds, grouped by family."
 ---
 
 import { Callout, Cards } from 'nextra/components'
+import { Flame, Fuel, Zap, Factory, Leaf, Atom, LineChart, BarChart3, Map, Cloud, Globe2 } from 'lucide-react'
 
 # Live feeds
 
@@ -16,17 +17,17 @@ Values are read by `feed_id`. Use [the SDK](/docs/reading/sdk), [the REST API](/
 ## Families
 
 <Cards>
-  <Cards.Card title="Biomass (2)" href="/docs/feeds/biomass" arrow />
-  <Cards.Card title="Coal (3)" href="/docs/feeds/coal" arrow />
-  <Cards.Card title="Electricity (6)" href="/docs/feeds/electricity" arrow />
-  <Cards.Card title="Emissions (1)" href="/docs/feeds/emissions" arrow />
-  <Cards.Card title="International (1)" href="/docs/feeds/international" arrow />
-  <Cards.Card title="Natural gas (7)" href="/docs/feeds/natural-gas" arrow />
-  <Cards.Card title="Nuclear (2)" href="/docs/feeds/nuclear" arrow />
-  <Cards.Card title="Outlooks (2)" href="/docs/feeds/outlooks" arrow />
-  <Cards.Card title="Petroleum (9)" href="/docs/feeds/petroleum" arrow />
-  <Cards.Card title="State energy (SEDS) (2)" href="/docs/feeds/state-energy" arrow />
-  <Cards.Card title="Total energy (1)" href="/docs/feeds/total-energy" arrow />
+  <Cards.Card icon={<Leaf />} title="Biomass (2)" href="/docs/feeds/biomass" arrow />
+  <Cards.Card icon={<Factory />} title="Coal (3)" href="/docs/feeds/coal" arrow />
+  <Cards.Card icon={<Zap />} title="Electricity (6)" href="/docs/feeds/electricity" arrow />
+  <Cards.Card icon={<Cloud />} title="Emissions (1)" href="/docs/feeds/emissions" arrow />
+  <Cards.Card icon={<Globe2 />} title="International (1)" href="/docs/feeds/international" arrow />
+  <Cards.Card icon={<Flame />} title="Natural gas (7)" href="/docs/feeds/natural-gas" arrow />
+  <Cards.Card icon={<Atom />} title="Nuclear (2)" href="/docs/feeds/nuclear" arrow />
+  <Cards.Card icon={<LineChart />} title="Outlooks (2)" href="/docs/feeds/outlooks" arrow />
+  <Cards.Card icon={<Fuel />} title="Petroleum (9)" href="/docs/feeds/petroleum" arrow />
+  <Cards.Card icon={<Map />} title="State energy (SEDS) (2)" href="/docs/feeds/state-energy" arrow />
+  <Cards.Card icon={<BarChart3 />} title="Total energy (1)" href="/docs/feeds/total-energy" arrow />
 </Cards>
 
 ## All feeds

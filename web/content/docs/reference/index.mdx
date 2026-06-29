@@ -1,0 +1,23 @@
+---
+title: "Reference"
+description: "Reference material for Claros: the EIA APIv2 the oracle adapts, the on-chain contract types, and a glossary of terms."
+---
+
+import { Cards } from 'nextra/components'
+import { Globe, Braces, BookOpen } from 'lucide-react'
+
+# Reference
+
+Lookup material you reach for while building: the upstream EIA API that Claros adapts, the exact on-chain struct types you read cross-contract, and the terms used across these docs.
+
+<Cards>
+  <Cards.Card icon={<Globe />} title="EIA API" href="/docs/reference/eia-api" arrow>
+    The EIA APIv2 faceted model Claros maps into feeds: routes, frequencies, facets.
+  </Cards.Card>
+  <Cards.Card icon={<Braces />} title="Contract types" href="/docs/reference/contract-types" arrow>
+    The `Attestation` and `Feed` structs and the registry entry points you call.
+  </Cards.Card>
+  <Cards.Card icon={<BookOpen />} title="Glossary" href="/docs/reference/glossary" arrow>
+    Feed, attestation, provenance, facet, decimals, and the other core terms.
+  </Cards.Card>
+</Cards>

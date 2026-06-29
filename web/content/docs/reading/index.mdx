@@ -4,6 +4,7 @@ description: "The four ways to read a Claros feed (REST, SDK, cross-contract, x4
 ---
 
 import { Callout, Tabs, Steps, Cards } from 'nextra/components'
+import { Globe, Code2, FileCode2, CreditCard } from 'lucide-react'
 
 # Choose a method
 
@@ -187,16 +188,16 @@ more on [the x402 page](/docs/reading/x402).
 ## Pick a page
 
 <Cards>
-  <Cards.Card title="REST API" href="/docs/reading/rest" arrow>
+  <Cards.Card icon={<Globe />} title="REST API" href="/docs/reading/rest" arrow>
     Free HTTP for any language. Apps, dashboards, bots, and agents.
   </Cards.Card>
-  <Cards.Card title="TypeScript SDK" href="/docs/reading/sdk" arrow>
+  <Cards.Card icon={<Code2 />} title="TypeScript SDK" href="/docs/reading/sdk" arrow>
     `claros-oracle` reads Casper state directly. No server, no indexer.
   </Cards.Card>
-  <Cards.Card title="Cross-contract" href="/docs/reading/on-chain" arrow>
+  <Cards.Card icon={<FileCode2 />} title="Cross-contract" href="/docs/reading/on-chain" arrow>
     Call `get_latest(id)` from your own Casper contract. Gas only.
   </Cards.Card>
-  <Cards.Card title="x402 (pay-per-call)" href="/docs/reading/x402" arrow>
+  <Cards.Card icon={<CreditCard />} title="x402 (pay-per-call)" href="/docs/reading/x402" arrow>
     Buy a reading from the hosted feed server, settled in WCSPR per call.
   </Cards.Card>
 </Cards>
