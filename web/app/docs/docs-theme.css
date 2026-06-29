@@ -64,3 +64,9 @@ html.dark .nextra-scope .copy-page-btn:hover {
   color: #fb923c;
   border-color: #fb923c;
 }
+
+/* Show the code-block action buttons (copy + word-wrap) at all times, not only
+   on hover, so the copy affordance is always discoverable. */
+.nextra-scope pre div[class*="opacity-0"] {
+  opacity: 1 !important;
+}
