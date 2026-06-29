@@ -1,8 +1,152 @@
 ---
 title: "SDK"
-description: "Read Claros feeds off-chain with the claros-oracle SDK."
+description: "Read Claros feeds off-chain in TypeScript with the claros-oracle SDK. It queries Casper state directly, with no server and no indexer."
 ---
+
+import { Callout, Tabs, Cards } from 'nextra/components'
+import { Globe, FileCode2, CreditCard, Calculator } from 'lucide-react'
 
 # SDK
 
-The `claros-oracle` SDK reads Casper state directly. Back to [the overview](/docs).
+The [`claros-oracle`](https://www.npmjs.com/package/claros-oracle) package reads Claros feeds straight from Casper global state over JSON-RPC. There is no server to run and no indexer to sync: you construct the reader, call a method with a `feed_id`, and get back the value already scaled to a human number. The testnet contract addresses are baked in, so the empty constructor just works.
+
+<Callout type="info">
+The SDK and the [REST API](/docs/reading/rest) return the same reading. Reach for the SDK when your code is already TypeScript or JavaScript; reach for REST when it is not. Both read the same on-chain state and cost nothing.
+</Callout>
+
+## Install
+
+```bash
+npm install claros-oracle
+```
+
+The only dependency is `@noble/hashes` (used to derive the on-chain dictionary keys), and the package ships TypeScript types.
+
+## Quick start
+
+```ts
+import { ClarosOracle } from 'claros-oracle'
+
+const claros = new ClarosOracle() // Casper testnet defaults baked in
+
+const wti = await claros.getReading('EIA.PET.PRICE.WTI.DAILY')
+if (wti) {
+  console.log(wti.value, wti.unit)       // 78.94 $/bbl
+  console.log(wti.amount, wti.decimals)  // 78940000n 6
+}
+```
+
+`getReading` returns `null` when the feed or its value is not on-chain, so check the result before using it.
+
+## Configuration
+
+`new ClarosOracle(cfg?)` takes an optional config. Every field defaults to the live testnet deployment, so most apps never pass one.
+
+| Option | Type | Default |
+| --- | --- | --- |
+| `rpc` | string | `https://node.testnet.casper.network/rpc` |
+| `feedRegistry` | string (package hash) | `dac573fc...f04366f46` |
+| `attestationRegistry` | string (package hash) | `236b5104...f98116cc` |
+
+```ts
+// point at your own node, keep the default registries
+const claros = new ClarosOracle({ rpc: 'https://my-casper-node.example/rpc' })
+```
+
+## Methods
+
+| Method | Returns | What it does |
+| --- | --- | --- |
+| `getReading(id)` | `Promise<Reading \| null>` | Metadata, value, and the scaled human number. The one-call helper. |
+| `getValue(id)` | `Promise<FeedValue \| null>` | Just the attested value: integer `amount` plus provenance. |
+| `getFeed(id)` | `Promise<Feed \| null>` | Just the self-describing metadata (`decimals`, `unit`, `route`, ...). |
+| `feedCount()` | `Promise<number>` | How many feeds are registered on-chain. |
+| `feedIdAt(i)` | `Promise<string \| null>` | The `feed_id` at index `i`. |
+| `listFeedIds()` | `Promise<string[]>` | Every `feed_id`, in registration order. |
+
+### Read one feed
+
+<Tabs items={['getReading', 'getValue + getFeed']}>
+<Tabs.Tab>
+
+```ts
+const r = await claros.getReading('EIA.NG.PRICE.HENRYHUB.DAILY')
+// { feed_id: 'EIA.NG.PRICE.HENRYHUB.DAILY', value: 3.16, unit: '$/MMBtu',
+//   decimals: 6, amount: 3160000n, period: 20260623,
+//   source_hash: '...', updated_at: 1750636800000, ... }
+```
+
+One call gives you the value, the scale, and the provenance together.
+
+</Tabs.Tab>
+<Tabs.Tab>
+
+```ts
+const meta = await claros.getFeed('EIA.NG.PRICE.HENRYHUB.DAILY')   // decimals, unit, route, ...
+const val  = await claros.getValue('EIA.NG.PRICE.HENRYHUB.DAILY')  // amount, period, source_hash, ...
+const value = meta && val ? Number(val.amount) / 10 ** meta.decimals : null
+```
+
+Use the split calls when you only need one half, for example reading metadata once and polling the value.
+
+</Tabs.Tab>
+</Tabs>
+
+### Enumerate every feed
+
+```ts
+const ids = await claros.listFeedIds()
+const all = await Promise.all(ids.map((id) => claros.getReading(id)))
+// every live feed with its current value, no indexer
+```
+
+<Callout type="warning">
+`listFeedIds()` calls `feedIdAt` once per feed, and `getReading` is two reads per feed, so loading everything is many RPC calls. For a frontend, do this once on the server and cache it, or use the [REST API](/docs/reading/rest), which aggregates all feeds for you.
+</Callout>
+
+## Return types
+
+`Reading` is `Feed` plus the value fields, so the one call gives you everything.
+
+**`Reading`** (from `getReading`)
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `feed_id` | string | The feed key. |
+| `value` | number | `amount / 10^decimals`, the human number. |
+| `amount` | bigint | Raw on-chain integer, U512-safe. |
+| `decimals` | number | Divisor exponent for this feed. |
+| `unit` | string | For example `$/bbl`. |
+| `title`, `source`, `route`, `frequency`, `description` | string | Self-describing metadata. |
+| `period` | number | Reporting period, for example `20260623`. |
+| `source_hash` | string | Hash of the upstream payload. |
+| `updated_at` | number | Attestation timestamp in milliseconds. |
+
+**`FeedValue`** (from `getValue`): `period`, `amount` (bigint), `source_hash`, `attester`, `timestamp`.
+
+**`Feed`** (from `getFeed`): `decimals`, `unit`, `title`, `source`, `route`, `frequency`, `description`.
+
+<Callout type="info">
+The on-chain `amount` is always an integer, and `value` is `amount / 10^decimals`. `amount` is a `bigint`, so large `U512` values never lose precision. See [decimals and scaling](/docs/concepts/decimals).
+</Callout>
+
+## Where it runs
+
+The reader uses `fetch` and queries Casper global state directly, so it works in any modern Node or server runtime with no extra infrastructure. It also uses Node's `Buffer` to decode on-chain bytes, so to run it in a browser, use a bundler that polyfills `Buffer` (most do) or call it from your server and pass the reading to the client. On this site, the reader runs server-side.
+
+## Related
+
+<Cards>
+  <Cards.Card icon={<Globe />} title="REST API" href="/docs/reading/rest" arrow>
+    The same readings over plain HTTP, for any language.
+  </Cards.Card>
+  <Cards.Card icon={<FileCode2 />} title="Cross-contract" href="/docs/reading/on-chain" arrow>
+    Read a feed on-chain from your own Casper contract.
+  </Cards.Card>
+  <Cards.Card icon={<Calculator />} title="Decimals and scaling" href="/docs/concepts/decimals" arrow>
+    The integer math behind `value = amount / 10^decimals`.
+  </Cards.Card>
+  <Cards.Card icon={<CreditCard />} title="Pay-per-call (x402)" href="/docs/reading/x402" arrow>
+    Metered, paid reads from the hosted endpoint.
+  </Cards.Card>
+</Cards>
