@@ -1,0 +1,31 @@
+/* Claros docs theme overrides.
+   The brutalist root layout sets `body { font-mono; background: cream }` globally.
+   These rules restore a clean, standard docs surface, scoped to .nextra-scope so the
+   brutalist marketing pages are never affected. */
+
+.nextra-scope {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, "Noto Sans", ui-sans-serif, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Keep code monospace + readable inside the docs. */
+.nextra-scope code,
+.nextra-scope kbd,
+.nextra-scope pre {
+  font-family: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* Claros orange accent for Nextra primary color.
+   Nextra's <Head color> injects its default blue at runtime on :root, so we win
+   the cascade with !important to keep the brand orange (#ea580c family). */
+:root,
+html {
+  --nextra-primary-hue: 24deg !important;
+  --nextra-primary-saturation: 92% !important;
+  --nextra-primary-lightness: 48% !important;
+}
+html.dark {
+  --nextra-primary-lightness: 58% !important;
+}
