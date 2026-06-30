@@ -2,14 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { RadioTower } from "lucide-react"
 import { motion } from "framer-motion"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { ClarosMark } from "@/components/claros-mark"
 
 const LINKS = [
   { label: "Feeds", href: "/feeds" },
   { label: "Datasets", href: "/datasets" },
-  { label: "Docs", href: "/docs" },
   { label: "Network", href: "/network" },
 ]
 
@@ -33,7 +32,7 @@ export function Navbar() {
               transition={{ delay: 0.2, duration: 0.4 }}
               className="flex items-center gap-3"
             >
-              <RadioTower size={16} strokeWidth={1.5} className="text-[#ea580c]" />
+              <ClarosMark size={20} />
               <span className="text-xs font-mono tracking-[0.2em] uppercase font-bold">
                 CLAROS
               </span>
@@ -71,21 +70,13 @@ export function Navbar() {
             className="flex items-center gap-4"
           >
             <ThemeToggle />
-            <a
-              href="https://testnet.cspr.live"
-              target="_blank"
-              rel="noreferrer"
-              className="hidden sm:block text-xs font-mono tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors duration-200"
-            >
-              Explorer
-            </a>
             <Link href="/docs">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="bg-foreground text-background px-4 py-2 text-xs font-mono tracking-widest uppercase"
               >
-                Start Building
+                Docs
               </motion.button>
             </Link>
           </motion.div>

@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { RadioTower } from "lucide-react"
+import { Github } from "lucide-react"
+import { ClarosMark } from "@/components/claros-mark"
 
 const ease = [0.22, 1, 0.36, 1] as const
 
@@ -25,7 +26,7 @@ export function Footer() {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex flex-col gap-1">
           <Link href="/" className="flex items-center gap-2">
-            <RadioTower size={14} strokeWidth={1.5} className="text-[#ea580c]" />
+            <ClarosMark size={16} />
             <span className="text-xs font-mono tracking-[0.2em] uppercase font-bold text-foreground">CLAROS</span>
           </Link>
           <span className="text-[10px] font-mono tracking-widest text-muted-foreground">
@@ -51,6 +52,19 @@ export function Footer() {
               </motion.a>
             )
           })}
+          <motion.a
+            href="https://github.com/HoomanBuilds/claros"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="GitHub repository"
+            initial={{ opacity: 0, y: 6 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 + LINKS.length * 0.06, duration: 0.4, ease }}
+            className="text-muted-foreground hover:text-foreground transition-colors duration-200"
+          >
+            <Github size={16} strokeWidth={1.5} />
+          </motion.a>
         </div>
       </div>
     </motion.footer>
