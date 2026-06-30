@@ -47,7 +47,7 @@ export function FeatureGrid({ feeds, stats }: { feeds: FeedReading[]; stats: Ora
         <motion.div
           custom={0}
           variants={cardVariants}
-          className="border-b-2 md:border-b-0 md:border-r-2 border-foreground min-h-[280px]"
+          className="border-b-2 md:border-b-0 md:border-r-2 border-foreground min-h-[320px]"
         >
           <TerminalCard feeds={feeds} />
         </motion.div>
@@ -56,7 +56,7 @@ export function FeatureGrid({ feeds, stats }: { feeds: FeedReading[]; stats: Ora
         <motion.div
           custom={1}
           variants={cardVariants}
-          className="border-b-2 md:border-b-0 border-foreground min-h-[280px]"
+          className="border-b-2 md:border-b-0 border-foreground min-h-[320px]"
         >
           <DitherCard />
         </motion.div>

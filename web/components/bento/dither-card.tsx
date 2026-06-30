@@ -64,10 +64,10 @@ export function DitherCard() {
         </span>
         <span className="text-[10px] tracking-widest text-muted-foreground">320x240</span>
       </div>
-      <div className="flex-1 flex items-center justify-center p-4 bg-background overflow-hidden">
+      <div className="flex-1 relative bg-background overflow-hidden">
         <canvas
           ref={canvasRef}
-          className="w-full h-auto"
+          className="absolute inset-0 w-full h-full object-cover"
           style={{ imageRendering: "pixelated" }}
           aria-label="Dithered neural network visualization"
           role="img"
