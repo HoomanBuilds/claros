@@ -1,7 +1,9 @@
-# planning & reference (local only, never committed). docs/ is now the
-# user-facing docs site (Fumadocs); internal planning lives in planning/.
+# planning & reference (local only, never committed). Root docs/ holds local
+# working notes/specs and is never committed; the user-facing docs site lives
+# in web/content/docs.
 /planning/
 /inspiration/
+/docs/
 
 # secrets & keys
 keys/
