@@ -300,6 +300,25 @@ await oracle.getReading('OP-1')                   // San Diego parking, value 27
 await oracle.getReading('EIA.PET.PRICE.WTI.DAILY')// WTI crude, value 78.94 $/bbl
 ```
 
+### Verify the deployed code matches the repo
+
+Casper has no Etherscan-style "verified source" badge, so Claros ships the proof in the repository instead. `contracts/wasm/` holds the exact deployed artifacts, and one script compares them byte-for-byte against the chain:
+
+```bash
+node scripts/verify-onchain.mjs
+```
+
+For each contract it fetches the install transaction from the public RPC, extracts the session `module_bytes` (the wasm the network stored at deploy time), and compares its sha256 against the artifact in `contracts/wasm/`. All four contracts match:
+
+| Contract | Deployed wasm sha256 |
+| --- | --- |
+| AttestationRegistry | `64d9d1cd361c9b6c1db61260e4d04e0c94968d13e06c651498dfe11e3d55234b` |
+| FeedRegistry | `c6cfcf2c18d4c7cbf52541d8a2ef76df41034f5c23973a077661e2989a8adfea` |
+| TreasuryVault | `5c0ff440ae985f94d68687a15de25100486714b331eb3f4a2f78f964a8076aee` |
+| EligibilityGate | `9b497c53c466d1f8d0eb3d2c203e06b892e8517123397820cc126695dfdd6db0` |
+
+The script needs no keys and no dependencies, so anyone can rerun it against the public network at any time. The contracts build from `contracts/src` with Odra 2.8 on the repo's pinned Rust toolchain.
+
 ## Related
 
 <Cards>

@@ -186,6 +186,7 @@ Everything below was read from Casper testnet at the time of writing; the live f
 
 | Claim | How to check | Value (verified) |
 | ----- | ------------ | ---------------- |
+| On-chain code == this repo | `node scripts/verify-onchain.mjs` | 4/4 wasm sha256 match |
 | 4 contracts deployed | open each package on cspr.live (links above) | all live, version 1 |
 | Deploys + ZK verify succeeded | [attestation deploy](https://testnet.cspr.live/transaction/ed0820135e92d66bd5aae307402b698fb8b95e2c5c586df95def17c40bb490fd) · [ZK verify](https://testnet.cspr.live/transaction/b3048a56044adb67796f7e94c9c0298700b5cf822b326fd71e8fe8370333a433) | success |
 | Feeds registered (FeedRegistry) | `FeedRegistry.feed_count` | **37** |
@@ -197,6 +198,21 @@ Everything below was read from Casper testnet at the time of writing; the live f
 | Reinvest decisions logged | `TreasuryVault.reinvestment_count` | **3** (with on-chain reasoning) |
 
 The SDK reproduces all of this off-chain in a few lines (`new ClarosOracle().getReading(id)`), and the `/network` and `/feeds` pages render it live.
+
+### Contract verification (source ↔ chain)
+
+Casper has no Etherscan-style "verified" badge, so Claros ships the proof instead. [`contracts/wasm/`](contracts/wasm) holds the exact deployed artifacts, and [`scripts/verify-onchain.mjs`](scripts/verify-onchain.mjs) fetches each install transaction from the public RPC, extracts the session `module_bytes` (the wasm the network stored), and compares sha256 digests:
+
+```
+$ node scripts/verify-onchain.mjs
+MATCH  AttestationRegistry.wasm   sha256 local == chain
+MATCH  FeedRegistry.wasm          sha256 local == chain
+MATCH  TreasuryVault.wasm         sha256 local == chain
+MATCH  EligibilityGate.wasm       sha256 local == chain
+All contracts verified: on-chain wasm == repo artifacts.
+```
+
+No keys and no dependencies; anyone can run it against the public network. The contracts build from [`contracts/src`](contracts/src) with Odra 2.8 on the pinned toolchain (`contracts/rust-toolchain`).
 
 ---
 
