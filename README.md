@@ -8,6 +8,14 @@
   <b>A verifiable real-world-data oracle and autonomous agent on Casper. Energy markets and civic data, attested on-chain as self-describing feeds.</b>
 </p>
 
+<p align="center">
+  <a href="https://claros-oracle.vercel.app">Live app</a> ·
+  <a href="https://claros-oracle.vercel.app/docs">Docs</a> ·
+  <a href="https://claros-oracle.vercel.app/feeds">Live feeds</a> ·
+  <a href="https://claros-oracle.vercel.app/network">Network</a> ·
+  <a href="https://www.npmjs.com/package/claros-oracle">SDK on npm</a>
+</p>
+
 > Claros pulls authoritative real-world data (U.S. EIA energy markets and City of San Diego parking revenue), scales each value to an integer, hashes its provenance, and attests it on Casper as a self-describing feed. A DeepSeek-driven agent runs the whole loop autonomously and funds its own gas. Read any feed for free from your contract, the SDK, or a REST API, or pay per call over x402.
 
 Claros is a Pyth-style oracle for real-world data, built on **Casper testnet**. Two registries hold the data on-chain: an **AttestationRegistry** stores each value keyed by a `feed_id`, and a **FeedRegistry** stores the matching self-describing metadata (decimals, unit, source, cadence). An **autonomous agent** fetches the upstream data, scales and hashes it, signs a Casper `TransactionV1`, and attests it, with no human in the loop. The agent sells the feed over an **x402** payment rail to earn WCSPR, routes idle treasury into on-chain yield, and gates its own operation behind a **zero-knowledge eligibility proof**, all of which it records on-chain.
@@ -361,6 +369,7 @@ A few honest notes about the live system:
 
 | Field | Value |
 | ----- | ----- |
+| Live app | `https://claros-oracle.vercel.app` |
 | Network | Casper testnet (`casper-test`) |
 | RPC | `https://node.testnet.casper.network/rpc` |
 | Explorer | `https://testnet.cspr.live` |
