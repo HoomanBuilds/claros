@@ -1,5 +1,12 @@
 use odra::casper_types::U512;
 use odra::prelude::*;
+use odra::ContractRef;
+
+// Cross-contract view of the FeedRegistry claim table.
+#[odra::external_contract]
+pub trait FeedAttesters {
+    fn get_attester(&self, feed_id: String) -> Option<Address>;
+}
 
 #[odra::odra_type]
 pub struct Attestation {
@@ -32,6 +39,8 @@ pub struct AttestationRegistry {
     history: Mapping<String, Attestation>,
     count: Mapping<String, u64>,
     total: Var<u64>,
+    // multi-agent upgrade: FeedRegistry holding per-feed attester claims
+    feed_registry: Var<Address>,
 }
 
 #[odra::module]
@@ -41,10 +50,37 @@ impl AttestationRegistry {
         self.total.set(0);
     }
 
+    /// Upgrade constructor: wires the FeedRegistry claim table.
+    pub fn upgrade(&mut self, feed_registry: Address) {
+        self.feed_registry.set(feed_registry);
+    }
+
+    pub fn set_feed_registry(&mut self, feed_registry: Address) {
+        if self.env().caller() != self.attester.get().unwrap_or_revert(&self.env()) {
+            self.env().revert(Error::Unauthorized);
+        }
+        self.feed_registry.set(feed_registry);
+    }
+
     pub fn attest(&mut self, asset_id: String, period: u64, amount: U512, source_hash: String) {
         let caller = self.env().caller();
-        if caller != self.attester.get().unwrap_or_revert(&self.env()) {
-            self.env().revert(Error::Unauthorized);
+        let claimant = self
+            .feed_registry
+            .get()
+            .and_then(|fr| FeedAttestersContractRef::new(self.env(), fr).get_attester(asset_id.clone()));
+        match claimant {
+            // claimed feed: only its claimant may attest
+            Some(a) => {
+                if caller != a {
+                    self.env().revert(Error::Unauthorized);
+                }
+            }
+            // unclaimed/unknown: the legacy first-party attester (pre-upgrade behavior)
+            None => {
+                if caller != self.attester.get().unwrap_or_revert(&self.env()) {
+                    self.env().revert(Error::Unauthorized);
+                }
+            }
         }
 
         let timestamp = self.env().get_block_time();
@@ -137,5 +173,57 @@ mod tests {
         let res = c.try_attest(String::from("zone-1"), 1, U512::from(1u64), String::from("h"));
         assert!(res.is_err());
         assert_eq!(c.total_attestations(), 0);
+    }
+
+    #[test]
+    fn claimed_feed_attested_only_by_claimant() {
+        use crate::feed_registry::{FeedRegistry, FeedRegistryInitArgs};
+        use crate::gate_stub::GateStub;
+        use odra::host::NoArgs;
+
+        let env = odra_test::env();
+        let legacy = env.get_account(0);
+        let operator = env.get_account(1);
+
+        let mut reg = AttestationRegistry::deploy(&env, AttestationRegistryInitArgs { attester: legacy });
+        let mut feeds = FeedRegistry::deploy(&env, FeedRegistryInitArgs { owner: legacy });
+        let mut gate = GateStub::deploy(&env, NoArgs);
+        gate.allow(operator);
+        env.set_caller(legacy);
+        feeds.set_eligibility_gate(gate.address());
+        reg.set_feed_registry(feeds.address());
+
+        // operator claims a new feed
+        env.set_caller(operator);
+        feeds.register_feed(
+            "OP2.SOLAR".into(), 3, "MWh".into(), "t".into(), "EIA".into(),
+            "electricity/rto/fuel-type-data".into(), "hourly".into(), "d".into(),
+        );
+
+        // claimant attests: OK
+        reg.attest("OP2.SOLAR".into(), 20260706, U512::from(1000u64), "h1".into());
+        assert_eq!(reg.get_latest("OP2.SOLAR".into()).unwrap().attester, operator);
+
+        // the legacy attester may NOT attest someone else's claimed feed
+        env.set_caller(legacy);
+        assert!(reg.try_attest("OP2.SOLAR".into(), 20260707, U512::from(1u64), "h2".into()).is_err());
+
+        // unclaimed/unknown feeds still fall back to the legacy attester
+        reg.attest("zone-legacy".into(), 20260707, U512::from(5u64), "h3".into());
+        // and a non-legacy caller still cannot touch them
+        env.set_caller(operator);
+        assert!(reg.try_attest("zone-legacy".into(), 20260708, U512::from(5u64), "h4".into()).is_err());
+    }
+
+    #[test]
+    fn set_feed_registry_gated_to_legacy_attester() {
+        use crate::feed_registry::{FeedRegistry, FeedRegistryInitArgs};
+        let env = odra_test::env();
+        let legacy = env.get_account(0);
+        let stranger = env.get_account(1);
+        let mut reg = AttestationRegistry::deploy(&env, AttestationRegistryInitArgs { attester: legacy });
+        let feeds = FeedRegistry::deploy(&env, FeedRegistryInitArgs { owner: legacy });
+        env.set_caller(stranger);
+        assert!(reg.try_set_feed_registry(feeds.address()).is_err());
     }
 }
