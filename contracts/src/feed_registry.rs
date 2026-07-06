@@ -1,4 +1,11 @@
 use odra::prelude::*;
+use odra::ContractRef;
+
+// Cross-contract view of the EligibilityGate (same signature as the real gate).
+#[odra::external_contract]
+pub trait Eligibility {
+    fn is_eligible(&self, who: Address) -> bool;
+}
 
 // Self-describing on-chain metadata for every Claros oracle feed, so a consumer
 // reading a value from the AttestationRegistry can interpret it (decimals/unit)
@@ -18,6 +25,8 @@ pub struct Feed {
 #[odra::odra_error]
 pub enum Error {
     Unauthorized = 1,
+    NotEligible = 2,
+    GateNotSet = 3,
 }
 
 #[odra::event]
@@ -34,6 +43,9 @@ pub struct FeedRegistry {
     feeds: Mapping<String, Feed>,
     ids: Mapping<u64, String>, // index -> feed_id, for enumeration
     count: Var<u64>,
+    // multi-agent upgrade: which address may attest each feed
+    feed_attester: Mapping<String, Address>,
+    eligibility_gate: Var<Address>,
 }
 
 #[odra::module]
@@ -41,6 +53,23 @@ impl FeedRegistry {
     pub fn init(&mut self, owner: Address) {
         self.owner.set(owner);
         self.count.set(0);
+    }
+
+    /// Upgrade constructor: wires the EligibilityGate (runs once, during the
+    /// package upgrade transaction — only the package owner can upgrade).
+    pub fn upgrade(&mut self, eligibility_gate: Address) {
+        self.eligibility_gate.set(eligibility_gate);
+    }
+
+    pub fn set_eligibility_gate(&mut self, gate: Address) {
+        if self.env().caller() != self.owner.get().unwrap_or_revert(&self.env()) {
+            self.env().revert(Error::Unauthorized);
+        }
+        self.eligibility_gate.set(gate);
+    }
+
+    pub fn get_attester(&self, feed_id: String) -> Option<Address> {
+        self.feed_attester.get(&feed_id)
     }
 
     pub fn register_feed(
@@ -54,8 +83,32 @@ impl FeedRegistry {
         frequency: String,
         description: String,
     ) {
-        if self.env().caller() != self.owner.get().unwrap_or_revert(&self.env()) {
-            self.env().revert(Error::Unauthorized);
+        let caller = self.env().caller();
+        match self.feed_attester.get(&feed_id) {
+            // claimed: only the claimant may update
+            Some(claimant) => {
+                if caller != claimant {
+                    self.env().revert(Error::Unauthorized);
+                }
+            }
+            None => {
+                if self.feeds.get(&feed_id).is_some() {
+                    // legacy feed (pre-upgrade): only the owner, who claims it
+                    if caller != self.owner.get().unwrap_or_revert(&self.env()) {
+                        self.env().revert(Error::Unauthorized);
+                    }
+                } else {
+                    // brand-new feed: caller must hold a gate credential
+                    let gate = match self.eligibility_gate.get() {
+                        Some(g) => g,
+                        None => self.env().revert(Error::GateNotSet),
+                    };
+                    if !EligibilityContractRef::new(self.env(), gate).is_eligible(caller) {
+                        self.env().revert(Error::NotEligible);
+                    }
+                }
+                self.feed_attester.set(&feed_id, caller);
+            }
         }
         let is_new = self.feeds.get(&feed_id).is_none();
         let feed = Feed {
@@ -92,46 +145,111 @@ impl FeedRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use odra::host::Deployer;
+    use crate::gate_stub::{GateStub, GateStubHostRef};
+    use odra::host::{Deployer, HostEnv, NoArgs};
 
-    #[test]
-    fn register_and_read() {
+    fn setup() -> (HostEnv, FeedRegistryHostRef, GateStubHostRef) {
         let env = odra_test::env();
         let owner = env.get_account(0);
         let mut c = FeedRegistry::deploy(&env, FeedRegistryInitArgs { owner });
+        let gate = GateStub::deploy(&env, NoArgs);
         env.set_caller(owner);
+        c.set_eligibility_gate(gate.address());
+        (env, c, gate)
+    }
+
+    fn reg(c: &mut FeedRegistryHostRef, id: &str) {
         c.register_feed(
-            "EIA.PET.PRICE.WTI.DAILY".into(),
-            6,
-            "$/bbl".into(),
-            "WTI crude spot".into(),
-            "EIA".into(),
-            "petroleum/pri/spt".into(),
-            "daily".into(),
-            "Cushing WTI spot price".into(),
+            id.into(), 6, "$/bbl".into(), "t".into(), "EIA".into(),
+            "petroleum/pri/spt".into(), "daily".into(), "d".into(),
         );
-        let f = c.get_feed("EIA.PET.PRICE.WTI.DAILY".into()).unwrap();
-        assert_eq!(f.decimals, 6);
-        assert_eq!(f.unit, "$/bbl");
-        assert_eq!(c.feed_count(), 1);
-        // re-register same id updates, does not double-count
-        c.register_feed(
-            "EIA.PET.PRICE.WTI.DAILY".into(), 6, "$/bbl".into(), "WTI".into(),
-            "EIA".into(), "petroleum/pri/spt".into(), "daily".into(), "x".into(),
-        );
-        assert_eq!(c.feed_count(), 1);
     }
 
     #[test]
-    fn only_owner_registers() {
-        let env = odra_test::env();
+    fn register_and_read() {
+        let (env, mut c, mut gate) = setup();
         let owner = env.get_account(0);
-        let stranger = env.get_account(1);
-        let mut c = FeedRegistry::deploy(&env, FeedRegistryInitArgs { owner });
-        env.set_caller(stranger);
+        gate.allow(owner);
+        env.set_caller(owner);
+        reg(&mut c, "EIA.PET.PRICE.WTI.DAILY");
+        let f = c.get_feed("EIA.PET.PRICE.WTI.DAILY".into()).unwrap();
+        assert_eq!(f.decimals, 6);
+        assert_eq!(c.feed_count(), 1);
+        // update by claimant, no double count
+        reg(&mut c, "EIA.PET.PRICE.WTI.DAILY");
+        assert_eq!(c.feed_count(), 1);
+        assert_eq!(c.get_attester("EIA.PET.PRICE.WTI.DAILY".into()), Some(owner));
+    }
+
+    #[test]
+    fn eligible_stranger_registers_new_feed_and_claims_it() {
+        let (env, mut c, mut gate) = setup();
+        let operator = env.get_account(1);
+        gate.allow(operator);
+        env.set_caller(operator);
+        reg(&mut c, "EIA.ELEC.GEN_SUN.US48.HOURLY");
+        assert_eq!(c.get_attester("EIA.ELEC.GEN_SUN.US48.HOURLY".into()), Some(operator));
+    }
+
+    #[test]
+    fn ineligible_caller_cannot_register_new_feed() {
+        let (env, mut c, _gate) = setup();
+        env.set_caller(env.get_account(1));
         let res = c.try_register_feed(
             "x".into(), 0, "u".into(), "t".into(), "s".into(), "r".into(), "f".into(), "d".into(),
         );
         assert!(res.is_err());
+    }
+
+    #[test]
+    fn claimed_feed_rejects_other_callers_even_owner() {
+        let (env, mut c, mut gate) = setup();
+        let owner = env.get_account(0);
+        let operator = env.get_account(1);
+        gate.allow(operator);
+        env.set_caller(operator);
+        reg(&mut c, "OP.X");
+        env.set_caller(owner);
+        let res = c.try_register_feed(
+            "OP.X".into(), 6, "u".into(), "t".into(), "s".into(), "r".into(), "f".into(), "d".into(),
+        );
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn owner_needs_eligibility_for_new_feeds_too() {
+        // The exists-but-unclaimed legacy branch cannot be fabricated in the test
+        // VM (it only arises from pre-upgrade storage); it is covered by the
+        // testnet smoke after the live upgrade. Closest testable property here:
+        // even the owner goes through the gate for brand-new feeds.
+        let (env, mut c, _gate) = setup();
+        env.set_caller(env.get_account(0));
+        let res = c.try_register_feed(
+            "NEW.Y".into(), 0, "u".into(), "t".into(), "s".into(), "r".into(), "f".into(), "d".into(),
+        );
+        assert!(res.is_err()); // owner not allowed on stub -> NotEligible
+    }
+
+    #[test]
+    fn gate_unset_rejects_new_feeds() {
+        let env = odra_test::env();
+        let owner = env.get_account(0);
+        let mut c = FeedRegistry::deploy(&env, FeedRegistryInitArgs { owner });
+        env.set_caller(owner);
+        let res = c.try_register_feed(
+            "x".into(), 0, "u".into(), "t".into(), "s".into(), "r".into(), "f".into(), "d".into(),
+        );
+        assert!(res.is_err()); // GateNotSet
+    }
+
+    #[test]
+    fn set_gate_is_owner_only() {
+        let env = odra_test::env();
+        let owner = env.get_account(0);
+        let stranger = env.get_account(1);
+        let mut c = FeedRegistry::deploy(&env, FeedRegistryInitArgs { owner });
+        let gate = GateStub::deploy(&env, NoArgs);
+        env.set_caller(stranger);
+        assert!(c.try_set_eligibility_gate(gate.address()).is_err());
     }
 }
