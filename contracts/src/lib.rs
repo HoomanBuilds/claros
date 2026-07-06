@@ -5,6 +5,7 @@ extern crate alloc;
 pub mod attestation_registry;
 pub mod eligibility_gate;
 pub mod feed_registry;
+pub mod gate_stub;
 pub mod treasury_vault;
 pub mod verifier;
 pub mod vk;
