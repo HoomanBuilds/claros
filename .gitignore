@@ -22,8 +22,9 @@ keys/
 npm-debug.log*
 
 # rust / odra
+# contracts/wasm/ is tracked on purpose: it holds the exact deployed artifacts,
+# checked against on-chain module_bytes by scripts/verify-onchain.mjs
 contracts/target/
-contracts/wasm/
 contracts/.builder*
 
 # os / editor / local tooling
