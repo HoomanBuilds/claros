@@ -10,10 +10,13 @@
   "contracts": {
     "attestation_registry": {
       "package_hash": "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc",
-      "contract_hash": "5b4c6c945c83796667d8090001af7fb7d5307b24bb50011007661b6dc7869173",
+      "contract_hash": "48bba059fee694378e30225798c7886a06f0e8229657139ee4f6eadbcf7be75b",
       "deploy_tx": "ed0820135e92d66bd5aae307402b698fb8b95e2c5c586df95def17c40bb490fd",
+      "upgrade_tx": "954e7b46a9b211549d6327d71637bb9d024264962df5c6abea5bbd11a95f2244",
+      "version": 2,
       "attester": "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
-      "upgradable": true
+      "upgradable": true,
+      "notes": "v2 enforces per-feed attester claims from feed_registry; unclaimed feeds keep the legacy attester"
     },
     "treasury_vault": {
       "package_hash": "a90b082d863c5977c6e54654fec10e523a38760529e664a87e9e8a8e887ffd7b",
@@ -23,11 +26,18 @@
       "upgradable": true
     },
     "feed_registry": {
+      "package_hash": "741cc223c14c2c00c9f06d7bb5c4be2f824fbf0c8b09a147bf1835570bddf5b6",
+      "deploy_tx": "83487cd1ddfa544ee22e93f476021226d7f076cb95e8d77325d45fbb66718917",
+      "gate_wired_tx": "3afc4bc96f3a546783fb5c2e46a23296fea7de799b4f6e5032aae568811e933e",
+      "owner": "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
+      "purpose": "self-describing feed metadata + per-feed attester claims — read alongside attestation_registry by feed_id",
+      "upgradable": true,
+      "notes": "v2 registry: eligibility-gated registration, claim-on-register; all 37 feeds migrated from v1 on 2026-07-07"
+    },
+    "feed_registry_v1_deprecated": {
       "package_hash": "dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46",
       "deploy_tx": "a7900a2b094d9561b2170ff9f026ac6df40fd3efc1930e03a5e4e617fb36b6e4",
-      "owner": "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
-      "purpose": "self-describing feed metadata (decimals/unit/source) — read alongside attestation_registry by feed_id",
-      "upgradable": true
+      "notes": "un-upgradable (its access token named keys were overwritten by a same-named test install); metadata migrated to the v2 feed_registry"
     },
     "eligibility_gate": {
       "package_hash": "7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227",

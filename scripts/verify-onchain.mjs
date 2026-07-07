@@ -60,13 +60,15 @@ let ok = true;
 console.log(`network: ${manifest.network}   rpc: ${RPC}\n`);
 for (const [key, entry] of Object.entries(manifest.contracts)) {
   const wasmFile = WASM[key];
+  if (!wasmFile) continue; // deprecated/aux entries have no artifact to check
+  const tx = entry.upgrade_tx ?? entry.deploy_tx;
   const local = sha256(readFileSync(resolve(REPO, 'contracts', 'wasm', wasmFile)));
-  const chain = await onchainWasmHash(entry.deploy_tx);
+  const chain = await onchainWasmHash(tx);
   const match = local === chain;
   ok &&= match;
   console.log(`${match ? 'MATCH   ' : 'MISMATCH'} ${wasmFile}`);
   console.log(`         package   ${entry.package_hash}`);
-  console.log(`         install   ${entry.deploy_tx}`);
+  console.log(`         ${entry.upgrade_tx ? 'upgrade' : 'install'}   ${tx}`);
   console.log(`         sha256    local ${local}`);
   console.log(`                   chain ${chain}\n`);
 }

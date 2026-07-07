@@ -7,8 +7,14 @@ use odra::prelude::{Address, Addressable};
 
 // Usage (env vars; reads ODRA_CASPER_LIVENET_* from contracts/.env like deploys):
 //   UPGRADE=dry                  deploy + upgrade a throwaway package, touches nothing live
+//   UPGRADE=fresh_feed_registry  GATE_PACKAGE=hash-..  deploy a new FeedRegistry + wire the gate
 //   UPGRADE=feed_registry        FEED_REGISTRY_PACKAGE=hash-.. GATE_PACKAGE=hash-..
 //   UPGRADE=attestation_registry ATT_REGISTRY_PACKAGE=hash-..  FEED_REGISTRY_PACKAGE=hash-..
+//
+// WARNING: installing a contract overwrites the account named keys
+// <Name>_package_hash(_access_token); a same-named install clobbers upgrade
+// rights to the earlier package. That is how the original FeedRegistry lost
+// upgradability (dry-run on 2026-07-07) and why fresh_feed_registry exists.
 fn main() {
     env_logger::init();
     let env = odra_casper_livenet_env::env();
@@ -35,6 +41,19 @@ fn main() {
             )
             .expect("dry-run upgrade failed");
             println!("dry-run upgrade OK at {:?}", up.address());
+        }
+        "fresh_feed_registry" => {
+            let owner = env.get_account(0);
+            env.set_gas(400_000_000_000);
+            let mut c = FeedRegistry::deploy_with_cfg(
+                &env,
+                FeedRegistryInitArgs { owner },
+                InstallConfig::upgradable::<FeedRegistry>(),
+            );
+            println!("fresh FeedRegistry deployed at {:?}", c.address());
+            env.set_gas(5_000_000_000);
+            c.set_eligibility_gate(addr("GATE_PACKAGE"));
+            println!("eligibility gate wired");
         }
         "feed_registry" => {
             let up = FeedRegistry::try_upgrade(
