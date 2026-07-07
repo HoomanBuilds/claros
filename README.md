@@ -5,7 +5,7 @@
 <h1 align="center">Claros</h1>
 
 <p align="center">
-  <b>A verifiable real-world-data oracle and autonomous agent on Casper. Energy markets and civic data, attested on-chain as self-describing feeds.</b>
+  <b>A verifiable real-world-data oracle network on Casper. Energy markets and civic data, attested on-chain as self-describing feeds by autonomous agents that earn their keep.</b>
 </p>
 
 <p align="center">
@@ -16,9 +16,11 @@
   <a href="https://www.npmjs.com/package/claros-oracle">SDK on npm</a>
 </p>
 
-> Claros pulls authoritative real-world data (U.S. EIA energy markets and City of San Diego parking revenue), scales each value to an integer, hashes its provenance, and attests it on Casper as a self-describing feed. A DeepSeek-driven agent runs the whole loop autonomously and funds its own gas. Read any feed for free from your contract, the SDK, or a REST API, or pay per call over x402.
+> Claros pulls authoritative real-world data (U.S. EIA energy markets and City of San Diego parking revenue), scales each value to an integer, hashes its provenance, and attests it on Casper as a self-describing feed. A DeepSeek-driven agent runs the whole loop autonomously and funds its own gas. Read any feed for free from your contract, the SDK, or a REST API, or pay per call over x402. The network is open: enroll through the ZK gate, claim a feed, run your own agent, and earn WCSPR per read. A second, independent operator already does.
 
 Claros is a Pyth-style oracle for real-world data, built on **Casper testnet**. Two registries hold the data on-chain: an **AttestationRegistry** stores each value keyed by a `feed_id`, and a **FeedRegistry** stores the matching self-describing metadata (decimals, unit, source, cadence). An **autonomous agent** fetches the upstream data, scales and hashes it, signs a Casper `TransactionV1`, and attests it, with no human in the loop. The agent sells the feed over an **x402** payment rail to earn WCSPR, routes idle treasury into on-chain yield, and gates its own operation behind a **zero-knowledge eligibility proof**, all of which it records on-chain.
+
+And Claros is an open **attester network**, not a single oracle: any operator can prove eligibility through the same ZK gate, claim a brand-new feed, and attest it with their own key and their own LLM. Feed claims are enforced by the contracts themselves, and a second, independent operator is already live on testnet, attesting US solar generation and earning WCSPR for reads.
 
 The whole thing is verifiable: every value is an attestation with a provenance hash, the registries are public Casper state anyone can read, and the agent's reinvest decisions (with their reasoning) are written to an on-chain treasury ledger. This repository is the working testnet build, deployed and live, built for the **Casper Agentic Buildathon 2026**.
 
@@ -34,6 +36,7 @@ The whole thing is verifiable: every value is an attestation with a provenance h
   - [The x402 Earn Rail](#the-x402-earn-rail)
   - [The Treasury and On-Chain Yield](#the-treasury-and-on-chain-yield)
   - [The ZK Eligibility Gate](#the-zk-eligibility-gate)
+  - [The Attester Network](#the-attester-network)
   - [The Consumption Layer: SDK, REST, Cross-Contract](#the-consumption-layer-sdk-rest-cross-contract)
   - [The Web App](#the-web-app)
 - [Data Coverage](#data-coverage)
@@ -50,7 +53,7 @@ The whole thing is verifiable: every value is an attestation with a provenance h
 
 ## What Claros Does
 
-Claros is five parts working as one:
+Claros is six parts working as one:
 
 1. **An on-chain oracle (Odra / Rust).** Two contracts: `AttestationRegistry` stores values by `feed_id`, and `FeedRegistry` stores self-describing metadata (decimals, unit, source, route, cadence) for the same id. Reading is `amount / 10^decimals`, exactly like Pyth's `price × 10^expo`. Both are deployed and upgradable on Casper testnet.
 
@@ -62,7 +65,9 @@ Claros is five parts working as one:
 
 5. **A web app (Next.js).** A landing page plus live explorers for the feeds, the full dataset catalog, the integration docs, and the agent's on-chain treasury and earnings, every figure read live from the testnet contracts.
 
-Put together: the agent attests real-world data on-chain, sells it over x402 to pay for itself, compounds the proceeds into on-chain yield, and anyone, a contract or an app, reads the same verifiable numbers back out.
+6. **An open attester network.** Registering a new feed requires a ZK eligibility credential and records the caller as the feed's claimant; attesting a claimed feed is restricted on-chain to its claimant. Operators enroll anonymously, claim feeds, run their own agent with their own key and LLM, and earn WCSPR per read over the same x402 rail. A second, independent operator is live.
+
+Put together: agents attest real-world data on-chain, sell it over x402 to pay for themselves, compound the proceeds into on-chain yield, and anyone, a contract or an app, reads the same verifiable numbers back out. And anyone can join the attester set and earn.
 
 ---
 
@@ -84,7 +89,7 @@ The design is deliberately verifiable rather than trust-me. The agent operates b
 
 `FeedRegistry` is the metadata store and the reason feeds are self-describing. Per `feed_id` it holds `Feed { decimals, unit, title, source, route, frequency, description }`, plus an enumerable index (`feed_count`, `feed_id_at`, `get_feed`). A consumer reads both registries by the same `feed_id`: `get_latest` for the value, `get_feed` for the decimals and unit, then `value = amount / 10^decimals`.
 
-Both are Odra contracts, deployed upgradable, and owner-gated for writes (only the agent key can attest or register).
+Both are Odra contracts, deployed upgradable, and write-gated on-chain per feed: registering a new feed requires a ZK eligibility credential and records the caller as the feed's claimant, and only the claimant can update or attest that feed afterwards (pre-network feeds remain with the first-party agent key). Reads are open to anyone.
 
 ### The Autonomous Agent
 
@@ -123,7 +128,18 @@ The agent's yield venues are real Casper DeFi:
 
 `EligibilityGate` gates the oracle behind a zero-knowledge proof of allowlist membership, a regulation-ready access pattern where the agent proves it is authorized without revealing its identity. The on-chain `verify_eligibility(proof, root, nullifier_hash)` runs a **Groth16 / BN254** verifier (`ark-groth16`, forked from Shroud Protocol) compiled into the contract, checks the proof against the on-chain allowlist Merkle `root`, burns a nullifier (one-shot, replay-safe), binds the caller's account, and marks it eligible.
 
-The circuit (`zk-gate/circuits/eligibility.circom`, Circom 2.1) proves knowledge of a private `(identity, nullifier)` whose MiMC7 leaf sits in a **20-level Merkle allowlist**, publishes the nullifier hash, and binds the caller account-hash. Setup is snarkjs Groth16 over a bn128 power-16 trusted setup. A real proof has been verified on-chain.
+The circuit (`zk-gate/circuits/eligibility.circom`, Circom 2.1) proves knowledge of a private `(identity, nullifier)` whose MiMC7 leaf sits in a **20-level Merkle allowlist**, publishes the nullifier hash, and binds the caller account-hash. Setup is snarkjs Groth16 over a bn128 power-16 trusted setup. Two real proofs have been verified on-chain (`granted_count` = 2), and the same gate is the network's membership check: it is how new operators join the attester set.
+
+### The Attester Network
+
+The multi-operator path is live on testnet, not hypothetical. Joining takes four steps, each with on-chain evidence:
+
+1. **Enroll.** An operator generates a secret locally, submits one public MiMC7 leaf to the allowlist, and calls `verify_eligibility` with a Groth16 proof; anonymous entry, permanent credential ([operator #2's verification](https://testnet.cspr.live/transaction/f5b96c7d3e874f86acd1c1bb16ef67cdbd1d35cba5ebf4801887ad1ce699de7a)).
+2. **Claim.** `register_feed` on the FeedRegistry checks the caller's on-chain eligibility and records them as the feed's claimant ([operator #2 claiming the solar feed](https://testnet.cspr.live/transaction/1d6a3135a9cdd7bb1fa928b905a6d89b46c856ecd00ad0c34a2118304fa55ecb)).
+3. **Attest.** The AttestationRegistry resolves the feed's claimant cross-contract and only accepts attestations from that key; unclaimed pre-network feeds fall back to the first-party agent. When the first-party key tried to attest operator #2's feed, the chain [reverted with `Unauthorized`](https://testnet.cspr.live/transaction/c596c940ecfe477d6efa5e157ba0cd3109543fd172a77a7f8a26985ee748c4b2).
+4. **Earn.** The operator runs the same agent with their own key, LLM, and feed config (`agent/operator-feeds.json` and `agent/feed-operator2.json` are the working configs operator #2 uses) and sells reads over the same x402 rail. Operator #2 was [settled 1 WCSPR](https://testnet.cspr.live/transaction/65534cbb1351abdbdbe27298580772ee1a74c8ac696a8e6ace0209ab3b2e3ce4) for a read of its solar feed.
+
+The full walkthrough, from key generation to first payout, is documented at [Run an agent and earn](https://claros-oracle.vercel.app/docs/network/run-an-agent).
 
 ### The Consumption Layer: SDK, REST, Cross-Contract
 
@@ -149,7 +165,7 @@ The on-chain reader is the same code in all three: the SDK and REST API read Cas
 
 ## Data Coverage
 
-Claros crawled the entire U.S. EIA APIv2 metadata tree into a catalog of **232 leaf datasets** across every energy family, and a generic adapter means any of them can be attested on request. Today **37 feeds are live on-chain**, plus a civic feed (San Diego parking revenue).
+Claros crawled the entire U.S. EIA APIv2 metadata tree into a catalog of **232 leaf datasets** across every energy family, and a generic adapter means any of them can be attested on request. Today **38 feeds serve live values on-chain**: the EIA energy set, a civic feed (San Diego parking revenue), and a solar-generation feed claimed and attested by an independent operator.
 
 | Family | Datasets indexed | Example live feed |
 | ------ | ---------------- | ----------------- |
@@ -163,6 +179,7 @@ Claros crawled the entire U.S. EIA APIv2 metadata tree into a catalog of **232 l
 | CO2 emissions | 2 | `EIA.CO2.AGG.US_TOTAL.ANNUAL` (MMT CO2) |
 | Crude imports / international / SEDS / total energy | 4 | `EIA.INTL.CRUDE_PROD.WORLD.ANNUAL` |
 | **Civic** | n/a | `OP-1` (San Diego parking revenue, cents) |
+| **Operator-claimed** | n/a | `EIA.ELEC.GEN_SUN.US48.HOURLY` (US48 solar, attested by operator #2) |
 
 Sources: [U.S. EIA APIv2](https://www.eia.gov/opendata/) and the [City of San Diego open-data portal](https://seshat.datasd.org). Each value carries a sha256 provenance hash of the exact upstream row.
 
@@ -184,7 +201,7 @@ All contracts are live and upgradable on **Casper testnet** (`casper-test`). Exp
 | WCSPR (x402 settlement asset) | `3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e` |
 | WiseLending (sCSPR staking) | `baa50d1500aa5361c497c06b40f2822ebb0b5fce5b1c3a037ea628cb68d920f3` |
 
-Deploy transactions and account hashes are in [`shared/deployments.json`](shared/deployments.json). The attester / agent / owner is one key: account-hash `43d7dd06…21d4`.
+Deploy transactions and account hashes are in [`shared/deployments.json`](shared/deployments.json). The first-party agent / owner key is account-hash `43d7dd06…21d4`; operator #2 attests its claimed feed with its own key.
 
 ---
 
@@ -197,7 +214,7 @@ Everything below was read from Casper testnet at the time of writing; the live f
 | On-chain code == this repo | `node scripts/verify-onchain.mjs` | 4/4 wasm sha256 match |
 | 4 contracts deployed | open each package on cspr.live (links above) | all live |
 | Deploys + ZK verify succeeded | [attestation deploy](https://testnet.cspr.live/transaction/ed0820135e92d66bd5aae307402b698fb8b95e2c5c586df95def17c40bb490fd) · [ZK verify](https://testnet.cspr.live/transaction/b3048a56044adb67796f7e94c9c0298700b5cf822b326fd71e8fe8370333a433) | success |
-| Feeds registered (FeedRegistry) | `FeedRegistry.feed_count` | **38** |
+| Feeds registered (FeedRegistry) | `FeedRegistry.feed_count` | **39** (38 serving values; one signed metric is registered but intentionally unattested) |
 | Total attestations (AttestationRegistry) | on-chain state | **74+** |
 | WTI spot price on-chain | `get_latest("EIA.PET.PRICE.WTI.DAILY")` ÷ 10^6 | **$71.87 /bbl** |
 | San Diego parking attested | `get_latest("OP-1")` | period 2026-06-23, **$2,734.20** |
@@ -272,13 +289,14 @@ claros/
 │   └── Odra.toml
 │
 ├── agent/                         autonomous agent (TypeScript, casper-js-sdk 5)
-│   └── src/
-│       ├── agent-cycle.ts            DeepSeek tool-calling cycle
-│       ├── loop.ts                   heartbeat (runs only on new data)
-│       ├── signer.ts                 TransactionV1 signer (attest / stake / delegate)
-│       ├── tools.ts                  agent tools (attest, reinvest, read_*)
-│       ├── eia*.ts                   EIA APIv2 adapter, 37-feed catalog, 232-dataset crawler
-│       └── sandiego.ts               San Diego parking adapter
+│   ├── src/
+│   │   ├── agent-cycle.ts            DeepSeek tool-calling cycle
+│   │   ├── loop.ts                   heartbeat (runs only on new data)
+│   │   ├── signer.ts                 TransactionV1 signer (attest / stake / delegate)
+│   │   ├── tools.ts                  agent tools (attest, reinvest, read_*)
+│   │   ├── eia*.ts                   EIA APIv2 adapter, 37-feed catalog, 232-dataset crawler
+│   │   └── sandiego.ts               San Diego parking adapter
+│   └── operator-feeds.json           operator feed configs (the set operator #2 runs)
 │
 ├── services/                     off-chain services (TypeScript)
 │   ├── claros-api/                   Hermes-style REST read API (:4030)
@@ -321,6 +339,8 @@ cd ../services/claros-api && npm install && npm run dev   # REST API on :4030
 cd ../../web && npm install && npm run dev                # http://localhost:3000
 ```
 
+To join the network as an operator instead (enroll through the ZK gate, claim a feed, attest it with your own key, earn per read), follow [Run an agent and earn](https://claros-oracle.vercel.app/docs/network/run-an-agent).
+
 Secrets (Casper key, EIA API key, DeepSeek key, CSPR.cloud key) live only in gitignored `.env` files; see each project's `.env.example`. The web app bakes the testnet addresses in, so it reads live state with no env.
 
 To run Claros continuously on a host (the agent heartbeat plus the read API and x402 services), use the included pm2 config:
@@ -356,7 +376,7 @@ The agent and facilitator sign transactions, so their keys must hold testnet CSP
 
 A few honest notes about the live system:
 
-- **Writes are owner-gated.** Only the agent key can `attest` or `register_feed`; reads are open to anyone (it is public chain state).
+- **Writes are gated on-chain, per feed.** Registering a new feed requires a ZK eligibility credential and records the caller as its claimant; attesting a claimed feed is restricted to that claimant (resolved cross-contract, [enforced with a revert](https://testnet.cspr.live/transaction/c596c940ecfe477d6efa5e157ba0cd3109543fd172a77a7f8a26985ee748c4b2)); pre-network feeds remain with the first-party agent key. Reads are open to anyone (it is public chain state).
 - **No floats on-chain.** Values are integers scaled by `10^decimals`; `U512` is unsigned, so the few naturally-signed metrics (e.g. electricity interchange) are intentionally excluded rather than misrepresented.
 - **Provenance is the contract.** The sha256 hash the agent attests is computed from the exact upstream row and is identical to the one served over x402, so a buyer can reconcile what they bought against the chain.
 - **The agent self-funds, conservatively.** Reinvest sizing is representative testnet sizing (e.g. 500 CSPR), and "hold" is a valid, recorded decision; the on-chain reinvest amounts are nominal demo figures, the reasoning is the substance.
