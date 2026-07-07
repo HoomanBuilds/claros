@@ -36,7 +36,7 @@ Custom config:
 ```ts
 new ClarosOracle({
   rpc: 'https://node.testnet.casper.network/rpc',
-  feedRegistry: 'dac573fc…',          // FeedRegistry package hash
+  feedRegistry: '741cc223…',          // FeedRegistry package hash
   attestationRegistry: '236b5104…',   // AttestationRegistry package hash
 });
 ```
