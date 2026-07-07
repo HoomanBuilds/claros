@@ -1,22 +1,19 @@
-// Generate a real eligibility proof: prove membership of a leaf = MiMC([identity,
-// nullifier]) in an allowlist Merkle root, bound to a caller account. Emits:
-//   - proof.json      : 256-byte proof + public inputs for on-chain submission
-//   - ../../contracts/src/known_good_proof.rs : the Rust verifier unit-test vector
+// Prove allowlist membership for one member from the tracked leaves file,
+// bound to a caller account.
+//   ACCOUNT_HASH=<64-hex, no prefix> SECRET_FILE=operator-secret.json node prove.js
+// Optional: EMIT_TEST_VECTOR=1 regenerates contracts/src/known_good_proof.rs.
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
 const snarkjs = require('snarkjs');
-const { buildMimc7 } = require('circomlibjs');
+const { hasher, buildTree, pathFor } = require('./tree');
 
-const LEVELS = 20;
 const DIR = __dirname;
 const WASM = path.join(DIR, 'eligibility_js', 'eligibility.wasm');
 const ZKEY = path.join(DIR, 'eligibility_final.zkey');
 const VKEY = JSON.parse(fs.readFileSync(path.join(DIR, 'verification_key.json'), 'utf8'));
-const ACCOUNT_HASH_HEX =
-  process.env.ACCOUNT_HASH || '43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4';
+const LEAVES = path.join(DIR, '..', 'allowlist', 'leaves.json');
 
-function snarkjsProofToBytes(p) {
+function proofToBytes(p) {
   const be32 = dec => {
     let hex = BigInt(dec).toString(16);
     if (hex.length > 64) throw new Error(`field element overflow: ${dec}`);
@@ -30,71 +27,45 @@ function snarkjsProofToBytes(p) {
 }
 
 (async () => {
-  const mimc = await buildMimc7();
-  const H = arr => mimc.F.toObject(mimc.multiHash(arr));
-  const rnd = () => BigInt('0x' + crypto.randomBytes(31).toString('hex'));
+  const accountHex = process.env.ACCOUNT_HASH;
+  if (!accountHex) throw new Error('set ACCOUNT_HASH=<64-hex account hash, no prefix>');
+  const secret = JSON.parse(fs.readFileSync(process.env.SECRET_FILE || 'operator-secret.json', 'utf8'));
+  const leaves = JSON.parse(fs.readFileSync(LEAVES, 'utf8'));
 
-  // Incremental MiMC Merkle tree (selection matches merkleTree.circom + the
-  // Shroud contract: unfilled siblings start at 0). Prove the last member, whose
-  // insert-time root equals the final tree root.
-  const filled = new Array(LEVELS).fill(0n);
-  let nextIndex = 0;
-  let proven = null;
-  const insert = (leaf, capture) => {
-    const pathElements = [], pathIndices = [];
-    let idx = nextIndex, cur = leaf;
-    for (let i = 0; i < LEVELS; i++) {
-      let left, right;
-      if (idx % 2 === 0) { left = cur; right = filled[i]; pathIndices.push(0); pathElements.push(filled[i]); filled[i] = cur; }
-      else { left = filled[i]; right = cur; pathIndices.push(1); pathElements.push(filled[i]); }
-      cur = H([left, right]);
-      idx = Math.floor(idx / 2);
-    }
-    nextIndex++;
-    if (capture) return { pathElements, pathIndices, root: cur };
-  };
-
-  const members = [];
-  for (let i = 0; i < 3; i++) {
-    const identity = rnd(), nullifier = rnd();
-    members.push({ identity, nullifier, leaf: H([identity, nullifier]) });
-  }
-  let captured;
-  members.forEach((m, i) => { const c = insert(m.leaf, i === members.length - 1); if (c) captured = c; });
-
-  const me = members[members.length - 1];
-  const nullifierHash = H([me.nullifier]);
-  const account = BigInt('0x' + ACCOUNT_HASH_HEX);
+  const H = await hasher();
+  const index = leaves.indexOf(secret.leaf);
+  if (index < 0) throw new Error('your leaf is not in the allowlist yet — submit it and wait for set_root');
+  const { root, layers } = buildTree(H, leaves);
+  const { pathElements, pathIndices } = pathFor(layers, index);
 
   const input = {
-    identity: me.identity.toString(),
-    nullifier: me.nullifier.toString(),
-    pathElements: captured.pathElements.map(String),
-    pathIndices: captured.pathIndices.map(String),
-    root: captured.root.toString(),
-    nullifierHash: nullifierHash.toString(),
-    account: account.toString(),
+    identity: secret.identity,
+    nullifier: secret.nullifier,
+    pathElements,
+    pathIndices: pathIndices.map(String),
+    root: root.toString(),
+    nullifierHash: H([BigInt(secret.nullifier)]).toString(),
+    account: BigInt('0x' + accountHex).toString(),
   };
 
   const { proof, publicSignals } = await snarkjs.groth16.fullProve(input, WASM, ZKEY);
-  const ok = await snarkjs.groth16.verify(VKEY, publicSignals, proof);
-  if (!ok) throw new Error('snarkjs rejected its own proof');
-  console.log('snarkjs verify: OK');
-  console.log('publicSignals [root, nullifierHash, account]:', publicSignals);
+  if (!(await snarkjs.groth16.verify(VKEY, publicSignals, proof))) {
+    throw new Error('snarkjs rejected its own proof');
+  }
+  console.log('snarkjs verify: OK  [root, nullifierHash, account]:', publicSignals);
 
-  const proofBytes = snarkjsProofToBytes(proof);
   const out = {
-    proof_hex: proofBytes.toString('hex'),
+    proof_hex: proofToBytes(proof).toString('hex'),
     root: publicSignals[0],
     nullifier_hash: publicSignals[1],
     account: publicSignals[2],
-    account_hash_hex: ACCOUNT_HASH_HEX,
+    account_hash_hex: accountHex,
   };
   fs.writeFileSync(path.join(DIR, 'proof.json'), JSON.stringify(out, null, 2));
-  console.log('wrote proof.json (256-byte proof =', proofBytes.length, 'bytes)');
+  console.log('wrote proof.json');
 
-  // Emit the Rust unit-test vector (proves vk.rs + verifier are correct off-chain).
-  const rs = `// Generated by zk-gate/circuits/prove.js — a real snarkjs proof that verified
+  if (process.env.EMIT_TEST_VECTOR === '1') {
+    const rs = `// Generated by zk-gate/circuits/prove.js — a real snarkjs proof that verified
 // as true against verification_key.json. Proves vk.rs + the verifier agree.
 #[test]
 fn verifies_known_good_proof_from_snarkjs() {
@@ -120,7 +91,8 @@ fn verifies_known_good_proof_from_snarkjs() {
     );
 }
 `;
-  fs.writeFileSync(path.join(DIR, '..', '..', 'contracts', 'src', 'known_good_proof.rs'), rs);
-  console.log('wrote contracts/src/known_good_proof.rs');
+    fs.writeFileSync(path.join(DIR, '..', '..', 'contracts', 'src', 'known_good_proof.rs'), rs);
+    console.log('wrote contracts/src/known_good_proof.rs');
+  }
   process.exit(0);
 })();
