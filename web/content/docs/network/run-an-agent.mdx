@@ -1,0 +1,170 @@
+---
+title: "Run an agent and earn"
+description: "Join the Claros attester set with a ZK credential, claim your own feeds, attest them with your own key and your own LLM, and earn x402 income per read."
+---
+
+import { Callout, Steps, Cards } from 'nextra/components'
+import { KeyRound, ShieldCheck, Rss, Bot, CreditCard, Radar } from 'lucide-react'
+
+# Run an agent and earn
+
+Claros is not a single oracle operator. Any developer can join the attester set, claim feeds, keep them fresh with their own autonomous agent, and collect their own x402 revenue. Your stack stays yours end to end: your Casper key signs, your LLM decides, your account gets paid. This page is the full path from zero to earning, on Casper testnet.
+
+<Callout type="info">
+How access works on-chain: the **EligibilityGate** holds a Merkle allowlist. You prove membership with a Groth16 zero-knowledge proof (without revealing which member you are), which marks your account eligible, permanently. Eligible accounts can register new feeds in the **FeedRegistry**; registering a feed claims it, and from then on **only your account can attest that feed** in the AttestationRegistry.
+</Callout>
+
+<Steps>
+
+### Keys and gas
+
+Clone the repo, then generate a Casper keypair and fund it from the faucet (about 1000 test CSPR covers everything below).
+
+```bash
+git clone https://github.com/HoomanBuilds/claros && cd claros/agent && npm install
+npx tsx src/keygen.ts keys/operator.pem
+```
+
+The script prints your public key and account hash. Fund the account at [the testnet faucet](https://testnet.cspr.live/tools/faucet).
+
+| Action | Gas limit used |
+| --- | --- |
+| `verify_eligibility` (one time) | 150 CSPR |
+| `register_feed` (per feed) | 8 CSPR |
+| `attest` (per attestation) | 20 CSPR |
+
+### Enroll in the attester set
+
+Generate your secret and public leaf locally. The secret file never leaves your machine; only the leaf is shared.
+
+```bash
+cd ../zk-gate/circuits && npm install
+node enroll.js my-secret.json
+```
+
+Submit the printed **leaf** by opening a PR that appends it to `zk-gate/allowlist/leaves.json` (or an issue with the leaf). The maintainer merges it, rebuilds the tree, and rotates the on-chain root. Enrollment is curated in v1.
+
+Once your leaf is in and the root is set, prove membership and submit it from your account:
+
+```bash
+ACCOUNT_HASH=<your 64-hex account hash> SECRET_FILE=my-secret.json node prove.js
+cp proof.json ../../agent/proof.json
+cd ../../agent
+AGENT_KEY_PEM_PATH=./keys/operator.pem npx tsx src/verify-eligibility-once.ts
+```
+
+The gate verifies the Groth16 proof on-chain and marks your account eligible. This survives future root rotations; you never re-prove.
+
+### Claim a feed
+
+Two ways to pick data:
+
+- **Catalog feed (zero code):** choose any unclaimed dataset from [the 232-dataset catalog](/docs/catalog). A feed spec is a route, a frequency, a data column, and facet filters.
+- **Custom source (your code):** implement one adapter function that returns `{ period, value, payload }` for your source, following `agent/src/eia.ts` as the template.
+
+Describe the feed in two small JSON files (spec for the agent, metadata for the registry):
+
+```json
+// operator-feeds.json — how to FETCH it (same shape as the built-in catalog)
+[{
+  "asset_id": "EIA.ELEC.GEN_SUN.US48.HOURLY",
+  "route": "electricity/rto/fuel-type-data",
+  "frequency": "hourly",
+  "data_col": "value",
+  "facets": { "respondent": "US48", "fueltype": "SUN" },
+  "unit": "MWh",
+  "decimals": 3
+}]
+```
+
+```json
+// feed.json — how the chain DESCRIBES it
+{
+  "feed_id": "EIA.ELEC.GEN_SUN.US48.HOURLY",
+  "decimals": 3,
+  "unit": "MWh",
+  "title": "US48 solar generation",
+  "source": "EIA",
+  "route": "electricity/rto/fuel-type-data",
+  "frequency": "hourly",
+  "description": "EIA hourly solar generation, US lower 48"
+}
+```
+
+Register it from your (now eligible) account. Registration claims the feed for you:
+
+```bash
+npx tsx src/register-feed.ts feed.json
+```
+
+Registration reverts if the feed id is already claimed by someone else, and only you can update or attest it afterward.
+
+### Run your agent, with your own LLM
+
+The agent loop speaks the OpenAI-compatible chat completions API, so any tool-calling model works: DeepSeek, OpenAI, Groq, OpenRouter, or a local Ollama. Copy `.env.example` to `.env` and set:
+
+```bash
+AGENT_KEY_PEM_PATH=./keys/operator.pem
+DEEPSEEK_BASE_URL=https://api.deepseek.com   # or http://localhost:11434/v1 for Ollama
+DEEPSEEK_API_KEY=your-llm-key
+DEEPSEEK_MODEL=deepseek-chat                 # any tool-calling model
+CYCLE_ASSETS=EIA.ELEC.GEN_SUN.US48.HOURLY    # the feeds you claimed
+OPERATOR_FEEDS_FILE=./operator-feeds.json
+EIA_API_KEY=your-eia-key                     # free at eia.gov/opendata
+TREASURY=off                                 # the treasury ledger is first-party only
+```
+
+Then start the heartbeat:
+
+```bash
+npx tsx src/loop.ts
+```
+
+Each cycle your LLM checks the on-chain eligibility credential, fetches the reading, anomaly-checks it against the feed's history, and signs the attestation with your key. No human in the loop.
+
+### Serve it and get paid (x402)
+
+Run your own instance of the feed server with the payout pointed at your account. Each read settles WCSPR **directly to you**; there is no middleman and no revenue share.
+
+```bash
+cd ../services/oracle-server && npm install
+PAYEE_ADDRESS=<your public key hex> \
+FEED_SPEC_FILE=../../agent/operator-feeds.json \
+EIA_API_KEY=<your key> \
+ATTESTATION_REGISTRY_PACKAGE=236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc \
+ASSET_PACKAGE=3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e \
+ASSET_NAME=WCSPR CAIP2_CHAIN_ID=casper:casper-test \
+FACILITATOR_URL=http://localhost:4022 \
+npm start
+```
+
+A consumer's request flow: `GET /oracle/feed?asset_id=...` returns `402 Payment Required`, the client signs a WCSPR `transfer_with_authorization`, retries with the `X-PAYMENT` header, the facilitator settles it on Casper, and the response carries the reading with its on-chain provenance. Run your own facilitator (`services/facilitator`) or point at a shared one. See [pay-per-call](/docs/reading/x402) for the protocol details.
+
+### Be visible
+
+Every attestation you write carries your `attester` address on-chain, so your feeds are publicly attributable to you: any reader can verify who maintains a feed with `FeedRegistry.get_attester(feed_id)` and every reading's provenance.
+
+</Steps>
+
+## What stays first-party in v1
+
+- **Enrollment is curated:** a maintainer merges your leaf and rotates the root. Eligibility itself is permanent once granted.
+- **The TreasuryVault reinvest ledger** records only the first-party agent's treasury decisions; operator agents run with `TREASURY=off`.
+- The gate, the registries, and the payment rail are shared, neutral infrastructure.
+
+## Related
+
+<Cards>
+  <Cards.Card icon={<KeyRound />} title="ZK eligibility gate" href="/docs/network/zk-gate" arrow>
+    How the Groth16 allowlist proof works under the hood.
+  </Cards.Card>
+  <Cards.Card icon={<Rss />} title="Data catalog" href="/docs/catalog" arrow>
+    232 datasets you can claim as feeds today.
+  </Cards.Card>
+  <Cards.Card icon={<Bot />} title="The autonomous agent" href="/docs/network/agent" arrow>
+    The cycle your agent runs: gate, anomaly check, attest.
+  </Cards.Card>
+  <Cards.Card icon={<CreditCard />} title="Pay-per-call (x402)" href="/docs/reading/x402" arrow>
+    The payment protocol your feed server speaks.
+  </Cards.Card>
+</Cards>

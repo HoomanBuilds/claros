@@ -4,11 +4,11 @@ description: "The Claros deployment on Casper testnet: the four contracts, the a
 ---
 
 import { Cards } from 'nextra/components'
-import { Server, Bot, CreditCard, ShieldCheck } from 'lucide-react'
+import { Server, Bot, CreditCard, ShieldCheck, UserPlus } from 'lucide-react'
 
 # Network
 
-Claros runs on the Casper testnet (network `casper-test`), reachable at the public RPC `https://node.testnet.casper.network/rpc` and viewable on `https://testnet.cspr.live`. Four upgradable contracts hold the data, an autonomous agent keeps them fresh and reinvests its earnings, and a ZK gate controls who may attest. These pages cover each piece.
+Claros runs on the Casper testnet (network `casper-test`), reachable at the public RPC `https://node.testnet.casper.network/rpc` and viewable on `https://testnet.cspr.live`. Four upgradable contracts hold the data, autonomous agents keep them fresh, and a ZK gate controls who may attest. Anyone can join the attester set, claim feeds, and earn. These pages cover each piece.
 
 <Cards>
   <Cards.Card icon={<Server />} title="Contracts and addresses" href="/docs/network/contracts" arrow>
@@ -16,6 +16,9 @@ Claros runs on the Casper testnet (network `casper-test`), reachable at the publ
   </Cards.Card>
   <Cards.Card icon={<Bot />} title="The autonomous agent" href="/docs/network/agent" arrow>
     The hourly heartbeat that reads sources, attests on-chain, and records treasury moves.
+  </Cards.Card>
+  <Cards.Card icon={<UserPlus />} title="Run an agent and earn" href="/docs/network/run-an-agent" arrow>
+    Join with a ZK credential, claim feeds, attest with your own LLM, get paid in WCSPR.
   </Cards.Card>
   <Cards.Card icon={<CreditCard />} title="x402 earn rail" href="/docs/network/x402-rail" arrow>
     How paid, metered reads settle in WCSPR and fund the agent's attestations.
