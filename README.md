@@ -195,15 +195,17 @@ Everything below was read from Casper testnet at the time of writing; the live f
 | Claim | How to check | Value (verified) |
 | ----- | ------------ | ---------------- |
 | On-chain code == this repo | `node scripts/verify-onchain.mjs` | 4/4 wasm sha256 match |
-| 4 contracts deployed | open each package on cspr.live (links above) | all live, version 1 |
+| 4 contracts deployed | open each package on cspr.live (links above) | all live |
 | Deploys + ZK verify succeeded | [attestation deploy](https://testnet.cspr.live/transaction/ed0820135e92d66bd5aae307402b698fb8b95e2c5c586df95def17c40bb490fd) · [ZK verify](https://testnet.cspr.live/transaction/b3048a56044adb67796f7e94c9c0298700b5cf822b326fd71e8fe8370333a433) | success |
-| Feeds registered (FeedRegistry) | `FeedRegistry.feed_count` | **37** |
-| Total attestations (AttestationRegistry) | on-chain state | **72** |
-| WTI spot price on-chain | `get_latest("EIA.PET.PRICE.WTI.DAILY")` ÷ 10^6 | **$78.94 /bbl** |
+| Feeds registered (FeedRegistry) | `FeedRegistry.feed_count` | **38** |
+| Total attestations (AttestationRegistry) | on-chain state | **74+** |
+| WTI spot price on-chain | `get_latest("EIA.PET.PRICE.WTI.DAILY")` ÷ 10^6 | **$71.87 /bbl** |
 | San Diego parking attested | `get_latest("OP-1")` | period 2026-06-23, **$2,734.20** |
-| ZK eligibility granted on-chain | `EligibilityGate.granted_count` | **1** (root matches allowlist) |
-| Agent self-funding | agent account liquid balance | **~2,380 CSPR** |
+| ZK eligibility granted on-chain | `EligibilityGate.granted_count` | **2** (first-party agent + operator #2) |
+| Agent self-funding | agent account liquid balance | **~2,400 CSPR** |
 | Reinvest decisions logged | `TreasuryVault.reinvestment_count` | **3** (with on-chain reasoning) |
+| **A second, independent agent joined and earned** | [operator #2 ZK verify](https://testnet.cspr.live/transaction/f5b96c7d3e874f86acd1c1bb16ef67cdbd1d35cba5ebf4801887ad1ce699de7a) · [feed claim](https://testnet.cspr.live/transaction/1d6a3135a9cdd7bb1fa928b905a6d89b46c856ecd00ad0c34a2118304fa55ecb) · [x402 settlement](https://testnet.cspr.live/transaction/65534cbb1351abdbdbe27298580772ee1a74c8ac696a8e6ace0209ab3b2e3ce4) | enrolled via ZK, claimed the solar feed, attested it, and was paid 1 WCSPR |
+| Feed claims enforced on-chain | first-party attest on operator #2's feed | [reverted Unauthorized](https://testnet.cspr.live/transaction/c596c940ecfe477d6efa5e157ba0cd3109543fd172a77a7f8a26985ee748c4b2) |
 
 The SDK reproduces all of this off-chain in a few lines (`new ClarosOracle().getReading(id)`), and the `/network` and `/feeds` pages render it live.
 
@@ -377,12 +379,13 @@ A few honest notes about the live system:
 
 ### What to Look For
 
-1. **A self-describing oracle, live on-chain.** Open `FeedRegistry` and `AttestationRegistry` on cspr.live and read any feed by `feed_id`: the value is in one, the decimals/unit in the other, and `value = amount / 10^decimals`. 37 feeds, 72 attestations.
+1. **A self-describing oracle, live on-chain.** Open `FeedRegistry` and `AttestationRegistry` on cspr.live and read any feed by `feed_id`: the value is in one, the decimals/unit in the other, and `value = amount / 10^decimals`. 38 feeds, 74+ attestations.
 2. **An agent that runs itself.** `agent/src/agent-cycle.ts` is a DeepSeek loop that gates on ZK eligibility, anomaly-checks, attests, and decides treasury moves; the heartbeat only acts on new data. Its decisions, with reasoning, are on-chain in `TreasuryVault` (`reinvestment_count` = 3).
-3. **Real ZK verification on-chain.** The Groth16 proof was verified by the on-chain `EligibilityGate` ([verify tx](https://testnet.cspr.live/transaction/b3048a56044adb67796f7e94c9c0298700b5cf822b326fd71e8fe8370333a433)); `granted_count` = 1 and the on-chain root matches the allowlist.
-4. **It pays for itself.** The x402 feed server settles WCSPR through a self-hosted Casper facilitator, and idle treasury is staked on WiseLending for yield. The agent account holds ~2,380 CSPR.
-5. **Verifiable end to end.** The SDK, REST API, and a cross-contract call all return the same numbers as the chain, and the `/feeds`, `/datasets`, and `/network` pages render them live.
+3. **Real ZK verification on-chain.** Groth16 proofs are verified by the on-chain `EligibilityGate` ([first-party](https://testnet.cspr.live/transaction/b3048a56044adb67796f7e94c9c0298700b5cf822b326fd71e8fe8370333a433) · [operator #2](https://testnet.cspr.live/transaction/f5b96c7d3e874f86acd1c1bb16ef67cdbd1d35cba5ebf4801887ad1ce699de7a)); `granted_count` = 2 and the on-chain root matches the allowlist.
+4. **It pays for itself.** The x402 feed server settles WCSPR through a self-hosted Casper facilitator, and idle treasury is staked on WiseLending for yield. The agent account holds ~2,400 CSPR.
+5. **An open attester network, not a single oracle.** A second, independent operator enrolled through the ZK gate, claimed its own feed (US48 solar generation), attested it with its own key and its own LLM, and was paid 1 WCSPR for an x402 read ([settlement](https://testnet.cspr.live/transaction/65534cbb1351abdbdbe27298580772ee1a74c8ac696a8e6ace0209ab3b2e3ce4)). Claims are enforced on-chain: the first-party key attesting operator #2's feed [reverts](https://testnet.cspr.live/transaction/c596c940ecfe477d6efa5e157ba0cd3109543fd172a77a7f8a26985ee748c4b2). The full path is documented in [Run an agent and earn](https://claros-oracle.vercel.app/docs/network/run-an-agent).
+6. **Verifiable end to end.** The SDK, REST API, and a cross-contract call all return the same numbers as the chain, and the `/feeds`, `/datasets`, and `/network` pages render them live.
 
 ### The One-Line Story
 
-Real-world data, attested on-chain on Casper as self-describing feeds by an autonomous agent that anomaly-checks its own inputs, sells reads over x402 to fund its gas, compounds the proceeds into on-chain yield, and gates itself behind a zero-knowledge proof, with every value, decision, and dollar verifiable on-chain.
+Real-world data, attested on-chain on Casper as self-describing feeds by autonomous agents that anomaly-check their own inputs, sell reads over x402 to fund their gas, compound the proceeds into on-chain yield, and gate themselves behind a zero-knowledge proof, in an attester network anyone can join and earn from, with every value, decision, and dollar verifiable on-chain.
