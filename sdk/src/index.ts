@@ -41,7 +41,7 @@ export interface Reading extends Feed {
 
 const DEFAULTS = {
   rpc: 'https://node.testnet.casper.network/rpc',
-  feedRegistry: 'dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46',
+  feedRegistry: '741cc223c14c2c00c9f06d7bb5c4be2f824fbf0c8b09a147bf1835570bddf5b6',
   attestationRegistry: '236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc',
 };
 

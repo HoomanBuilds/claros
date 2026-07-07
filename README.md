@@ -175,7 +175,7 @@ All contracts are live and upgradable on **Casper testnet** (`casper-test`). Exp
 | Contract | Package hash | Role |
 | -------- | ------------ | ---- |
 | **AttestationRegistry** | [`236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc`](https://testnet.cspr.live/contract-package/236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc) | feed values, keyed by `feed_id` |
-| **FeedRegistry** | [`dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46`](https://testnet.cspr.live/contract-package/dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46) | self-describing metadata |
+| **FeedRegistry** | [`741cc223c14c2c00c9f06d7bb5c4be2f824fbf0c8b09a147bf1835570bddf5b6`](https://testnet.cspr.live/contract-package/741cc223c14c2c00c9f06d7bb5c4be2f824fbf0c8b09a147bf1835570bddf5b6) | self-describing metadata |
 | **TreasuryVault** | [`a90b082d863c5977c6e54654fec10e523a38760529e664a87e9e8a8e887ffd7b`](https://testnet.cspr.live/contract-package/a90b082d863c5977c6e54654fec10e523a38760529e664a87e9e8a8e887ffd7b) | agent reinvest ledger + holdings |
 | **EligibilityGate** | [`7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227`](https://testnet.cspr.live/contract-package/7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227) | ZK Groth16 access gate |
 

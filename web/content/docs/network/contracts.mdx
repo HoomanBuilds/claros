@@ -22,7 +22,7 @@ and read, see [how it works](/docs/how-it-works); for the on-chain record shape,
 | Contract | Package hash (cspr.live) | Role |
 | --- | --- | --- |
 | **AttestationRegistry** | [`236b51…16cc`](https://testnet.cspr.live/contract-package/236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc) | Stores feed **values** by `feed_id`: the latest reading plus the full append-only history. |
-| **FeedRegistry** | [`dac573…6f46`](https://testnet.cspr.live/contract-package/dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46) | Stores self-describing feed **metadata** by `feed_id` (decimals, unit, source, route, frequency). |
+| **FeedRegistry** | [`741cc2…f5b6`](https://testnet.cspr.live/contract-package/741cc223c14c2c00c9f06d7bb5c4be2f824fbf0c8b09a147bf1835570bddf5b6) | Stores self-describing feed **metadata** by `feed_id` (decimals, unit, source, route, frequency). |
 | **TreasuryVault** | [`a90b08…fd7b`](https://testnet.cspr.live/contract-package/a90b082d863c5977c6e54654fec10e523a38760529e664a87e9e8a8e887ffd7b) | Append-only ledger of the agent's reinvestment decisions and treasury holdings. |
 | **EligibilityGate** | [`7be33b…5227`](https://testnet.cspr.live/contract-package/7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227) | Zero-knowledge (Groth16) access gate the agent clears before it is allowed to attest. |
 
@@ -71,7 +71,7 @@ never paste an address by hand.
   "explorer": "https://testnet.cspr.live",
   "contracts": {
     "attestation_registry": "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc",
-    "feed_registry":        "dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46",
+    "feed_registry":        "741cc223c14c2c00c9f06d7bb5c4be2f824fbf0c8b09a147bf1835570bddf5b6",
     "treasury_vault":       "a90b082d863c5977c6e54654fec10e523a38760529e664a87e9e8a8e887ffd7b",
     "eligibility_gate":     "7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227"
   },
@@ -101,7 +101,7 @@ The value store. The agent calls `attest` once per genuinely new period; everyon
 
 Source: `contracts/src/attestation_registry.rs`. Package
 [`236b51…16cc`](https://testnet.cspr.live/contract-package/236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc),
-contract `5b4c6c…9173`, deployed in transaction `ed0820…90fd`.
+contract `48bba0…e75b` (v2), installed in transaction `ed0820…90fd` and upgraded in `954e7b…2244`.
 
 | Entry point | Signature | Access | Returns |
 | --- | --- | --- | --- |
@@ -125,8 +125,8 @@ The metadata store. Holds one self-describing `Feed` record per `feed_id`, so a 
 interpret a value entirely on-chain (the Pyth model: the value ships with its exponent and unit).
 
 Source: `contracts/src/feed_registry.rs`. Package
-[`dac573…6f46`](https://testnet.cspr.live/contract-package/dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46),
-deployed in transaction `a7900a…b6e4`.
+[`741cc2…f5b6`](https://testnet.cspr.live/contract-package/741cc223c14c2c00c9f06d7bb5c4be2f824fbf0c8b09a147bf1835570bddf5b6),
+deployed in transaction `83487c…8917`.
 
 | Entry point | Signature | Access | Returns |
 | --- | --- | --- | --- |
@@ -231,7 +231,7 @@ const oracle = new ClarosOracle() // casper-test RPC + registries baked in
 const custom = new ClarosOracle({
   rpc: 'https://node.testnet.casper.network/rpc',
   attestationRegistry: '236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc',
-  feedRegistry: 'dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46',
+  feedRegistry: '741cc223c14c2c00c9f06d7bb5c4be2f824fbf0c8b09a147bf1835570bddf5b6',
 })
 ```
 
@@ -249,7 +249,7 @@ points through an external contract trait. Full trait wiring is on
 ```rust
 // The upgradable package hashes are the stable addresses to call.
 const ATTESTATIONS: &str = "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc";
-const FEEDS: &str        = "dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46";
+const FEEDS: &str        = "741cc223c14c2c00c9f06d7bb5c4be2f824fbf0c8b09a147bf1835570bddf5b6";
 
 // AttestationRegistry.get_latest(asset_id) -> Option<Attestation>
 // FeedRegistry.get_feed(feed_id)           -> Option<Feed>
@@ -312,8 +312,8 @@ For each contract it fetches the install transaction from the public RPC, extrac
 
 | Contract | Deployed wasm sha256 |
 | --- | --- |
-| AttestationRegistry | `64d9d1cd361c9b6c1db61260e4d04e0c94968d13e06c651498dfe11e3d55234b` |
-| FeedRegistry | `c6cfcf2c18d4c7cbf52541d8a2ef76df41034f5c23973a077661e2989a8adfea` |
+| AttestationRegistry | `7c207fe977cd904a9ebd45f227373897e46235b3efcb2f4790c6bcef31b7a987` |
+| FeedRegistry | `f690dc619de65063cbec86fc1e891a58834cefe7a9a6c4d9064e1824eee85146` |
 | TreasuryVault | `5c0ff440ae985f94d68687a15de25100486714b331eb3f4a2f78f964a8076aee` |
 | EligibilityGate | `9b497c53c466d1f8d0eb3d2c203e06b892e8517123397820cc126695dfdd6db0` |
 

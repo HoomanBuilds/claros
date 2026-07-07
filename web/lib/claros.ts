@@ -10,7 +10,7 @@ import { FLAGSHIP_IDS } from "./format"
 // fields are 1-indexed; stored CLValue is List<U8> = 4-byte LE length + raw bytes.
 
 const RPC = process.env.CASPER_NODE_RPC ?? "https://node.testnet.casper.network/rpc"
-const FEED_REGISTRY = process.env.FEED_REGISTRY_PACKAGE_HASH ?? "dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46"
+const FEED_REGISTRY = process.env.FEED_REGISTRY_PACKAGE_HASH ?? "741cc223c14c2c00c9f06d7bb5c4be2f824fbf0c8b09a147bf1835570bddf5b6"
 const ATTESTATION_REGISTRY = process.env.ATTESTATION_REGISTRY_PACKAGE_HASH ?? "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc"
 
 export const NETWORK = "casper-test"

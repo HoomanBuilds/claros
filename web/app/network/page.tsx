@@ -19,7 +19,7 @@ const cspr = (pkg: string) => `https://testnet.cspr.live/contract-package/${pkg}
 
 const CONTRACTS = [
   { name: "AttestationRegistry", role: "feed values, keyed by feed_id", pkg: "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc" },
-  { name: "FeedRegistry", role: "self-describing metadata (decimals, unit, source)", pkg: "dac573fc3a4c9df921013300612cd289d193814e52a72f76abb0f18f04366f46" },
+  { name: "FeedRegistry", role: "self-describing metadata (decimals, unit, source)", pkg: "741cc223c14c2c00c9f06d7bb5c4be2f824fbf0c8b09a147bf1835570bddf5b6" },
   { name: "TreasuryVault", role: "agent treasury + on-chain yield", pkg: "a90b082d863c5977c6e54654fec10e523a38760529e664a87e9e8a8e887ffd7b" },
   { name: "EligibilityGate", role: "ZK Groth16 access gate", pkg: "7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227" },
 ]

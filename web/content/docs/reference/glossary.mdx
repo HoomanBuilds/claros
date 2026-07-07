@@ -26,7 +26,7 @@ or pay for it.
 | [`feed_id`](/docs/concepts/feeds) | The stable string that names one data series and the only identifier you ever pass to Claros, for example `EIA.PET.PRICE.WTI.DAILY` or `OP-1`. It is the single key into both registries: metadata from the FeedRegistry, value from the AttestationRegistry, read with the same string. |
 | **attestation** | One value the agent wrote on-chain for a feed, recording the reporting `period`, the scaled `amount`, the `source_hash`, the `attester` account, and the chain `timestamp`. The AttestationRegistry keeps the latest plus an append-only history per `feed_id`. |
 | [`AttestationRegistry`](/docs/reference/contract-types) | The Casper contract that stores feed values by `feed_id` (package `236b51…16cc`). Its `get_latest(asset_id)` view returns the most recent attestation for a feed. |
-| [`FeedRegistry`](/docs/reference/contract-types) | The Casper contract that stores self-describing metadata by `feed_id`: `decimals`, `unit`, `source`, `route`, `frequency`, `title`, and `description` (package `dac573…6f46`). A consumer reads it to interpret a value entirely on-chain, the Pyth model where a number ships with its exponent and unit. |
+| [`FeedRegistry`](/docs/reference/contract-types) | The Casper contract that stores self-describing metadata by `feed_id`: `decimals`, `unit`, `source`, `route`, `frequency`, `title`, and `description` (package `741cc2…f5b6`). A consumer reads it to interpret a value entirely on-chain, the Pyth model where a number ships with its exponent and unit. |
 
 ## Values and scaling
 
