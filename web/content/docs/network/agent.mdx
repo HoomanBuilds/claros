@@ -23,10 +23,11 @@ The agent has two layers:
 | **Tools** | `agent/src/tools.ts` | The concrete actions the model can call: data reads, balance reads, and the three on-chain writes. |
 
 <Callout type="info">
-The agent is the only account authorized to write Claros data. `attest` and
-`record_reinvest` revert `Unauthorized` for any caller but the agent (account-hash
+Writes are gated per feed: `attest` reverts `Unauthorized` for any caller but the feed's
+claimant, and `record_reinvest` for any caller but the agent (account-hash
 `43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4`), so every on-chain
-value carries a verifiable signer. See [the attestation record](/docs/concepts/attestation).
+value carries a verifiable signer. The first-party agent holds the pre-network feeds;
+operators hold the feeds they claim. See [the attestation record](/docs/concepts/attestation).
 </Callout>
 
 ## The heartbeat: run only on new data

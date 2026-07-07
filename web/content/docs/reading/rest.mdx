@@ -123,7 +123,7 @@ Reading it: `amount = 78940000`, `decimals = 6`, so `value = 78940000 / 10^6 = 7
 
 ## GET /v1/feeds
 
-List every feed that is live on-chain, each as a full reading (metadata plus latest value). There are **37 feeds** live today. There are no parameters and no pagination: the call enumerates all feed ids, then reads each one, so it is the heaviest endpoint. To read a single value, prefer [`GET /v1/feeds/:id`](#get-v1feedsid).
+List every feed that is live on-chain, each as a full reading (metadata plus latest value). There are **38 feeds** live today. There are no parameters and no pagination: the call enumerates all feed ids, then reads each one, so it is the heaviest endpoint. To read a single value, prefer [`GET /v1/feeds/:id`](#get-v1feedsid).
 
 ```bash
 curl http://localhost:4030/v1/feeds

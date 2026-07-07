@@ -31,12 +31,15 @@ value from one and the metadata from the other, then compute `value = amount / 1
 See [the two registries](/docs/how-it-works#two-registries-one-feed_id).
 
 <Callout type="info">
-**One account holds every privileged role.** The attester (AttestationRegistry), the owner
-(FeedRegistry, EligibilityGate), and the agent (TreasuryVault) are all the same Claros agent
-account, account-hash
-[`43d7dd…21d4`](https://testnet.cspr.live/account/020362ef3cb7536f7eac9a1d30a8d0fbdf7ed3384717b5365751005ebf1826c7b1f6).
-Any other caller of a privileged entry point reverts with an authorization error, so every
-attested value carries a verifiable `attester` you can check on-chain.
+**Writes are gated per feed, not per deployment.** New feeds are registered by any caller
+holding a ZK eligibility credential, and the registry records that caller as the feed's
+claimant; only the claimant can update or attest the feed afterwards. Feeds that predate
+the network upgrade remain with the first-party Claros agent, account-hash
+[`43d7dd…21d4`](https://testnet.cspr.live/account/020362ef3cb7536f7eac9a1d30a8d0fbdf7ed3384717b5365751005ebf1826c7b1f6),
+which also owns the EligibilityGate and TreasuryVault. Any other caller of a gated entry
+point reverts with `Unauthorized`, so every attested value carries a verifiable `attester`
+you can check on-chain. See [Run an agent and earn](/docs/network/run-an-agent) to claim
+a feed of your own.
 </Callout>
 
 ## Network
@@ -105,7 +108,7 @@ contract `48bba0…e75b` (v2), installed in transaction `ed0820…90fd` and upgr
 
 | Entry point | Signature | Access | Returns |
 | --- | --- | --- | --- |
-| `attest` | `attest(asset_id: String, period: u64, amount: U512, source_hash: String)` | Attester only | none, emits `RevenueAttested` |
+| `attest` | `attest(asset_id: String, period: u64, amount: U512, source_hash: String)` | Feed claimant only (legacy attester for pre-network feeds) | none, emits `RevenueAttested` |
 | `get_latest` | `get_latest(asset_id: String)` | Public view | `Option<Attestation>` |
 | `get_at` | `get_at(asset_id: String, index: u64)` | Public view | `Option<Attestation>` |
 | `get_count` | `get_count(asset_id: String)` | Public view | `u64` (history length for a feed) |
@@ -117,7 +120,7 @@ where `timestamp` is the chain commit time in epoch milliseconds. See
 [the attestation record](/docs/concepts/attestation) for the field meanings and freshness rules.
 
 - **Event:** `RevenueAttested { asset_id, period, amount, source_hash, index, timestamp }`
-- **Error:** `Unauthorized` (a caller other than the attester invoked `attest`)
+- **Error:** `Unauthorized` (for a claimed feed, a caller other than its claimant invoked `attest`; for pre-network feeds, a caller other than the legacy attester)
 
 ### FeedRegistry
 
@@ -130,7 +133,7 @@ deployed in transaction `83487c…8917`.
 
 | Entry point | Signature | Access | Returns |
 | --- | --- | --- | --- |
-| `register_feed` | `register_feed(feed_id: String, decimals: u8, unit: String, title: String, source: String, route: String, frequency: String, description: String)` | Owner only | none, emits `FeedRegistered` |
+| `register_feed` | `register_feed(feed_id: String, decimals: u8, unit: String, title: String, source: String, route: String, frequency: String, description: String)` | ZK-eligible callers (new feeds; caller becomes claimant), claimant only (updates) | none, emits `FeedRegistered` |
 | `get_feed` | `get_feed(feed_id: String)` | Public view | `Option<Feed>` |
 | `get_feed_at` | `get_feed_at(index: u64)` | Public view | `Option<String>` (the `feed_id` at that index) |
 | `feed_count` | `feed_count()` | Public view | `u64` |
@@ -141,7 +144,7 @@ Re-registering an existing `feed_id` updates it in place and does not double-cou
 wraps this as `listFeedIds`).
 
 - **Event:** `FeedRegistered { feed_id, decimals, unit, source }`
-- **Error:** `Unauthorized` (a caller other than the owner invoked `register_feed`)
+- **Error:** `Unauthorized` (a new-feed caller without a ZK eligibility credential, or an update by anyone other than the feed's claimant)
 
 ### TreasuryVault
 
@@ -190,9 +193,10 @@ deployed in transaction `bb3595…be88`.
 | `granted_count` | `granted_count()` | Public view | `u64` |
 
 The public inputs to `verify_eligibility` are `(root, nullifier_hash, caller)`. The on-chain
-allowlist root is `16331994690242190256441629756923135657650690078906869969179988007525570044228`,
-and the gate has granted eligibility once so far (`granted_count` = 1, verified in transaction
-`b3048a…a433`). Internals are covered on [the ZK eligibility gate](/docs/network/zk-gate) page.
+allowlist root is currently `5652912302653102267326913836753961554938404630179929975228700590098587111483`
+(it moves as operators enroll), and the gate has granted eligibility twice so far
+(`granted_count` = 2: the first-party agent in transaction `b3048a…a433` and operator #2 in
+`f5b96c…9de7a`). Internals are covered on [the ZK eligibility gate](/docs/network/zk-gate) page.
 
 - **Events:** `EligibilityGranted { account, nullifier_hash, timestamp }`, `RootUpdated { root }`
 - **Errors:** `NotOwner` (1), `UnknownRoot` (2), `InvalidProof` (3), `AlreadyClaimed` (4)
@@ -285,11 +289,11 @@ Nothing here requires trusting this page. Every claim is checkable on testnet ri
 - **Open the explorer.** Each package hash above links to its
   [cspr.live](https://testnet.cspr.live) contract-package page, where you can see its versions,
   entry points, and recent activity.
-- **Count the feeds.** `FeedRegistry.feed_count` returns **37** live feeds. The SDK helper
-  `feedCount()` and `GET /v1/feeds` both reflect this.
-- **Count the attestations.** `AttestationRegistry.total_attestations` returns **72** total
+- **Count the feeds.** `FeedRegistry.feed_count` returns **39** registered feeds (38 serving
+  live values). The SDK helper `feedCount()` and `GET /v1/feeds` both reflect this.
+- **Count the attestations.** `AttestationRegistry.total_attestations` returns **78+** total
   attestations across all feeds.
-- **Check the gate.** `EligibilityGate.granted_count` returns **1**.
+- **Check the gate.** `EligibilityGate.granted_count` returns **2**.
 
 ```ts
 import { ClarosOracle } from 'claros-oracle'

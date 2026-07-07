@@ -232,7 +232,7 @@ Pass each id to `getReading(id)` (or both registries directly) to get metadata a
   Casper (Odra) `Mapping`s cannot be iterated. The FeedRegistry therefore keeps an explicit `ids: Mapping<u64, String>` alongside a `count`, appending each new `feed_id` at the next index when it is first registered. Re-registering an existing id updates its metadata in place and does not advance the count, so ids stay stable and gap-free.
 </Callout>
 
-Today **37 feeds** are registered: the 36 EIA energy mappings in `agent/src/eia-feeds.ts` plus the civic feed `OP-1`.
+Today **39 feeds** are registered: the EIA energy mappings in `agent/src/eia-feeds.ts`, the civic feed `OP-1`, and the operator-claimed solar feed `EIA.ELEC.GEN_SUN.US48.HOURLY`. 38 serve live values; electricity interchange is registered but intentionally unattested (it is a signed metric).
 
 ## From feed_id to upstream data
 

@@ -187,10 +187,12 @@ testnet:
 - **Open the package.** The package hash
   [`7be33b…5227`](https://testnet.cspr.live/contract-package/7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227)
   links to its versions, entry points, and activity on cspr.live.
-- **Read the root.** `get_root()` returns the on-chain allowlist root
-  `16331994690242190256441629756923135657650690078906869969179988007525570044228`.
-- **Count the grants.** `granted_count()` returns **1**: one valid proof has been verified
-  on-chain, and the agent confirms this credential before each attestation cycle.
+- **Read the root.** `get_root()` returns the on-chain allowlist root, currently
+  `5652912302653102267326913836753961554938404630179929975228700590098587111483`.
+  The root moves as new operators enroll a leaf, so read it live.
+- **Count the grants.** `granted_count()` returns **2**: the first-party agent and
+  operator #2 have each verified a proof on-chain, and every agent confirms its
+  credential before each attestation cycle.
 
 ## Related
 

@@ -54,7 +54,7 @@ pub struct Attestation {
 | `period` | `u64` | Provider period key the value covers, encoded as an integer (for example `20260623` for 2026-06-23, or epoch seconds for hourly feeds). See [attestation and freshness](/docs/concepts/attestation) for the per-cadence encoding. |
 | `amount` | `U512` | The integer value. The human value is `amount / 10^decimals`, where `decimals` comes from the matching [`Feed`](#feed). |
 | `source_hash` | `String` | A deterministic provenance digest of the canonical source row. Recompute it from the upstream data to verify the on-chain number was not altered. |
-| `attester` | `Address` | The account that wrote the record: the Claros agent (account-hash `43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4`). |
+| `attester` | `Address` | The account that wrote the record: the feed's claimant. For first-party feeds this is the Claros agent (account-hash `43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4`); operator-claimed feeds carry their operator's key. |
 | `timestamp` | `u64` | The on-chain commit time in epoch **milliseconds**, stamped by the chain via `get_block_time()` at inclusion, not supplied by the caller. |
 
 <Callout type="info">
@@ -120,7 +120,7 @@ These are the methods a consumer calls. All are `&self` views: free to call off-
 </Tabs>
 
 <Callout type="info">
-  As of the latest on-chain verification, `feed_count()` returns **37** and `total_attestations()` returns **72**. Both grow as the agent registers feeds and attests new periods, so read them live rather than hardcoding.
+  As of the latest on-chain verification, `feed_count()` returns **39** and `total_attestations()` returns **78**. Both grow as agents register feeds and attest new periods, so read them live rather than hardcoding.
 </Callout>
 
 ## The `Option` returns
@@ -158,7 +158,7 @@ let att = match AttestationRegistryContractRef::new(self.env(), areg).get_latest
 ```rust
 let freg = FeedRegistryContractRef::new(self.env(), feed_registry);
 
-let n = freg.feed_count(); // u64, e.g. 37
+let n = freg.feed_count(); // u64, e.g. 39
 for i in 0..n {
     if let Some(id) = freg.get_feed_at(i) {
         let feed = freg.get_feed(id).unwrap_or_revert(&self.env());
@@ -233,10 +233,10 @@ These exist for completeness. They are restricted to the Claros agent and owner,
 
 | Entry point | Contract | Caller | Effect |
 | --- | --- | --- | --- |
-| `attest(asset_id, period, amount, source_hash)` | `AttestationRegistry` | attester only | Writes the `latest` value, appends to `history`, bumps the counts |
-| `register_feed(feed_id, decimals, unit, title, source, route, frequency, description)` | `FeedRegistry` | owner only | Registers or updates a feed; re-registering an existing id updates it without double-counting |
+| `attest(asset_id, period, amount, source_hash)` | `AttestationRegistry` | feed claimant only | Writes the `latest` value, appends to `history`, bumps the counts |
+| `register_feed(feed_id, decimals, unit, title, source, route, frequency, description)` | `FeedRegistry` | ZK-eligible callers (new feeds), claimant only (updates) | Registers or updates a feed; re-registering an existing id updates it without double-counting |
 
-Both the attester and the owner are the Claros agent account-hash `43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4`.
+New feeds are claimed by whichever ZK-eligible account registers them; feeds that predate the network upgrade remain with the first-party Claros agent, account-hash `43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4`.
 
 ## Related
 

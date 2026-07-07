@@ -83,15 +83,16 @@ The `source_hash` commits to the route, frequency, sorted facets, period, value,
 unit, so the same reading hashes identically wherever it is produced. See
 [provenance](/docs/concepts/provenance).
 
-### Register the metadata (owner-gated)
+### Register the metadata (eligibility-gated)
 
-The agent calls `FeedRegistry.register_feed` with the self-describing metadata. The
-scripts derive `title` and `description` from the mapping and set `source` to `EIA`, so
-a feed only needs the row above. Re-registering the same `feed_id` updates it in place
-and never double-counts.
+The agent calls `FeedRegistry.register_feed` with the self-describing metadata. Registering
+a new feed requires a ZK eligibility credential and records the caller as the feed's
+claimant; only the claimant can update or attest it afterwards. The scripts derive `title`
+and `description` from the mapping and set `source` to `EIA`, so a feed only needs the row
+above. Re-registering the same `feed_id` updates it in place and never double-counts.
 
 ```ts
-// agent/src/tools.ts: owner-only entry point
+// agent/src/tools.ts: claimant entry point (ZK-eligible callers only)
 await registerFeed(
   asset_id, decimals, unit, title, /* source */ 'EIA', route, frequency, description,
 ); // -> FeedRegistry.register_feed (gas limit 8 CSPR)
@@ -111,11 +112,12 @@ await attest(r.asset_id, r.period, r.amount, r.source_hash); // gas limit 20 CSP
 </Steps>
 
 <Callout type="warning">
-  **Access control.** `register_feed` is **owner-only** and `attest` is **attester-only**;
-  any other caller reverts with `Unauthorized`. On the Claros testnet deployment both
-  roles are held by the agent account `43d7dd06...a21d4`, so feeds on the canonical
-  registries are added by the Claros agent. To attest against your own registries, deploy
-  the open-source contracts (they are upgradable) and hold both roles yourself.
+  **Access control.** Registering a **new** feed requires a ZK eligibility credential, and
+  the registry records the caller as the feed's claimant; `attest` on a claimed feed is
+  **claimant-only**, and any other caller reverts with `Unauthorized`. Feeds that predate
+  the network upgrade remain with the first-party agent account `43d7dd06...21d4`. So you
+  have two paths: ask the Claros agent to add the feed (below), or [enroll as an operator](/docs/network/run-an-agent),
+  claim the feed yourself, and attest it with your own key.
 </Callout>
 
 ## Request a feed on the live oracle
