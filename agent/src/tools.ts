@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { readFileSync } from 'node:fs';
 import { callContract, callWithValue, delegate, Args, CLValue } from './signer.js';
 import { latestRevenue, assetHistory } from './sandiego.js';
+import { getAt, getCount } from './casper-read.js';
 import { fetchLatest } from './eia.js';
 import { EIA_FEEDS, FEED_BY_ID } from './eia-feeds.js';
 
@@ -88,6 +89,26 @@ export async function readEiaFeed(assetId: string) {
 }
 
 export async function readAttestationHistory(assetId: string) {
+  if (assetId.startsWith('EIA.')) {
+    const n = await getCount(REGISTRY, assetId);
+    if (n === 0) {
+      return { asset_id: assetId, attestations: 0, note: 'no on-chain history yet; this is the first attestation for this feed, so there is no baseline to compare against' };
+    }
+    const take = Math.min(n, 10);
+    const amounts: number[] = [];
+    for (let i = n - take; i < n; i++) {
+      const a = await getAt(REGISTRY, assetId, i);
+      if (a) amounts.push(Number(a.amount));
+    }
+    return {
+      asset_id: assetId,
+      attestations: n,
+      sampled: amounts.length,
+      typical_range_amount: { min: Math.min(...amounts), max: Math.max(...amounts) },
+      avg_amount: Math.round(amounts.reduce((s, v) => s + v, 0) / amounts.length),
+      note: 'integer amounts from this feed\'s real on-chain attestation history (scale by the feed decimals); flag readings far outside this range as anomalous',
+    };
+  }
   const h = await assetHistory(assetId);
   return {
     asset_id: assetId,

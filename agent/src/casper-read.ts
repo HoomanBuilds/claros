@@ -90,3 +90,17 @@ export async function getLatest(registryPkg: string, assetId: string): Promise<O
   const c = new Cursor(b);
   return { period: Number(c.u64()), amount: c.u512(), source_hash: c.string(), attester: c.address(), timestamp: Number(c.u64()) };
 }
+
+// AttestationRegistry.count is field index 4 (per-asset history length).
+export async function getCount(registryPkg: string, assetId: string): Promise<number> {
+  const b = await readField(registryPkg, 4, assetId);
+  return b ? Number(new Cursor(b).u64()) : 0;
+}
+
+// AttestationRegistry.history is field index 3, keyed "<asset_id>#<index>".
+export async function getAt(registryPkg: string, assetId: string, index: number): Promise<OnChainValue | null> {
+  const b = await readField(registryPkg, 3, `${assetId}#${index}`);
+  if (!b) return null;
+  const c = new Cursor(b);
+  return { period: Number(c.u64()), amount: c.u512(), source_hash: c.string(), attester: c.address(), timestamp: Number(c.u64()) };
+}
