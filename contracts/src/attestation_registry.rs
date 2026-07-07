@@ -2,7 +2,6 @@ use odra::casper_types::U512;
 use odra::prelude::*;
 use odra::ContractRef;
 
-// Cross-contract view of the FeedRegistry claim table.
 #[odra::external_contract]
 pub trait FeedAttesters {
     fn get_attester(&self, feed_id: String) -> Option<Address>;
@@ -39,7 +38,6 @@ pub struct AttestationRegistry {
     history: Mapping<String, Attestation>,
     count: Mapping<String, u64>,
     total: Var<u64>,
-    // multi-agent upgrade: FeedRegistry holding per-feed attester claims
     feed_registry: Var<Address>,
 }
 
@@ -50,8 +48,11 @@ impl AttestationRegistry {
         self.total.set(0);
     }
 
-    /// Upgrade constructor: wires the FeedRegistry claim table.
+    /// Runs during the package upgrade tx; Casper restricts it to the installer group.
     pub fn upgrade(&mut self, feed_registry: Address) {
+        if self.env().caller() != self.attester.get().unwrap_or_revert(&self.env()) {
+            self.env().revert(Error::Unauthorized);
+        }
         self.feed_registry.set(feed_registry);
     }
 
@@ -69,13 +70,12 @@ impl AttestationRegistry {
             .get()
             .and_then(|fr| FeedAttestersContractRef::new(self.env(), fr).get_attester(asset_id.clone()));
         match claimant {
-            // claimed feed: only its claimant may attest
             Some(a) => {
                 if caller != a {
                     self.env().revert(Error::Unauthorized);
                 }
             }
-            // unclaimed/unknown: the legacy first-party attester (pre-upgrade behavior)
+            // unclaimed feeds keep pre-upgrade behavior
             None => {
                 if caller != self.attester.get().unwrap_or_revert(&self.env()) {
                     self.env().revert(Error::Unauthorized);

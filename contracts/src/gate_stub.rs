@@ -1,8 +1,7 @@
 use odra::prelude::*;
 
-// Test-only eligibility gate: NOT listed in Odra.toml, so it is never built to
-// wasm or deployed. Lets registry tests toggle eligibility per address without
-// generating Groth16 proofs.
+// Test-only gate: not in Odra.toml so it never builds to wasm. Lets registry
+// tests toggle eligibility without Groth16 proofs.
 #[odra::module]
 pub struct GateStub {
     allowed: Mapping<Address, bool>,

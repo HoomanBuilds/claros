@@ -1,7 +1,6 @@
 use odra::prelude::*;
 use odra::ContractRef;
 
-// Cross-contract view of the EligibilityGate (same signature as the real gate).
 #[odra::external_contract]
 pub trait Eligibility {
     fn is_eligible(&self, who: Address) -> bool;
@@ -43,8 +42,7 @@ pub struct FeedRegistry {
     feeds: Mapping<String, Feed>,
     ids: Mapping<u64, String>, // index -> feed_id, for enumeration
     count: Var<u64>,
-    // multi-agent upgrade: which address may attest each feed
-    feed_attester: Mapping<String, Address>,
+    feed_attester: Mapping<String, Address>, // feed_id -> address allowed to attest it
     eligibility_gate: Var<Address>,
 }
 
@@ -55,9 +53,11 @@ impl FeedRegistry {
         self.count.set(0);
     }
 
-    /// Upgrade constructor: wires the EligibilityGate (runs once, during the
-    /// package upgrade transaction — only the package owner can upgrade).
+    /// Runs during the package upgrade tx; Casper restricts it to the installer group.
     pub fn upgrade(&mut self, eligibility_gate: Address) {
+        if self.env().caller() != self.owner.get().unwrap_or_revert(&self.env()) {
+            self.env().revert(Error::Unauthorized);
+        }
         self.eligibility_gate.set(eligibility_gate);
     }
 
@@ -85,7 +85,6 @@ impl FeedRegistry {
     ) {
         let caller = self.env().caller();
         match self.feed_attester.get(&feed_id) {
-            // claimed: only the claimant may update
             Some(claimant) => {
                 if caller != claimant {
                     self.env().revert(Error::Unauthorized);
@@ -93,12 +92,11 @@ impl FeedRegistry {
             }
             None => {
                 if self.feeds.get(&feed_id).is_some() {
-                    // legacy feed (pre-upgrade): only the owner, who claims it
+                    // pre-upgrade feeds have no claim entry; they stay with the owner
                     if caller != self.owner.get().unwrap_or_revert(&self.env()) {
                         self.env().revert(Error::Unauthorized);
                     }
                 } else {
-                    // brand-new feed: caller must hold a gate credential
                     let gate = match self.eligibility_gate.get() {
                         Some(g) => g,
                         None => self.env().revert(Error::GateNotSet),
@@ -218,10 +216,7 @@ mod tests {
 
     #[test]
     fn owner_needs_eligibility_for_new_feeds_too() {
-        // The exists-but-unclaimed legacy branch cannot be fabricated in the test
-        // VM (it only arises from pre-upgrade storage); it is covered by the
-        // testnet smoke after the live upgrade. Closest testable property here:
-        // even the owner goes through the gate for brand-new feeds.
+        // exists-but-unclaimed only arises from pre-upgrade storage; covered by testnet smoke
         let (env, mut c, _gate) = setup();
         env.set_caller(env.get_account(0));
         let res = c.try_register_feed(
