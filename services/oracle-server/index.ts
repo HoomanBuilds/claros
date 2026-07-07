@@ -47,10 +47,36 @@ function parseEnv(): Env {
 const cfg = parseEnv();
 const chainID = cfg.chainID as Network;
 
-// The paid product: the oracle's latest real San Diego parking-revenue reading,
-// stamped with on-chain registry provenance so the buyer can independently verify
-// it. source_hash is the same canonical digest the agent attests on-chain.
+const ATTESTER =
+  process.env.ATTESTER_ACCOUNT_HASH ??
+  "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4";
+
+// The paid product: the oracle's latest attested reading (San Diego parking or
+// any EIA feed the operator serves), stamped with on-chain registry provenance
+// so the buyer can independently verify it. source_hash is the same canonical
+// digest the agent attests on-chain.
 async function latestFeed(assetId: string) {
+  if (assetId.startsWith("EIA.")) {
+    const { latestEia } = await import("./eia.js");
+    const r = await latestEia(assetId);
+    return {
+      asset_id: r.asset_id,
+      period: r.period,
+      amount: String(r.amount),
+      value: r.value,
+      unit: r.unit,
+      latest_date: r.latest_date,
+      source_hash: r.source_hash,
+      provenance: {
+        network: chainID,
+        registry_package_hash: cfg.registryPackage,
+        attester: ATTESTER,
+        source: "U.S. Energy Information Administration APIv2",
+        verify: `https://testnet.cspr.live/contract-package/${cfg.registryPackage}`,
+      },
+      served_at: new Date().toISOString(),
+    };
+  }
   const r = await latestRevenue(assetId);
   return {
     asset_id: r.asset_id,
@@ -62,7 +88,7 @@ async function latestFeed(assetId: string) {
     provenance: {
       network: chainID,
       registry_package_hash: cfg.registryPackage,
-      attester: "account-hash-43d7dd06d5538e504e54a3f235f1596f7d2e803e9065bf3c0d040f5cd31a21d4",
+      attester: ATTESTER,
       source: "City of San Diego — parking-meter daily transactions",
       source_url: r.source_url,
       verify: `https://testnet.cspr.live/contract-package/${cfg.registryPackage}`,
