@@ -1,0 +1,9 @@
+[{
+  "asset_id": "EIA.ELEC.GEN_SUN.US48.HOURLY",
+  "route": "electricity/rto/fuel-type-data",
+  "frequency": "hourly",
+  "data_col": "value",
+  "facets": { "respondent": "US48", "fueltype": "SUN" },
+  "unit": "MWh",
+  "decimals": 3
+}]

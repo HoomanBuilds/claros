@@ -1,0 +1,10 @@
+{
+  "feed_id": "EIA.ELEC.GEN_SUN.US48.HOURLY",
+  "decimals": 3,
+  "unit": "MWh",
+  "title": "US48 solar generation",
+  "source": "EIA",
+  "route": "electricity/rto/fuel-type-data",
+  "frequency": "hourly",
+  "description": "EIA electricity/rto/fuel-type-data hourly, fueltype SUN, respondent US48"
+}
