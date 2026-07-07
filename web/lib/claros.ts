@@ -201,7 +201,8 @@ async function load(): Promise<Cache> {
   return {
     ts: Date.now(),
     readings,
-    stats: { feedsLive: ids.length, attestations, datasets: DATASETS_TOTAL, network: NETWORK },
+    // registered ids can include feeds with no attested value yet; "live" means serving a value
+    stats: { feedsLive: readings.length, attestations, datasets: DATASETS_TOTAL, network: NETWORK },
   }
 }
 
