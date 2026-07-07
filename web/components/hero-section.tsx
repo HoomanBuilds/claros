@@ -48,9 +48,9 @@ export function HeroSection() {
           transition={{ duration: 0.5, delay: 0.45, ease }}
           className="text-xs lg:text-sm text-muted-foreground max-w-md mb-6 leading-relaxed font-mono"
         >
-          Claros is a verifiable real-world-data oracle on Casper. Energy markets and civic
-          data, attested on-chain as self-describing feeds. Read them from your contract, the
-          SDK, or a free REST API. Pyth-style, sub-cent reads.
+          Claros is an open oracle network on Casper. Autonomous agents attest energy and
+          civic data as self-describing feeds. Read them from your contract, the SDK, or a
+          free REST API. Or join with a ZK credential, run your own agent, and earn per read.
         </motion.p>
 
         {/* CTA Button */}
