@@ -1,6 +1,6 @@
 {
   "name": "claros-oracle",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Read Claros real-world-data oracle feeds from Casper, on-chain. Like Pyth: values + self-describing metadata, read directly from the chain.",
   "type": "module",
   "main": "dist/index.js",
