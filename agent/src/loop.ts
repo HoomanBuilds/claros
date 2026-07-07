@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { latestRevenue } from './sandiego.js';
+import { readEiaFeed } from './tools.js';
 import { runCycle } from './agent-cycle.js';
 
 const ASSETS = (process.env.CYCLE_ASSETS ?? 'OP-1').split(',').map(s => s.trim()).filter(Boolean);
@@ -28,7 +29,9 @@ async function tick(): Promise<void> {
   const state = loadState();
   for (const asset of ASSETS) {
     try {
-      const { period } = await latestRevenue(asset);
+      const period = asset.startsWith('EIA.')
+        ? Number((await readEiaFeed(asset)).period)
+        : (await latestRevenue(asset)).period;
       const last = state[asset];
       if (last && period <= last) {
         console.log(`[${ts()}] ${asset}: no new data (period ${period} already processed) — skip`);

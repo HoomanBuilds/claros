@@ -35,6 +35,10 @@ async function balanceOfUref(uref: string): Promise<bigint> {
 const motesToCspr = (m: bigint) => Number(m) / 1e9;
 
 export async function readRevenue(assetId: string) {
+  if (assetId.startsWith('EIA.')) {
+    const r = await readEiaFeed(assetId);
+    return { asset_id: r.asset_id, period: r.period, amount: r.amount, source_hash: r.source_hash };
+  }
   const r = await latestRevenue(assetId);
   return { asset_id: r.asset_id, period: r.period, amount: r.amount_cents, source_hash: r.source_hash };
 }
@@ -129,6 +133,9 @@ export async function readEligibility() {
 }
 
 export async function readX402Earnings() {
+  if (!process.env.CSPR_CLOUD_API_KEY || !process.env.CSPR_CLOUD_BASE) {
+    return { wcspr_earned: 0, note: 'CSPR.cloud key not configured; x402 earnings lookup skipped' };
+  }
   const base = process.env.CSPR_CLOUD_BASE!;
   const wcspr = process.env.WCSPR_PACKAGE_HASH!;
   const agentHash = process.env.AGENT_ACCOUNT_HASH!;

@@ -9,18 +9,20 @@ const client = new OpenAI({
 });
 const MODEL = process.env.DEEPSEEK_MODEL ?? 'deepseek-chat';
 
-const SYSTEM = `You are Claros, an autonomous oracle + treasury agent on Casper testnet. No human approves your actions; you decide and act through tools.
+const TREASURY_ON = (process.env.TREASURY ?? 'on') !== 'off';
+
+const SYSTEM = `You are Claros, an autonomous oracle${TREASURY_ON ? ' + treasury' : ''} agent on Casper testnet. No human approves your actions; you decide and act through tools.
 
 You operate a compliant, regulation-ready RWA oracle. Access is gated by a zero-knowledge eligibility credential.
 
-Each cycle, for the given parking asset:
-0. COMPLIANCE GATE: call read_eligibility. If you are not eligible, STOP — do not attest or move capital. Only proceed when your on-chain ZK eligibility credential is confirmed.
+Each cycle, for the given asset (a Claros feed):
+0. COMPLIANCE GATE: call read_eligibility. If you are not eligible, STOP — do not attest${TREASURY_ON ? ' or move capital' : ''}. Only proceed when your on-chain ZK eligibility credential is confirmed.
 1. Call read_revenue and read_attestation_history.
-2. ANOMALY CHECK: if the revenue is outside the typical range or looks unverifiable, do NOT attest — explain why. Otherwise call attest with the EXACT period, amount, and source_hash from read_revenue.
-3. Call read_treasury, read_x402_earnings, and read_venue_state. You earn WCSPR income by selling the feed via x402; count it as part of your treasury.
+2. ANOMALY CHECK: if the value is outside the typical range or looks unverifiable, do NOT attest — explain why. Otherwise call attest with the EXACT period, amount, and source_hash from read_revenue.
+${TREASURY_ON ? `3. Call read_treasury, read_x402_earnings, and read_venue_state. You earn WCSPR income by selling the feed via x402; count it as part of your treasury.
 4. TREASURY DECISION: decide whether to reinvest. Only act if you have at least the 500 CSPR stake minimum liquid. Prefer WiseLending stake (CSPR->sCSPR, growing yield); native delegation is the fallback. Restraint is valid: if conditions do not clearly warrant moving capital this cycle, HOLD. Keep any amount conservative (representative testnet sizing, e.g. 500 CSPR).
 5. If you reinvest: call reinvest(action, amount_cspr), then record_reinvest with a one-sentence justification. If you HOLD: call record_reinvest with venue="hold", amount_in=0, amount_out=0, and your reasoning.
-6. Finish with a short summary of what you did and why.
+6. Finish with a short summary of what you did and why.` : `3. Finish with a short summary of what you did and why.`}
 
 Be decisive and use tool outputs as ground truth.`;
 
@@ -48,6 +50,9 @@ const dispatch: Record<string, (a: any) => Promise<unknown>> = {
   record_reinvest: (a) => tools.recordReinvest(a.venue, a.amount_in, a.amount_out, a.reasoning),
 };
 
+const TREASURY_TOOLS = new Set(['read_treasury', 'read_x402_earnings', 'read_venue_state', 'reinvest', 'record_reinvest']);
+const activeTools = TREASURY_ON ? toolSchemas : toolSchemas.filter(t => !TREASURY_TOOLS.has(t.function.name));
+
 export async function runCycle(asset: string): Promise<void> {
   const messages: ChatCompletionMessageParam[] = [
     { role: 'system', content: SYSTEM },
@@ -55,7 +60,7 @@ export async function runCycle(asset: string): Promise<void> {
   ];
 
   for (let step = 0; step < 14; step++) {
-    const res = await client.chat.completions.create({ model: MODEL, messages, tools: toolSchemas, tool_choice: 'auto' });
+    const res = await client.chat.completions.create({ model: MODEL, messages, tools: activeTools, tool_choice: 'auto' });
     const msg = res.choices[0].message;
     messages.push(msg);
     if (msg.content) console.log(`\n[agent] ${msg.content}`);

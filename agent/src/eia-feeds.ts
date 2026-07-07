@@ -63,6 +63,14 @@ export const EIA_FEEDS: EiaFeed[] = [
   { asset_id: 'EIA.INTL.CRUDE_PROD.WORLD.ANNUAL', route: 'international', frequency: 'annual', data_col: 'value', facets: { activityId: '1', productId: '57', countryRegionId: 'WORL', unit: 'TBPD' }, unit: 'Mbbl/d', decimals: 3 },
 ];
 
+// Operators add their own feed specs (same shape) via a local JSON file.
+if (process.env.OPERATOR_FEEDS_FILE) {
+  const { readFileSync } = await import('node:fs');
+  for (const f of JSON.parse(readFileSync(process.env.OPERATOR_FEEDS_FILE, 'utf8')) as EiaFeed[]) {
+    EIA_FEEDS.push(f);
+  }
+}
+
 export const FEED_BY_ID: Record<string, EiaFeed> = Object.fromEntries(
   EIA_FEEDS.map(f => [f.asset_id, f]),
 );
