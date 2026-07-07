@@ -27,7 +27,7 @@ const args = Args.fromMap({
 });
 
 console.log('submitting eligibility proof (on-chain Groth16 verify)...');
-const tx = await callContract(GATE, 'verify_eligibility', args, 500_000_000_000);
+const tx = await callContract(GATE, 'verify_eligibility', args, 150_000_000_000);
 console.log('tx:', tx);
 console.log('explorer:', `https://testnet.cspr.live/transaction/${tx}`);
 
