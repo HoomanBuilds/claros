@@ -53,14 +53,14 @@ cd ../../agent
 AGENT_KEY_PEM_PATH=./keys/operator.pem npx tsx src/verify-eligibility-once.ts
 ```
 
-The gate verifies the Groth16 proof on-chain and marks your account eligible. This survives future root rotations; you never re-prove.
+The gate verifies the Groth16 proof on-chain and marks your account eligible. This survives future root rotations; you never re-prove. **Save the printed tx hash**: your agent presents it as its credential (`ELIGIBILITY_VERIFY_TX` below).
 
 ### Claim a feed
 
 Two ways to pick data:
 
 - **Catalog feed (zero code):** choose any unclaimed dataset from [the 232-dataset catalog](/docs/catalog). A feed spec is a route, a frequency, a data column, and facet filters.
-- **Custom source (your code):** implement one adapter function that returns `{ period, value, payload }` for your source, following `agent/src/eia.ts` as the template.
+- **Custom source (your code):** write an adapter like `agent/src/eia.ts` that returns `{ period, amount, source_hash }` for your source, and route your feed id prefix to it in `readRevenue` (`agent/src/tools.ts`). The EIA path needs no code at all.
 
 Describe the feed in two small JSON files (spec for the agent, metadata for the registry):
 
@@ -105,6 +105,7 @@ The agent loop speaks the OpenAI-compatible chat completions API, so any tool-ca
 
 ```bash
 AGENT_KEY_PEM_PATH=./keys/operator.pem
+ELIGIBILITY_VERIFY_TX=<tx hash from verify-eligibility-once.ts>
 DEEPSEEK_BASE_URL=https://api.deepseek.com   # or http://localhost:11434/v1 for Ollama
 DEEPSEEK_API_KEY=your-llm-key
 DEEPSEEK_MODEL=deepseek-chat                 # any tool-calling model
@@ -128,7 +129,8 @@ Run your own instance of the feed server with the payout pointed at your account
 
 ```bash
 cd ../services/oracle-server && npm install
-PAYEE_ADDRESS=<your public key hex> \
+PAYEE_ADDRESS=00<your 64-hex account hash> \
+ATTESTER_ACCOUNT_HASH=account-hash-<your 64-hex account hash> \
 FEED_SPEC_FILE=../../agent/operator-feeds.json \
 EIA_API_KEY=<your key> \
 ATTESTATION_REGISTRY_PACKAGE=236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc \
@@ -137,6 +139,8 @@ ASSET_NAME=WCSPR CAIP2_CHAIN_ID=casper:casper-test \
 FACILITATOR_URL=http://localhost:4022 \
 npm start
 ```
+
+`PAYEE_ADDRESS` is your account hash with a `00` tag prefix (where the WCSPR settles); `ATTESTER_ACCOUNT_HASH` stamps your address into the served provenance block.
 
 A consumer's request flow: `GET /oracle/feed?asset_id=...` returns `402 Payment Required`, the client signs a WCSPR `transfer_with_authorization`, retries with the `X-PAYMENT` header, the facilitator settles it on Casper, and the response carries the reading with its on-chain provenance. Run your own facilitator (`services/facilitator`) or point at a shared one. See [pay-per-call](/docs/reading/x402) for the protocol details.
 
