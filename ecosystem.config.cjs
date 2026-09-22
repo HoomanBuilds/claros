@@ -43,6 +43,21 @@ module.exports = {
       time: true,
     },
     {
+      name: "claros-agent-operator2",
+      cwd: "./agent",
+      script: "npm",
+      args: "run update-feeds",
+      autorestart: true,
+      max_memory_restart: "512M",
+      env: {
+        NODE_OPTIONS: "--max-old-space-size=384",
+        AGENT_KEY_PEM_PATH: "./keys/operator2.pem",
+        OPERATOR_FEEDS_FILE: "./operator-feeds.json",
+        FEED_UPDATE_ASSETS: "EIA.ELEC.GEN_SUN.US48.HOURLY",
+      },
+      time: true,
+    },
+    {
       // Hermes-style REST read API (free): GET /v1/feeds, /v1/feeds/:id, /v1/datasets.
       name: "claros-api",
       cwd: "./services/claros-api",
