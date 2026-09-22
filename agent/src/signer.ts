@@ -19,6 +19,8 @@ const {
 
 const RPC = process.env.CASPER_NODE_RPC!;
 const CHAIN = process.env.CASPER_CHAIN_NAME!;
+const TX_POLL_MS = Number(process.env.TX_POLL_MS ?? 5_000);
+const TX_TIMEOUT_MS = Number(process.env.TX_TIMEOUT_MS ?? 300_000);
 
 const algo =
   (process.env.AGENT_KEY_ALGO ?? 'secp256k1').toLowerCase() === 'ed25519'
@@ -28,6 +30,40 @@ const key = PrivateKey.fromPem(readFileSync(process.env.AGENT_KEY_PEM_PATH!, 'ut
 const rpc = new RpcClient(new HttpHandler(RPC));
 
 export { Args, CLValue };
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+export async function waitForTransaction(transactionHash: string): Promise<void> {
+  const deadline = Date.now() + TX_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const response = await fetch(RPC, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'info_get_transaction',
+        params: { transaction_hash: { Version1: transactionHash } },
+      }),
+    });
+    const body = await response.json() as any;
+    const execution = body?.result?.execution_info?.execution_result;
+    if (execution) {
+      const error = execution.Version2?.error_message
+        ?? execution.Version1?.Failure?.error_message
+        ?? execution.Failure?.error_message;
+      if (error) throw new Error(`transaction ${transactionHash} failed: ${error}`);
+      return;
+    }
+    await sleep(TX_POLL_MS);
+  }
+  throw new Error(`transaction ${transactionHash} was not finalized within ${TX_TIMEOUT_MS}ms`);
+}
+
+async function confirm(transactionHash: string): Promise<string> {
+  await waitForTransaction(transactionHash);
+  return transactionHash;
+}
 
 export async function callContract(
   packageHash: string,
@@ -45,7 +81,7 @@ export async function callContract(
     .build();
   tx.sign(key);
   const res = await rpc.putTransaction(tx);
-  return res.transactionHash.toHex();
+  return confirm(res.transactionHash.toHex());
 }
 
 export async function delegate(
@@ -62,7 +98,7 @@ export async function delegate(
     .build();
   tx.sign(key);
   const res = await rpc.putTransaction(tx);
-  return res.transactionHash.toHex();
+  return confirm(res.transactionHash.toHex());
 }
 
 // Call a payable contract entry point that takes native CSPR, via the
@@ -95,5 +131,5 @@ export async function callWithValue(
     .build();
   tx.sign(key);
   const res = await rpc.putTransaction(tx);
-  return res.transactionHash.toHex();
+  return confirm(res.transactionHash.toHex());
 }

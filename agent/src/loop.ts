@@ -34,15 +34,20 @@ async function tick(): Promise<void> {
         : (await latestRevenue(asset)).period;
       const last = state[asset];
       if (last && period <= last) {
-        console.log(`[${ts()}] ${asset}: no new data (period ${period} already processed) — skip`);
+        console.log(`[${ts()}] ${asset}: no new data (period ${period} already processed), skip`);
         continue;
       }
-      console.log(`[${ts()}] ${asset}: new data period ${period} — ${DRY_RUN ? 'WOULD run cycle (dry run)' : 'running cycle'}`);
-      if (!DRY_RUN) await runCycle(asset);
-      state[asset] = period;
-      saveState(state);
+      console.log(`[${ts()}] ${asset}: new data period ${period}, ${DRY_RUN ? 'WOULD run cycle (dry run)' : 'running cycle'}`);
+      if (DRY_RUN) continue;
+      const outcome = await runCycle(asset);
+      if (outcome.attested) {
+        state[asset] = period;
+        saveState(state);
+      } else {
+        console.warn(`[${ts()}] ${asset}: cycle completed without an attestation; period ${period} will be retried`);
+      }
     } catch (e) {
-      console.error(`[${ts()}] ${asset}: cycle error — ${(e as Error).message}`);
+      console.error(`[${ts()}] ${asset}: cycle error, ${(e as Error).message}`);
     }
   }
 }

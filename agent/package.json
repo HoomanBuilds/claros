@@ -15,6 +15,7 @@
     "verify-eligibility-once": "tsx src/verify-eligibility-once.ts",
     "cycle": "tsx src/cycle.ts",
     "loop": "tsx src/loop.ts",
+    "update-feeds": "tsx src/update-feeds.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

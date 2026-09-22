@@ -11,6 +11,9 @@ const REGISTRY = process.env.ATTESTATION_REGISTRY_PACKAGE_HASH!;
 const VAULT = process.env.TREASURY_VAULT_PACKAGE_HASH!;
 const WL = process.env.WISELENDING_PACKAGE_HASH!;
 const AGENT_PUB = process.env.AGENT_PUBLIC_KEY!;
+const ATTEST_GAS_MOTES = Number(process.env.ATTEST_GAS_MOTES ?? 20_000_000_000);
+const STAKE_GAS_MOTES = Number(process.env.STAKE_GAS_MOTES ?? 30_000_000_000);
+const TREASURY_RESERVE_CSPR = Number(process.env.TREASURY_RESERVE_CSPR ?? 1_000);
 const WL_MAIN_PURSE = 'uref-fc3f0684d19865a5c020536e499dd3d9cf1c08201b85474762e86de7e85c0d34-007';
 const VALIDATOR = '0106ca7c39cd272dbf21a86eeb3b36b7c26e2e9b94af64292419f7862936bca2ca';
 
@@ -100,13 +103,16 @@ export async function readAttestationHistory(assetId: string) {
       const a = await getAt(REGISTRY, assetId, i);
       if (a) amounts.push(Number(a.amount));
     }
+    const frequency = FEED_BY_ID[assetId]?.frequency;
     return {
       asset_id: assetId,
       attestations: n,
       sampled: amounts.length,
       typical_range_amount: { min: Math.min(...amounts), max: Math.max(...amounts) },
       avg_amount: Math.round(amounts.reduce((s, v) => s + v, 0) / amounts.length),
-      note: 'integer amounts from this feed\'s real on-chain attestation history (scale by the feed decimals); flag readings far outside this range as anomalous',
+      note: frequency === 'hourly'
+        ? 'hourly data changes by hour and season; do not reject a nonnegative EIA reading only because it is outside this small historical sample'
+        : 'integer amounts from this feed\'s real on-chain history; use this as context, but accept source-verified nonnegative EIA readings when the period advances',
     };
   }
   const h = await assetHistory(assetId);
@@ -121,10 +127,13 @@ export async function readAttestationHistory(assetId: string) {
 
 export async function readTreasury() {
   const cspr = await balanceOfPublicKey(AGENT_PUB).catch(() => 0n);
+  const liquid = motesToCspr(cspr);
   return {
-    cspr_liquid: motesToCspr(cspr),
+    cspr_liquid: liquid,
     scspr_held_note: 'agent holds sCSPR from prior WiseLending stakes',
     stake_minimum_cspr: 500,
+    operations_reserve_cspr: TREASURY_RESERVE_CSPR,
+    available_to_reinvest_cspr: Math.max(0, liquid - TREASURY_RESERVE_CSPR),
   };
 }
 
@@ -170,23 +179,40 @@ export async function readX402Earnings() {
   };
 }
 
-export async function attest(asset_id: string, period: number, amount: number, source_hash: string) {
+function uintAmount(value: string | number): string {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || value < 0) throw new Error(`invalid unsigned amount: ${value}`);
+    return String(Math.round(value));
+  }
+  if (!/^\d+$/.test(value)) throw new Error(`invalid unsigned amount: ${value}`);
+  return value;
+}
+
+export async function attest(asset_id: string, period: number, amount: string | number, source_hash: string) {
   const args = Args.fromMap({
     asset_id: CLValue.newCLString(asset_id),
     period: CLValue.newCLUint64(period),
-    amount: CLValue.newCLUInt512(amount),
+    amount: CLValue.newCLUInt512(uintAmount(amount)),
     source_hash: CLValue.newCLString(source_hash),
   });
-  const tx = await callContract(REGISTRY, 'attest', args, 20_000_000_000);
+  const tx = await callContract(REGISTRY, 'attest', args, ATTEST_GAS_MOTES);
   return { tx, explorer: `https://testnet.cspr.live/transaction/${tx}` };
 }
 
 export async function reinvest(action: 'stake' | 'delegate' | 'hold', amount_cspr: number) {
   if (action === 'hold') return { action, tx: null };
+  if (!Number.isFinite(amount_cspr) || amount_cspr < 500) {
+    throw new Error('reinvestment amount must be at least 500 CSPR');
+  }
+  const balance = motesToCspr(await balanceOfPublicKey(AGENT_PUB));
+  const gas = action === 'stake' ? STAKE_GAS_MOTES / 1e9 : 2.5;
+  if (balance - amount_cspr - gas < TREASURY_RESERVE_CSPR) {
+    throw new Error(`reinvestment would breach the ${TREASURY_RESERVE_CSPR} CSPR operations reserve`);
+  }
   const motes = String(BigInt(Math.round(amount_cspr)) * 1_000_000_000n);
   if (action === 'stake') {
     const proxy = new Uint8Array(readFileSync('wasm/wiselending-proxy.wasm'));
-    const tx = await callWithValue(proxy, WL, 'stake', motes, 15_000_000_000);
+    const tx = await callWithValue(proxy, WL, 'stake', motes, STAKE_GAS_MOTES);
     return { action, tx, explorer: `https://testnet.cspr.live/transaction/${tx}` };
   }
   const tx = await delegate(VALIDATOR, motes, 2_500_000_000);
@@ -196,8 +222,8 @@ export async function reinvest(action: 'stake' | 'delegate' | 'hold', amount_csp
 export async function recordReinvest(venue: string, amount_in: number, amount_out: number, reasoning: string) {
   const args = Args.fromMap({
     venue: CLValue.newCLString(venue),
-    amount_in: CLValue.newCLUInt512(amount_in),
-    amount_out: CLValue.newCLUInt512(amount_out),
+    amount_in: CLValue.newCLUInt512(uintAmount(amount_in)),
+    amount_out: CLValue.newCLUInt512(uintAmount(amount_out)),
     reasoning: CLValue.newCLString(reasoning),
   });
   const tx = await callContract(VAULT, 'record_reinvest', args, 20_000_000_000);

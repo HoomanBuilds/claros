@@ -16,9 +16,9 @@ const SYSTEM = `You are Claros, an autonomous oracle${TREASURY_ON ? ' + treasury
 You operate a compliant, regulation-ready RWA oracle. Access is gated by a zero-knowledge eligibility credential.
 
 Each cycle, for the given asset (a Claros feed):
-0. COMPLIANCE GATE: call read_eligibility. If you are not eligible, STOP — do not attest${TREASURY_ON ? ' or move capital' : ''}. Only proceed when your on-chain ZK eligibility credential is confirmed.
+0. COMPLIANCE GATE: call read_eligibility. If you are not eligible, STOP and do not attest${TREASURY_ON ? ' or move capital' : ''}. Only proceed when your on-chain ZK eligibility credential is confirmed.
 1. Call read_revenue and read_attestation_history.
-2. ANOMALY CHECK: if the value is outside the typical range or looks unverifiable, do NOT attest — explain why. Otherwise call attest with the EXACT period, amount, and source_hash from read_revenue.
+2. ANOMALY CHECK: if the value is outside the typical range or looks unverifiable, do NOT attest and explain why. Otherwise call attest with the EXACT period, amount, and source_hash from read_revenue.
 ${TREASURY_ON ? `3. Call read_treasury, read_x402_earnings, and read_venue_state. You earn WCSPR income by selling the feed via x402; count it as part of your treasury.
 4. TREASURY DECISION: decide whether to reinvest. Only act if you have at least the 500 CSPR stake minimum liquid. Prefer WiseLending stake (CSPR->sCSPR, growing yield); native delegation is the fallback. Restraint is valid: if conditions do not clearly warrant moving capital this cycle, HOLD. Keep any amount conservative (representative testnet sizing, e.g. 500 CSPR).
 5. If you reinvest: call reinvest(action, amount_cspr), then record_reinvest with a one-sentence justification. If you HOLD: call record_reinvest with venue="hold", amount_in=0, amount_out=0, and your reasoning.
@@ -38,22 +38,47 @@ const toolSchemas: ChatCompletionTool[] = [
   { type: 'function', function: { name: 'record_reinvest', description: 'Record the reinvestment decision + reasoning on-chain (TreasuryVault).', parameters: { type: 'object', properties: { venue: { type: 'string' }, amount_in: { type: 'number' }, amount_out: { type: 'number' }, reasoning: { type: 'string' } }, required: ['venue', 'amount_in', 'amount_out', 'reasoning'] } } },
 ];
 
-const dispatch: Record<string, (a: any) => Promise<unknown>> = {
-  read_eligibility: () => tools.readEligibility(),
-  read_revenue: (a) => tools.readRevenue(a.asset_id),
-  read_attestation_history: (a) => tools.readAttestationHistory(a.asset_id),
-  read_treasury: () => tools.readTreasury(),
-  read_x402_earnings: () => tools.readX402Earnings(),
-  read_venue_state: () => tools.readVenueState(),
-  attest: (a) => tools.attest(a.asset_id, a.period, a.amount, a.source_hash),
-  reinvest: (a) => tools.reinvest(a.action, a.amount_cspr),
-  record_reinvest: (a) => tools.recordReinvest(a.venue, a.amount_in, a.amount_out, a.reasoning),
-};
-
 const TREASURY_TOOLS = new Set(['read_treasury', 'read_x402_earnings', 'read_venue_state', 'reinvest', 'record_reinvest']);
-const activeTools = TREASURY_ON ? toolSchemas : toolSchemas.filter(t => !TREASURY_TOOLS.has(t.function.name));
+const activeTools = TREASURY_ON
+  ? toolSchemas
+  : toolSchemas.filter(t => t.type === 'function' && !TREASURY_TOOLS.has(t.function.name));
 
-export async function runCycle(asset: string): Promise<void> {
+export interface CycleResult {
+  attested: boolean;
+  reinvested: boolean;
+  recorded: boolean;
+}
+
+export async function runCycle(asset: string): Promise<CycleResult> {
+  const outcome: CycleResult = { attested: false, reinvested: false, recorded: false };
+  let reinvestmentCompleted = false;
+  const dispatch: Record<string, (a: any) => Promise<unknown>> = {
+    read_eligibility: () => tools.readEligibility(),
+    read_revenue: (a) => tools.readRevenue(a.asset_id),
+    read_attestation_history: (a) => tools.readAttestationHistory(a.asset_id),
+    read_treasury: () => tools.readTreasury(),
+    read_x402_earnings: () => tools.readX402Earnings(),
+    read_venue_state: () => tools.readVenueState(),
+    attest: async (a) => {
+      const result = await tools.attest(a.asset_id, a.period, a.amount, a.source_hash);
+      outcome.attested = true;
+      return result;
+    },
+    reinvest: async (a) => {
+      const result = await tools.reinvest(a.action, a.amount_cspr);
+      reinvestmentCompleted = true;
+      outcome.reinvested = a.action !== 'hold';
+      return result;
+    },
+    record_reinvest: async (a) => {
+      if (a.venue !== 'hold' && !reinvestmentCompleted) {
+        throw new Error('cannot record a reinvestment before its transaction succeeds');
+      }
+      const result = await tools.recordReinvest(a.venue, a.amount_in, a.amount_out, a.reasoning);
+      outcome.recorded = true;
+      return result;
+    },
+  };
   const messages: ChatCompletionMessageParam[] = [
     { role: 'system', content: SYSTEM },
     { role: 'user', content: `Run one autonomous cycle for asset "${asset}". Decide and act.` },
@@ -78,4 +103,5 @@ export async function runCycle(asset: string): Promise<void> {
       messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(result) });
     }
   }
+  return outcome;
 }

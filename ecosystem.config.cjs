@@ -11,10 +11,8 @@
 //   pm2 logs ; pm2 monit                           # watch
 //   pm2 save && pm2 startup                        # survive reboots
 //
-// Tuned for a ~1 GB VM: each app caps its V8 heap (NODE_OPTIONS) and pm2 restarts
-// it if RSS exceeds max_memory_restart, so a leak can't OOM the host. On a 1 GB box
-// already running other apps, prefer `--only claros-agent,claros-api`; add the two
-// x402 services only if you need the paid endpoint and have swap headroom.
+// Tuned for the 8 GB production host. PM2 still enforces per-process limits so a
+// single service cannot exhaust the machine.
 //
 // Each app loads its own .env from its cwd. The agent and facilitator sign
 // transactions, so their keys must hold testnet CSPR.
@@ -30,8 +28,18 @@ module.exports = {
       autorestart: true,
       max_restarts: 10,
       restart_delay: 10000,
-      max_memory_restart: "260M",
-      env: { NODE_OPTIONS: "--max-old-space-size=200" },
+      max_memory_restart: "1G",
+      env: { NODE_OPTIONS: "--max-old-space-size=768" },
+      time: true,
+    },
+    {
+      name: "claros-feed-updater",
+      cwd: "./agent",
+      script: "npm",
+      args: "run update-feeds",
+      autorestart: true,
+      max_memory_restart: "512M",
+      env: { NODE_OPTIONS: "--max-old-space-size=384" },
       time: true,
     },
     {
