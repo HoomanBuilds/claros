@@ -12,7 +12,7 @@ The Claros REST API is the **Hermes** of Claros: a small HTTP service (`services
 The service holds no database and runs no indexer. Each request reads Casper global state through the [TypeScript SDK](/docs/reading/sdk) (`claros-oracle`), so a response always reflects the latest value attested on-chain at request time.
 
 <Callout type="info">
-**Base URL.** When you self-host the service it listens on `http://localhost:4030` by default. Replace the host with your own deployment. Everything points at Casper **testnet** (network id `casper-test`); the registry addresses are baked into the SDK, so reads need no key and no wallet.
+**Hosted base URL:** `https://claros-oracle.vercel.app`. When you self-host the service it listens on `http://localhost:4030` by default. Everything points at Casper **testnet** (network id `casper-test`); reads need no key and no wallet.
 </Callout>
 
 ## Endpoints
@@ -42,11 +42,11 @@ Return the full reading for one feed: its self-describing metadata, its latest o
 
 ```http
 GET /v1/feeds/EIA.PET.PRICE.WTI.DAILY HTTP/1.1
-Host: localhost:4030
+Host: claros-oracle.vercel.app
 ```
 
 ```bash
-curl http://localhost:4030/v1/feeds/EIA.PET.PRICE.WTI.DAILY
+curl https://claros-oracle.vercel.app/v1/feeds/EIA.PET.PRICE.WTI.DAILY
 ```
 
 ### Path parameters
@@ -126,7 +126,7 @@ Reading it: `amount = 78940000`, `decimals = 6`, so `value = 78940000 / 10^6 = 7
 List every feed that is live on-chain, each as a full reading (metadata plus latest value). There are **38 feeds** live today. There are no parameters and no pagination: the call enumerates all feed ids, then reads each one, so it is the heaviest endpoint. To read a single value, prefer [`GET /v1/feeds/:id`](#get-v1feedsid).
 
 ```bash
-curl http://localhost:4030/v1/feeds
+curl https://claros-oracle.vercel.app/v1/feeds
 ```
 
 ### Response fields
@@ -171,7 +171,7 @@ Each entry is abbreviated above; the live response carries every field listed in
 Discover the universe of EIA datasets Claros can attest. The EIA APIv2 is one uniform faceted API: every dataset has a **route**, a set of **frequencies**, a set of **columns**, and a set of **facets** (the filters). A Claros feed is exactly the tuple `{ route, frequency, data_col, facets }`. This endpoint searches the full catalog of **232 datasets** so you can find the route and facets behind a feed, or scout a new series to register.
 
 ```bash
-curl "http://localhost:4030/v1/datasets?family=electricity&q=price"
+curl "https://claros-oracle.vercel.app/v1/datasets?family=electricity&q=price"
 ```
 
 ### Query parameters
@@ -229,7 +229,7 @@ That one dataset already backs several live feeds, including `EIA.ELEC.RETAIL.PR
 A liveness probe. Returns `200` with the service name and the number of discovery datasets loaded.
 
 ```bash
-curl http://localhost:4030/health
+curl https://claros-oracle.vercel.app/health
 ```
 
 ```json

@@ -50,14 +50,14 @@ export const metadata: Metadata = {
     locale: 'en_US',
     title: 'Claros: Verifiable Real-World Data Oracle on Casper',
     description:
-      'Real-world data, attested on-chain. 37 live feeds across 232 EIA datasets, self-describing and Pyth-style. Read from your contract, the SDK, or a free REST API on Casper.',
+      'Real-world data, attested on-chain. 38 live feeds across 232 EIA datasets, self-describing and Pyth-style. Read from your contract, the SDK, or a free REST API on Casper.',
     siteName: 'Claros',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Claros: Verifiable Real-World Data Oracle on Casper',
     description:
-      'Real-world data, attested on-chain. 37 live feeds across 232 EIA datasets, self-describing and Pyth-style. Read from your contract, the SDK, or a free REST API on Casper.',
+      'Real-world data, attested on-chain. 38 live feeds across 232 EIA datasets, self-describing and Pyth-style. Read from your contract, the SDK, or a free REST API on Casper.',
     creator: '@claros',
   },
   category: 'technology',

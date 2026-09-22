@@ -23,7 +23,7 @@ export interface Reinvestment {
 export interface VenueTotal {
   key: string
   label: string
-  amount: number // sum of recorded amount_in
+  amount: number // sum of decision-ledger amount_in
 }
 
 export interface TreasurySnapshot {

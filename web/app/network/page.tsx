@@ -85,7 +85,7 @@ export default async function NetworkPage() {
           </div>
           <TopologyGraph />
           <p className="mt-4 text-[10px] tracking-[0.15em] uppercase text-muted-foreground font-mono">
-            * source → agent + provenance hash → on-chain registry → read by any consumer.
+            * source -&gt; agent + provenance hash -&gt; on-chain registry -&gt; read by any consumer.
           </p>
         </section>
 
@@ -165,7 +165,7 @@ export default async function NetworkPage() {
           </div>
           <div className="flex items-center gap-3 mt-8">
             <Link href="/docs" className="bg-foreground text-background px-4 py-2 text-xs font-mono tracking-widest uppercase hover:opacity-90">
-              Read Integration Docs →
+              Read Integration Docs -&gt;
             </Link>
             <div className="flex-1 border-t border-border" />
           </div>

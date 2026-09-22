@@ -65,7 +65,7 @@ Two ways to pick data:
 Describe the feed in two small JSON files (spec for the agent, metadata for the registry):
 
 ```json
-// operator-feeds.json — how to FETCH it (same shape as the built-in catalog)
+// operator-feeds.json: how to FETCH it (same shape as the built-in catalog)
 [{
   "asset_id": "EIA.ELEC.GEN_SUN.US48.HOURLY",
   "route": "electricity/rto/fuel-type-data",
@@ -78,7 +78,7 @@ Describe the feed in two small JSON files (spec for the agent, metadata for the 
 ```
 
 ```json
-// feed.json — how the chain DESCRIBES it
+// feed.json: how the chain DESCRIBES it
 {
   "feed_id": "EIA.ELEC.GEN_SUN.US48.HOURLY",
   "decimals": 3,

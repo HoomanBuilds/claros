@@ -59,7 +59,7 @@ function clString(s: string): Uint8Array {
   return new Uint8Array([...u32le(u.length), ...u])
 }
 function itemKey(index: number, keyBytes: Uint8Array = new Uint8Array()): string {
-  const idx = new Uint8Array([0, 0, 0, index]) // index <= 15 → u32 BE
+  const idx = new Uint8Array([0, 0, 0, index]) // index <= 15, encoded as u32 BE
   return Buffer.from(blake2b(new Uint8Array([...idx, ...keyBytes]), { dkLen: 32 })).toString("hex")
 }
 
@@ -223,7 +223,7 @@ export async function getAllReadings(): Promise<Reading[]> {
 }
 
 export async function getStats(): Promise<OracleStats> {
-  try { return (await snapshotCached()).stats } catch { return cache?.stats ?? { feedsLive: 37, attestations: 0, datasets: DATASETS_TOTAL, network: NETWORK } }
+  try { return (await snapshotCached()).stats } catch { return cache?.stats ?? { feedsLive: 38, attestations: 0, datasets: DATASETS_TOTAL, network: NETWORK } }
 }
 
 export async function getFlagshipReadings(): Promise<Reading[]> {

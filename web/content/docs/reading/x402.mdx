@@ -33,9 +33,9 @@ The oracle server answers `402` with the payment requirements: scheme `exact`, a
 
 From those requirements the client's Casper `exact` scheme builds and signs an off-chain WCSPR `transfer_with_authorization` (an EIP-3009-style authorization) for the exact amount, payable to the agent. No on-chain transaction yet, just a signature.
 
-### Retry with `X-PAYMENT`
+### Retry with `PAYMENT-SIGNATURE`
 
-The client re-issues the same `GET`, now carrying the signed authorization in the `X-PAYMENT` header.
+The client re-issues the same `GET`, now carrying the signed authorization in the `PAYMENT-SIGNATURE` header.
 
 ### Facilitator verifies and settles on Casper
 
@@ -123,7 +123,7 @@ const { KeyAlgorithm } = casperSdk;
 
 // A PEM secret key whose account already holds WCSPR (see the next tab).
 const KEY_PATH = process.env.CLIENT_PRIVATE_KEY_PATH!;
-const URL = "http://localhost:4021/oracle/feed?asset_id=OP-1";
+const URL = "https://claros-oracle.vercel.app/oracle/feed?asset_id=OP-1";
 
 // Of the payment options both sides support, prefer any Casper network.
 const selectCasper = (_v: number, options: PaymentRequirements[]): PaymentRequirements =>
@@ -159,7 +159,7 @@ npm i @x402/fetch@2.15.0 @make-software/casper-x402@1.0.0 casper-js-sdk@5.0.12
 # Point at the hosted oracle and your funded key.
 export CLIENT_PRIVATE_KEY_PATH=./keys/consumer_secret_key.pem
 export CLIENT_KEY_ALGO=secp256k1
-export SERVER_URL=http://localhost:4021
+export SERVER_URL=https://claros-oracle.vercel.app
 export ENDPOINT_PATH=/oracle/feed
 
 # One-time: wrap some CSPR into WCSPR so the key can pay.

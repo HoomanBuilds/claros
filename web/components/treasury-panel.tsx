@@ -62,8 +62,8 @@ export function TreasuryPanel({ snapshot }: { snapshot: TreasurySnapshot }) {
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
         <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl">
           Read live from the <span className="text-foreground">TreasuryVault</span> on Casper. The agent
-          earns x402 read fees and routes idle treasury into on-chain yield. Every decision, with its
-          reasoning, is recorded on-chain.
+          earns x402 read fees and evaluates idle treasury for on-chain yield. Every decision, with
+          its reasoning, is recorded on-chain.
         </p>
         <a
           href={cspr(`contract-package/${VAULT_PKG}`)}
@@ -79,7 +79,7 @@ export function TreasuryPanel({ snapshot }: { snapshot: TreasurySnapshot }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 border-l-2 border-t-2 border-foreground mb-8">
         <StatCard label="Agent Liquid" value={`${fmt(snapshot.liquidCspr, 2)}`} sub="CSPR · live balance" />
         <StatCard label="Reinvest Cycles" value={String(snapshot.reinvestCount)} sub="logged on-chain" />
-        <StatCard label="Primary Venue" value={snapshot.primaryVenue.split(" ")[0]} sub={snapshot.primaryVenue} />
+        <StatCard label="Most Selected" value={snapshot.primaryVenue.split(" ")[0]} sub="decision ledger" />
         <StatCard label="Strategy" value="AUTONOMOUS" sub="DeepSeek heartbeat" />
       </div>
 
@@ -108,7 +108,7 @@ export function TreasuryPanel({ snapshot }: { snapshot: TreasurySnapshot }) {
                   <span className="text-sm font-mono font-bold tracking-tight uppercase">{v.label}</span>
                 </div>
                 <span className={`text-[9px] tracking-[0.15em] uppercase font-mono px-2 py-0.5 ${active ? "bg-[#ea580c] text-background" : "text-muted-foreground group-hover:text-background/60 border border-border group-hover:border-background/30"}`}>
-                  {active ? "active" : "evaluated"}
+                  {active ? "selected" : "evaluated"}
                 </span>
               </div>
               <span className="text-[10px] tracking-[0.15em] uppercase font-mono text-muted-foreground group-hover:text-background/60">
@@ -144,7 +144,7 @@ export function TreasuryPanel({ snapshot }: { snapshot: TreasurySnapshot }) {
                 {e.venue}
               </span>
               <span className="text-[10px] font-mono text-muted-foreground tabular-nums">
-                stake {e.amount_in} → {e.amount_out}
+                plan {e.amount_in} -&gt; {e.amount_out}
               </span>
               <span className="text-[10px] font-mono text-muted-foreground ml-auto">
                 #{e.index} · {timeAgo(e.timestamp)}
@@ -155,7 +155,7 @@ export function TreasuryPanel({ snapshot }: { snapshot: TreasurySnapshot }) {
         ))}
       </div>
       <p className="mt-4 text-[10px] tracking-[0.15em] uppercase text-muted-foreground font-mono">
-        * testnet figures. each entry is a Reinvested event the agent wrote to the TreasuryVault, reasoning included.
+        * testnet figures. entries prove the agent decision, not historical venue settlement. new entries are recorded only after transaction finality.
       </p>
     </section>
   )

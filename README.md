@@ -100,7 +100,7 @@ The agent (`agent/src/`) is a DeepSeek tool-calling loop. Its system prompt make
 3. **Attest**: `attest` with the exact period, amount, and source hash from the reading.
 4. **Treasury decision**: `read_treasury`, `read_x402_earnings`, `read_venue_state`, then `reinvest` (stake / delegate / hold) and `record_reinvest` with a one-sentence justification. Restraint is valid: a "hold" is recorded too.
 
-A heartbeat (`loop.ts`) runs a cycle only when the upstream source has a newer period than last processed, so it never wastes gas re-attesting the same data. All signing is `casper-js-sdk` v5 building Casper 2.0 (`Condor`) `TransactionV1`s.
+A heartbeat (`loop.ts`) runs the autonomous OP-1 cycle only when the upstream source has a newer period than the last confirmed attestation. A separate deterministic updater (`update-feeds.ts`) checks every first-party EIA feed and submits only newer periods. Both paths wait for Casper execution finality before counting a transaction as successful. All signing is `casper-js-sdk` v5 building Casper 2.0 (`Condor`) `TransactionV1`s.
 
 ### The x402 Earn Rail
 
@@ -108,7 +108,7 @@ The paid product is a hosted feed endpoint, `GET /oracle/feed?asset_id=`, that r
 
 1. A client requests the feed with no payment.
 2. The server replies `402 Payment Required` with the requirements (scheme `exact`, asset WCSPR, amount, payTo, network `casper-test`).
-3. The client signs a WCSPR `transfer_with_authorization` and retries with an `X-PAYMENT` header.
+3. The client signs a WCSPR `transfer_with_authorization` and retries with a `PAYMENT-SIGNATURE` header.
 4. A self-hosted **facilitator** verifies and settles the transfer on Casper.
 5. The server returns `200` with the reading; the WCSPR lands with the agent.
 
@@ -145,7 +145,7 @@ The full walkthrough, from key generation to first payout, is documented at [Run
 
 There are three ways to read a feed, all sharing one model (`amount / 10^decimals`, keyed by `feed_id`):
 
-- **REST**: the `services/claros-api` Hermes-style read service. `GET /v1/feeds`, `GET /v1/feeds/:id`, `GET /v1/datasets`. JSON, CORS open, no key. Free.
+- **REST**: the hosted Hermes-style read service at `https://claros-oracle.vercel.app`. `GET /v1/feeds`, `GET /v1/feeds/:id`, `GET /v1/datasets`. JSON, CORS open, no key. Free.
 - **SDK**: `claros-oracle` (npm), reads feed metadata and values directly from Casper global state with no indexer and no running node. `new ClarosOracle().getReading(id)` returns metadata + value + the human number. Free.
 - **Cross-contract**: from your own Casper contract, declare the registry interfaces and call `get_latest(feed_id)` and `get_feed(feed_id)`, exactly like reading Pyth on-chain. Gas only.
 

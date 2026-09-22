@@ -53,11 +53,11 @@ reading.
 
 <Tabs.Tab>
 
-Plain HTTP, any language, no key. Run [`services/claros-api`](/docs/reading/rest) (port
-`4030`) or point at a hosted instance:
+Plain HTTP, any language, no key. Use the hosted API or run
+[`services/claros-api`](/docs/reading/rest) yourself on port `4030`:
 
 ```bash
-curl http://localhost:4030/v1/feeds/EIA.PET.PRICE.WTI.DAILY
+curl https://claros-oracle.vercel.app/v1/feeds/EIA.PET.PRICE.WTI.DAILY
 ```
 
 The endpoint reads Casper state through the SDK and returns the reading as JSON.
@@ -117,7 +117,7 @@ let att = claros
     .get_latest("EIA.PET.PRICE.WTI.DAILY".to_string())
     .unwrap_or_revert(&self.env());
 
-// real price = att.amount / 10^6  →  78_940_000 / 1_000_000 = 78.94
+// real price = att.amount / 10^6, so 78_940_000 / 1_000_000 = 78.94
 ```
 
 The companion `FeedRegistry.get_feed(feed_id)` returns the metadata (including
