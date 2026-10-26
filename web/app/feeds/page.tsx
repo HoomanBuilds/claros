@@ -1,41 +1,17 @@
-import type { Metadata } from "next"
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
+import type { Metadata, Viewport } from "next"
+import { PageShell } from "@/components/product/page-shell"
 import { FeedsExplorer } from "@/components/feeds-explorer"
 
 export const metadata: Metadata = {
   title: "Live Feeds: Claros Oracle",
-  description: "Every Claros feed live on Casper: energy markets and civic data, attested on-chain with provenance hashes. Search, filter, and verify each value.",
+  description: "Browse real-world readings attested on Casper. Search energy and civic feeds and verify their reporting periods and provenance.",
 }
+export const viewport: Viewport = { themeColor: "#070b14" }
 
 export default function FeedsPage() {
   return (
-    <div className="min-h-screen dot-grid-bg">
-      <Navbar />
-      <main>
-        {/* Header */}
-        <section className="w-full px-6 pt-12 lg:px-12">
-          <div className="flex items-center gap-4 mb-8">
-            <span className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-mono">
-              {"// FEEDS_REGISTRY"}
-            </span>
-            <div className="flex-1 border-t border-border" />
-            <span className="inline-block h-2 w-2 bg-[#ea580c] animate-blink" />
-            <span className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-mono">001</span>
-          </div>
-          <h1 className="font-pixel text-4xl sm:text-5xl lg:text-6xl tracking-tight text-foreground mb-4 select-none">
-            LIVE FEEDS
-          </h1>
-          <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl">
-            Real-world feeds attested on Casper testnet, drawn from the EIA dataset catalog.
-            Each value is read from on-chain state: self-describing, hashed, and
-            verifiable by anyone.
-          </p>
-        </section>
-
-        <FeedsExplorer />
-      </main>
-      <Footer />
-    </div>
+    <PageShell active="Feeds" number="01" title="The world, in readings." description="Energy markets, the grid, and civic revenue. Every reading carries a reporting period, a source hash, and an attester you can verify on Casper." image="/landing/avail/road.webp">
+      <FeedsExplorer />
+    </PageShell>
   )
 }

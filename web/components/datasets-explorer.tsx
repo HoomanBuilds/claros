@@ -1,139 +1,268 @@
-"use client"
+"use client";
 
-import { useMemo, useState } from "react"
-import { motion } from "framer-motion"
-import { Search } from "lucide-react"
-import type { DatasetRow } from "@/lib/datasets"
-import { useLiveFeeds } from "@/lib/use-live-feeds"
+import { useMemo, useState } from "react";
+import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
+import type { DatasetRow } from "@/lib/datasets";
+import { formatCount } from "@/lib/format";
+import { useLiveFeeds } from "@/lib/use-live-feeds";
+import {
+  EmptyState,
+  Metrics,
+  SearchField,
+  SectionHeading,
+} from "@/components/product/ui";
+import styles from "@/components/product/product.module.css";
 
-const ease = [0.22, 1, 0.36, 1] as const
+const PAGE_SIZE = 24;
+const datasetName = (name: string) => name.replaceAll("\\", " / ");
 
 export function DatasetsExplorer({ datasets }: { datasets: DatasetRow[] }) {
-  const { feeds } = useLiveFeeds()
-  const live = useMemo(() => new Set(feeds.map(feed => feed.route)), [feeds])
-  const [query, setQuery] = useState("")
-  const [fam, setFam] = useState("ALL")
-  const [liveOnly, setLiveOnly] = useState(false)
-
-  const families = useMemo(() => {
-    const set = new Set(datasets.map((d) => d.family))
-    return ["ALL", ...Array.from(set).sort()]
-  }, [datasets])
-
+  const { feeds, loading, error } = useLiveFeeds();
+  const live = useMemo(() => new Set(feeds.map((feed) => feed.route)), [feeds]);
+  const [query, setQuery] = useState("");
+  const [fam, setFam] = useState("ALL");
+  const [liveOnly, setLiveOnly] = useState(false);
+  const [page, setPage] = useState(0);
+  const families = useMemo(
+    () => ["ALL", ...Array.from(new Set(datasets.map((d) => d.family))).sort()],
+    [datasets],
+  );
   const rows = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return datasets.filter((d) => {
-      if (fam !== "ALL" && d.family !== fam) return false
-      if (liveOnly && !live.has(d.route)) return false
-      if (!q) return true
-      return (d.route + " " + d.name + " " + d.columns.join(" ") + " " + d.facets.join(" ")).toLowerCase().includes(q)
-    })
-  }, [datasets, query, fam, liveOnly, live])
+    const q = query.trim().toLowerCase();
+    return datasets.filter(
+      (d) =>
+        (fam === "ALL" || d.family === fam) &&
+        (!liveOnly || live.has(d.route)) &&
+        (!q ||
+          [d.route, d.name, datasetName(d.name), ...d.columns, ...d.facets]
+            .join(" ")
+            .toLowerCase()
+            .includes(q)),
+    );
+  }, [datasets, query, fam, liveOnly, live]);
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const current = Math.min(page, pages - 1);
+  const visible = rows.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE);
+  const reset = () => {
+    setQuery("");
+    setFam("ALL");
+    setLiveOnly(false);
+    setPage(0);
+  };
+  const coverageKnown = !loading && (!error || feeds.length > 0);
+  const covered = datasets.filter((d) => live.has(d.route)).length;
+  const changePage = (next: number) => {
+    setPage(next);
+    document
+      .getElementById("catalog-results")
+      ?.scrollIntoView({ block: "start" });
+  };
 
   return (
-    <section className="w-full px-6 py-10 lg:px-12">
-      {/* Toolbar */}
-      <div className="flex flex-col gap-4 mb-6">
-        <div className="flex flex-col md:flex-row md:items-center gap-3 md:justify-between">
-          <div className="flex items-center gap-3 border-2 border-foreground px-3 py-2 w-full md:max-w-sm">
-            <Search size={14} strokeWidth={2} className="text-muted-foreground shrink-0" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="search 232 datasets: crude, storage, retail…"
-              className="w-full bg-transparent outline-none text-xs font-mono tracking-wide placeholder:text-muted-foreground/60"
-            />
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setLiveOnly((v) => !v)}
-              className={`flex items-center gap-2 px-3 py-1.5 text-[10px] font-mono tracking-[0.15em] uppercase border-2 border-foreground transition-colors ${
-                liveOnly ? "bg-[#ea580c] text-background border-[#ea580c]" : "bg-background text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <span className={`h-1.5 w-1.5 ${liveOnly ? "bg-background" : "bg-[#ea580c]"}`} />
-              live only
-            </button>
-            <span className="text-[10px] tracking-widest text-muted-foreground uppercase font-mono">
-              {rows.length}/{datasets.length} datasets
-            </span>
-          </div>
-        </div>
-
-        {/* Family filter chips */}
-        <div className="flex flex-wrap gap-0 border-l-2 border-t-2 border-foreground">
-          {families.map((f) => (
-            <button
-              key={f}
-              onClick={() => setFam(f)}
-              className={`px-3 py-1.5 text-[10px] font-mono tracking-[0.15em] uppercase border-r-2 border-b-2 border-foreground transition-colors ${
-                fam === f ? "bg-foreground text-background" : "bg-background text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {f}
-            </button>
-          ))}
+    <section aria-label="Dataset catalog">
+      <Metrics
+        items={[
+          {
+            label: "Datasets mapped",
+            value: formatCount(datasets.length),
+            detail: "EIA API v2 catalog",
+          },
+          {
+            label: "With live feeds",
+            value: coverageKnown ? formatCount(covered) : "-",
+            detail: "At least one attested series",
+          },
+          {
+            label: "Data families",
+            value: formatCount(families.length - 1),
+            detail: "Across the energy economy",
+          },
+          {
+            label: "Source",
+            value: "US EIA",
+            detail: "Public energy datasets",
+          },
+        ]}
+      />
+      <SectionHeading
+        label="02 / Source catalog"
+        title="An open field of data."
+      >
+        <a className={styles.primaryButton} href="/docs/catalog/request/">
+          Request a feed <ArrowUpRight size={15} />
+        </a>
+      </SectionHeading>
+      {error && (
+        <p role="alert" className={styles.notice}>
+          The catalog is available, but live coverage could not be refreshed.
+          {feeds.length
+            ? " Coverage labels use the last available readings."
+            : " Coverage labels are unavailable until the connection recovers."}
+        </p>
+      )}
+      <div className={styles.toolbar}>
+        <SearchField
+          label="Search datasets"
+          value={query}
+          onChange={(value) => {
+            setQuery(value);
+            setPage(0);
+          }}
+          placeholder="Search crude oil, storage, retail, or a data field..."
+        />
+        <div className={styles.toolbarRight}>
+          <span className={styles.status} role="status">
+            {loading
+              ? "Checking live coverage..."
+              : error
+                ? "Live coverage interrupted"
+                : "Coverage checked against attested feeds"}
+          </span>
+          <button
+            type="button"
+            className={styles.filter}
+            aria-pressed={liveOnly}
+            disabled={!coverageKnown}
+            onClick={() => {
+              setLiveOnly((value) => !value);
+              setPage(0);
+            }}
+          >
+            With live feeds
+            {coverageKnown ? " (" + formatCount(covered) + ")" : ""}
+          </button>
         </div>
       </div>
-
-      {/* Cards grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 border-l-2 border-t-2 border-foreground">
-        {rows.map((d, i) => {
-          const isLive = live.has(d.route)
-          return (
-            <motion.div
-              key={d.route}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: Math.min(i, 24) * 0.012, duration: 0.3, ease }}
-              className="group flex flex-col border-r-2 border-b-2 border-foreground px-4 py-3 hover:bg-foreground hover:text-background transition-colors"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[9px] tracking-[0.18em] uppercase text-muted-foreground group-hover:text-background/60 font-mono">
-                  {d.family}
-                </span>
-                {isLive ? (
-                  <span className="flex items-center gap-1.5 text-[9px] tracking-[0.15em] uppercase font-mono text-[#ea580c]">
-                    <span className="h-1.5 w-1.5 bg-[#ea580c]" /> live
-                  </span>
-                ) : (
-                  <span className="text-[9px] tracking-[0.15em] uppercase font-mono text-muted-foreground/50 group-hover:text-background/40">
-                    indexed
-                  </span>
-                )}
-              </div>
-              <span className="text-sm font-mono font-bold tracking-tight leading-snug mb-1">{d.name}</span>
-              <span className="text-[10px] font-mono text-muted-foreground group-hover:text-background/60 break-all mb-3">
-                {d.route}
-              </span>
-              <div className="mt-auto flex items-center justify-between gap-2">
-                <div className="flex flex-wrap gap-1">
-                  {d.frequencies.slice(0, 3).map((f) => (
-                    <span
-                      key={f}
-                      className="text-[8px] tracking-[0.1em] uppercase font-mono border border-border group-hover:border-background/30 px-1.5 py-0.5 text-muted-foreground group-hover:text-background/70"
-                    >
-                      {f}
-                    </span>
-                  ))}
-                </div>
-                <span className="text-[9px] font-mono text-muted-foreground group-hover:text-background/60 whitespace-nowrap">
-                  {d.columns.length}c · {d.facets.length}f
-                </span>
-              </div>
-            </motion.div>
-          )
-        })}
-        {rows.length === 0 && (
-          <div className="col-span-full px-4 py-10 text-center text-xs font-mono text-muted-foreground border-r-2 border-b-2 border-foreground">
-            no datasets match “{query}”.
-          </div>
+      <div
+        className={styles.filters}
+        role="group"
+        aria-label="Filter datasets by family"
+      >
+        {families.map((f) => (
+          <button
+            type="button"
+            className={styles.filter}
+            key={f}
+            aria-pressed={fam === f}
+            onClick={() => {
+              setFam(f);
+              setPage(0);
+            }}
+          >
+            {f === "ALL" ? "All families" : f}
+          </button>
+        ))}
+      </div>
+      <div className={styles.resultLine} id="catalog-results">
+        <span role="status">
+          {rows.length
+            ? current * PAGE_SIZE +
+              1 +
+              "-" +
+              Math.min((current + 1) * PAGE_SIZE, rows.length)
+            : "0"}{" "}
+          of {formatCount(rows.length)} datasets
+        </span>
+        {(query || fam !== "ALL" || liveOnly) && (
+          <button className={styles.inlineLink} type="button" onClick={reset}>
+            Reset filters
+          </button>
         )}
       </div>
-
-      <p className="mt-4 text-[10px] tracking-[0.15em] uppercase text-muted-foreground font-mono">
-        * any indexed dataset can be attested on-chain via the Claros agent (c = columns, f = facets).
+      {visible.length ? (
+        <div className={styles.datasetGrid}>
+          {visible.map((d) => {
+            const isLive = live.has(d.route);
+            return (
+              <article className={styles.datasetCard} key={d.route}>
+                <div className={styles.cardTop}>
+                  <span>{d.family}</span>
+                  <span
+                    className={styles.badge}
+                    data-muted={!isLive || undefined}
+                  >
+                    {isLive
+                      ? "Has live feeds"
+                      : coverageKnown
+                        ? "Mapped"
+                        : loading
+                          ? "Checking"
+                          : "Status unknown"}
+                  </span>
+                </div>
+                <h3>{datasetName(d.name)}</h3>
+                <code className={styles.route}>{d.route}</code>
+                <div className={styles.tags}>
+                  {d.frequencies.length ? (
+                    d.frequencies.map((f) => <span key={f}>{f}</span>)
+                  ) : (
+                    <span>Cadence not listed</span>
+                  )}
+                </div>
+                <details className={styles.schema}>
+                  <summary>
+                    {formatCount(d.columns.length)} data fields ·{" "}
+                    {formatCount(d.facets.length)} filters
+                  </summary>
+                  <p>
+                    <strong>Fields:</strong>{" "}
+                    {d.columns.join(", ") || "None listed"}
+                  </p>
+                  <p>
+                    <strong>Filters:</strong>{" "}
+                    {d.facets.join(", ") || "None listed"}
+                  </p>
+                </details>
+                <a
+                  className={styles.cardLink}
+                  href={
+                    isLive
+                      ? "/feeds/?q=" + encodeURIComponent(d.route)
+                      : "/docs/catalog/request/"
+                  }
+                >
+                  {isLive ? "Browse its feeds" : "Request an attester"}
+                  <ArrowUpRight size={15} />
+                </a>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <EmptyState title="No datasets match" onReset={reset}>
+          Try another keyword or family, or turn off the live-feed filter.
+        </EmptyState>
+      )}
+      {rows.length > PAGE_SIZE && (
+        <nav className={styles.pagination} aria-label="Catalog pagination">
+          <span>
+            Page {current + 1} of {pages}
+          </span>
+          <div>
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              disabled={current === 0}
+              onClick={() => changePage(current - 1)}
+            >
+              <ChevronLeft size={15} /> Previous
+            </button>
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              disabled={current === pages - 1}
+              onClick={() => changePage(current + 1)}
+            >
+              Next <ChevronRight size={15} />
+            </button>
+          </div>
+        </nav>
+      )}
+      <p className={styles.footnote}>
+        Mapped datasets are available for integration, not necessarily attested
+        on-chain. A live badge means at least one series from that dataset has
+        an attested reading.
       </p>
     </section>
-  )
+  );
 }

@@ -134,3 +134,28 @@ export function shortHash(h: string, n = 6): string {
   const clean = h.replace(/^(account-hash-|hash-)/, "")
   return clean.length > n * 2 ? `${clean.slice(0, n)}…${clean.slice(-4)}` : clean
 }
+
+export function formatCount(value: number): string {
+  return Number.isFinite(value) ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value) : "-"
+}
+
+export function formatCspr(value: number): string {
+  if (!Number.isFinite(value) || value < 0) return "-"
+  if (value > 0 && value < 0.0001) return "<0.0001"
+  return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: value < 1000 ? 4 : 2 }).format(value)
+}
+
+export function formatLedgerAmount(value: string): string {
+  return /^\d+$/.test(value) ? new Intl.NumberFormat("en-US").format(BigInt(value)) : "-"
+}
+
+export function formatTimestamp(value: number): string {
+  const date = new Date(value)
+  return Number.isFinite(value) && value > 0 && !Number.isNaN(date.getTime())
+    ? date.toISOString().slice(0, 16).replace("T", " ") + " UTC" : "-"
+}
+
+export function safePeriod(period: number, frequency: string): string {
+  if (!Number.isFinite(period) || period <= 0) return "-"
+  try { return formatPeriod(period, frequency) } catch { return "-" }
+}

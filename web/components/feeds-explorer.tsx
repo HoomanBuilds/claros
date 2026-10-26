@@ -1,137 +1,304 @@
-"use client"
+"use client";
 
-import { useMemo, useState } from "react"
-import { motion } from "framer-motion"
-import { Search, ExternalLink } from "lucide-react"
-import { family, flagshipFirst, formatPeriod, formatValue, shortHash, shortUnit, ticker, timeAgo } from "@/lib/format"
-import { useLiveFeeds } from "@/lib/use-live-feeds"
+import { useEffect, useMemo, useState } from "react";
+import { ExternalLink } from "lucide-react";
+import {
+  family,
+  flagshipFirst,
+  formatCount,
+  formatTimestamp,
+  formatValue,
+  safePeriod,
+  shortHash,
+  shortUnit,
+  ticker,
+  timeAgo,
+} from "@/lib/format";
+import { useLiveFeeds } from "@/lib/use-live-feeds";
+import {
+  EmptyState,
+  Metrics,
+  SearchField,
+  SectionHeading,
+} from "@/components/product/ui";
+import styles from "@/components/product/product.module.css";
 
-const ease = [0.22, 1, 0.36, 1] as const
-const ATTESTATION_PKG = "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc"
+const ATTESTATION_PKG =
+  "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc";
+const category = (id: string) => family(id) || "CIVIC REVENUE";
+const ELEMENTS: Record<string, string> = {
+  PET: "Pt",
+  NG: "Ng",
+  ELEC: "El",
+  COAL: "Co",
+  NUC: "Nu",
+  CO2: "C₂",
+  STEO: "St",
+  DBF: "Bm",
+  INTL: "In",
+  SEDS: "Se",
+  TOTAL: "Te",
+};
+const element = (id: string) => ELEMENTS[id.split(".")[1]] || "Cv";
 
 export function FeedsExplorer() {
-  const { feeds, stats, updatedAt, loading, error } = useLiveFeeds()
-  const [query, setQuery] = useState("")
-  const [fam, setFam] = useState<string>("ALL")
-
-  const families = useMemo(() => {
-    const set = new Set(feeds.map((f) => family(f.feed_id)).filter(Boolean))
-    return ["ALL", ...Array.from(set).sort()]
-  }, [feeds])
-
+  const { feeds, stats, updatedAt, loading, error } = useLiveFeeds();
+  const [query, setQuery] = useState("");
+  const [fam, setFam] = useState("ALL");
+  const [sort, setSort] = useState("featured");
+  useEffect(() => {
+    setQuery(new URLSearchParams(window.location.search).get("q") || "");
+  }, []);
+  const families = useMemo(
+    () => [
+      "ALL",
+      ...Array.from(new Set(feeds.map((f) => category(f.feed_id)))).sort(),
+    ],
+    [feeds],
+  );
   const rows = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return flagshipFirst(feeds).filter((f) => {
-      if (fam !== "ALL" && family(f.feed_id) !== fam) return false
-      if (!q) return true
-      return (f.feed_id + " " + ticker(f.feed_id) + " " + f.title + " " + f.unit).toLowerCase().includes(q)
-    })
-  }, [feeds, query, fam])
+    const q = query.trim().toLowerCase();
+    const result = flagshipFirst(feeds).filter(
+      (f) =>
+        (fam === "ALL" || category(f.feed_id) === fam) &&
+        (!q ||
+          [f.feed_id, ticker(f.feed_id), f.title, f.unit, f.route]
+            .join(" ")
+            .toLowerCase()
+            .includes(q)),
+    );
+    if (sort === "updated") result.sort((a, b) => b.updated_at - a.updated_at);
+    if (sort === "name")
+      result.sort((a, b) => ticker(a.feed_id).localeCompare(ticker(b.feed_id)));
+    return result;
+  }, [feeds, query, fam, sort]);
+  const reset = () => {
+    setQuery("");
+    setFam("ALL");
+    setSort("featured");
+  };
 
   return (
-    <section className="w-full px-6 py-10 lg:px-12">
-      {/* Toolbar */}
-      <div className="flex flex-col gap-4 mb-6">
-        <div className="flex flex-col md:flex-row md:items-center gap-3 md:justify-between">
-          <div className="flex items-center gap-3 border-2 border-foreground px-3 py-2 w-full md:max-w-sm">
-            <Search size={14} strokeWidth={2} className="text-muted-foreground shrink-0" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="search feeds: wti, coal, henry hub…"
-              className="w-full bg-transparent outline-none text-xs font-mono tracking-wide placeholder:text-muted-foreground/60"
-            />
-          </div>
-          <div className="flex items-center gap-2 text-[10px] tracking-widest text-muted-foreground uppercase font-mono">
-            <span className="h-1.5 w-1.5 bg-[#ea580c] animate-blink" />
-            <span>
-              {rows.length}/{stats.feedsLive} feeds · {stats.network}
-            </span>
-            <span className="text-foreground" role="status">{error ? "· data unavailable" : loading ? "· loading" : updatedAt ? `· synced ${timeAgo(updatedAt)}` : ""}</span>
-          </div>
-        </div>
-
-        {/* Family filter chips */}
-        <div className="flex flex-wrap gap-0 border-l-2 border-t-2 border-foreground">
-          {families.map((f) => (
-            <button
-              key={f}
-              onClick={() => setFam(f)}
-              className={`px-3 py-1.5 text-[10px] font-mono tracking-[0.15em] uppercase border-r-2 border-b-2 border-foreground transition-colors ${
-                fam === f ? "bg-foreground text-background" : "bg-background text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Table header (md+) */}
-      <div className="hidden md:grid grid-cols-[1.7fr_1.1fr_1.2fr_1fr_0.8fr_0.9fr_0.5fr] gap-3 px-4 py-2 border-2 border-foreground bg-foreground text-background">
-        {["Feed", "Family", "Value", "Period", "Cadence", "Updated", ""].map((h, i) => (
-          <span key={i} className={`text-[9px] tracking-[0.18em] uppercase ${i === 2 ? "text-right" : ""}`}>
-            {h}
+    <section aria-label="Feed registry">
+      <Metrics
+        items={[
+          {
+            label: "Feeds available",
+            value:
+              loading || (error && !feeds.length)
+                ? "-"
+                : formatCount(stats.feedsLive),
+            detail: "Registered on Casper",
+          },
+          {
+            label: "Attestations",
+            value:
+              loading || (error && !feeds.length)
+                ? "-"
+                : formatCount(stats.attestations),
+            detail: "Provenance recorded on-chain",
+          },
+          {
+            label: "Data families",
+            value:
+              loading || (error && !feeds.length)
+                ? "-"
+                : formatCount(families.length - 1),
+            detail: "Energy and civic sources",
+          },
+          {
+            label: "Network",
+            value: "Testnet",
+            detail: "Casper / casper-test",
+          },
+        ]}
+      />
+      <SectionHeading
+        label="01 / Feed registry"
+        title="Readings, not black boxes."
+      >
+        <a className={styles.inlineLink} href="/docs/reading/rest/">
+          Integrate a feed <ExternalLink size={13} />
+        </a>
+      </SectionHeading>
+      {error && (
+        <p className={styles.notice} role="alert">
+          {feeds.length
+            ? "The data connection is interrupted. Showing the last available readings while we retry."
+            : "The feed service is unavailable. Retrying automatically. No cached readings are being presented as live."}
+        </p>
+      )}
+      <div className={styles.toolbar}>
+        <SearchField
+          label="Search feeds"
+          value={query}
+          onChange={setQuery}
+          placeholder="Search WTI, solar, a feed ID, or a dataset route..."
+        />
+        <div className={styles.toolbarRight}>
+          <span className={styles.status} role="status">
+            <i className={styles.dot} aria-hidden="true" />
+            {loading
+              ? "Reading on-chain data..."
+              : error
+                ? "Connection interrupted"
+                : updatedAt
+                  ? "API checked " + timeAgo(updatedAt)
+                  : "Waiting for data"}
           </span>
+          <label className={styles.selectLabel}>
+            Sort
+            <select
+              aria-label="Sort feeds"
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+            >
+              <option value="featured">Featured</option>
+              <option value="updated">Latest attestation</option>
+              <option value="name">Feed name</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div
+        className={styles.filters}
+        role="group"
+        aria-label="Filter feeds by family"
+      >
+        {families.map((f) => (
+          <button
+            type="button"
+            className={styles.filter}
+            key={f}
+            aria-pressed={fam === f}
+            onClick={() => setFam(f)}
+          >
+            {f === "ALL" ? "All families" : f}
+          </button>
         ))}
       </div>
-
-      {/* Rows */}
-      <div className="border-l-2 border-r-2 border-b-2 border-foreground md:border-t-0">
-        {rows.map((f, i) => (
-          <motion.a
-            key={f.feed_id}
-            href={`https://testnet.cspr.live/contract-package/${ATTESTATION_PKG}`}
-            target="_blank"
-            rel="noreferrer"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: Math.min(i, 20) * 0.015, duration: 0.3, ease }}
-            className="group grid grid-cols-2 md:grid-cols-[1.7fr_1.1fr_1.2fr_1fr_0.8fr_0.9fr_0.5fr] gap-x-3 gap-y-1 px-4 py-3 border-b-2 border-foreground last:border-b-0 hover:bg-foreground hover:text-background transition-colors"
-          >
-            {/* Feed */}
-            <div className="flex flex-col col-span-2 md:col-span-1">
-              <span className="text-xs font-mono font-bold tracking-[0.1em] uppercase">{ticker(f.feed_id)}</span>
-              <span className="text-[9px] font-mono text-muted-foreground group-hover:text-background/60 truncate">{f.feed_id}</span>
-            </div>
-            {/* Family */}
-            <span className="flex items-center text-[10px] font-mono tracking-[0.12em] uppercase text-muted-foreground group-hover:text-background/70">
-              {family(f.feed_id)}
-            </span>
-            {/* Value */}
-            <span className="flex items-center md:justify-end text-sm font-mono font-bold tabular-nums">
-              {formatValue(f.value, f.decimals)}
-              <span className="ml-1 text-[10px] font-normal text-muted-foreground group-hover:text-background/60">{shortUnit(f.unit)}</span>
-            </span>
-            {/* Period */}
-            <span className="flex items-center text-[10px] font-mono text-muted-foreground group-hover:text-background/70">
-              {formatPeriod(f.period, f.frequency)}
-            </span>
-            {/* Cadence */}
-            <span className="flex items-center text-[10px] font-mono tracking-[0.1em] uppercase text-muted-foreground group-hover:text-background/70">
-              {f.frequency}
-            </span>
-            {/* Updated + hash */}
-            <span className="flex flex-col justify-center text-[10px] font-mono text-muted-foreground group-hover:text-background/70">
-              <span>{timeAgo(f.updated_at)}</span>
-              <span className="text-[8px] opacity-60">#{shortHash(f.source_hash, 4)}</span>
-            </span>
-            {/* Verify */}
-            <span className="hidden md:flex items-center justify-end">
-              <ExternalLink size={12} strokeWidth={2} className="text-muted-foreground group-hover:text-[#ea580c]" />
-            </span>
-          </motion.a>
-        ))}
-        {rows.length === 0 && (
-          <div className="px-4 py-10 text-center text-xs font-mono text-muted-foreground">
-            {loading ? "Loading on-chain feeds..." : error ? "Feed service unavailable. Retrying shortly." : `No feeds match "${query}".`}
-          </div>
+      <div className={styles.resultLine}>
+        <span role="status">
+          {loading
+            ? "Loading feeds"
+            : formatCount(rows.length) +
+              " of " +
+              formatCount(feeds.length) +
+              " feeds"}
+        </span>
+        {(query || fam !== "ALL") && (
+          <button type="button" className={styles.inlineLink} onClick={reset}>
+            Reset filters
+          </button>
         )}
       </div>
-
-      <p className="mt-4 text-[10px] tracking-[0.15em] uppercase text-muted-foreground font-mono">
-        * every row is an attestation on Casper; click to verify the registry on-chain.
+      {rows.length ? (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <caption className={styles.srOnly}>
+              Attested real-world feeds. Reporting periods describe the source
+              data, not when this page refreshed.
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Feed / source family</th>
+                <th scope="col" className={styles.numeric}>
+                  Reading
+                </th>
+                <th scope="col">Reporting period</th>
+                <th scope="col">Last attested</th>
+                <th scope="col">
+                  <span className={styles.srOnly}>Verify provenance</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((f, i) => (
+                <tr key={f.feed_id}>
+                  <td>
+                    <div className={styles.feedCell}>
+                      <span className={styles.element} aria-hidden="true">
+                        <small>{String(i + 1).padStart(2, "0")}</small>
+                        {element(f.feed_id)}
+                      </span>
+                      <div className={styles.feedName}>
+                        <strong>{ticker(f.feed_id)}</strong>
+                        <code>{f.feed_id}</code>
+                        <span>{category(f.feed_id)}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className={styles.reading} data-label="Reading">
+                    <strong>{formatValue(f.value, f.decimals)}</strong>
+                    <span>{shortUnit(f.unit)}</span>
+                  </td>
+                  <td data-label="Reporting period">
+                    <span className={styles.period}>
+                      {safePeriod(f.period, f.frequency)}
+                    </span>
+                    <span className={styles.meta}>{f.frequency}</span>
+                  </td>
+                  <td data-label="Last attested">
+                    <time
+                      className={styles.meta}
+                      title={formatTimestamp(f.updated_at)}
+                    >
+                      {timeAgo(f.updated_at)}
+                    </time>
+                    <span className={styles.hash} title={f.source_hash}>
+                      #{shortHash(f.source_hash, 4)}
+                    </span>
+                  </td>
+                  <td>
+                    <a
+                      className={styles.verify}
+                      href={
+                        "https://testnet.cspr.live/contract-package/" +
+                        ATTESTATION_PKG
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={"Verify " + ticker(f.feed_id) + " on Casper"}
+                    >
+                      Verify <ExternalLink size={13} />
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <EmptyState
+          title={
+            loading
+              ? "Fetching the latest attestations"
+              : error
+                ? "Readings are temporarily unavailable"
+                : !feeds.length
+                  ? "No attestations yet"
+                  : "No readings match"
+          }
+          onReset={
+            !loading && !error && (query !== "" || fam !== "ALL")
+              ? reset
+              : undefined
+          }
+        >
+          {loading
+            ? "The registry is being read from AWS. Values appear here when the request completes."
+            : error
+              ? "The connection will retry automatically. You can still browse the dataset catalog."
+              : !feeds.length
+                ? "The registry returned no readings. Explore the dataset catalog or check back after an attestation is recorded."
+                : "Try another name, feed ID, or source family."}
+        </EmptyState>
+      )}
+      <p className={styles.footnote}>
+        Reporting periods show when the source measured a value. Last attested
+        shows when it was written on Casper. Refreshing the API does not make an
+        old reading fresh.
       </p>
     </section>
-  )
+  );
 }
