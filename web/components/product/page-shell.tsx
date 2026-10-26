@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import Cell from "@/components/landing/ui/Cell";
+import Footer from "@/components/landing/sections/Footer";
 import { fontVariables } from "@/components/landing/fonts";
+import headerStyles from "@/components/landing/Header.module.css";
 import "@/components/landing/landing.css";
 import styles from "./product.module.css";
 
@@ -21,19 +23,20 @@ export function PageShell({
 }: {
   active: string;
   number: string;
-  title: string;
+  title: ReactNode;
   description: string;
   image: string;
   children: ReactNode;
 }) {
   return (
     <div className={`claros-landing ${fontVariables} ${styles.shell}`}>
+      <div className="grain" aria-hidden="true" />
       <a href="#main-content" className={styles.skip}>
         Skip to content
       </a>
       <header className={styles.header}>
-        <a href="/" className={styles.brand} aria-label="Claros home">
-          <Cell />
+        <a href="/" className={headerStyles.brand} aria-label="Claros home">
+          <Cell className={headerStyles.mark} />
           <span>Claros</span>
         </a>
         <nav aria-label="Main navigation" className={styles.nav}>
@@ -52,51 +55,34 @@ export function PageShell({
         </span>
       </header>
       <main id="main-content" className={styles.main}>
-        <section className={styles.pageHead}>
-          <div>
+        <section
+          className={styles.pageHead}
+          aria-label={`${active} introduction`}
+        >
+          <div className={styles.headArt} aria-hidden="true">
+            <img
+              src={image}
+              alt=""
+              width={960}
+              height={720}
+              fetchPriority="high"
+            />
+            <span className={styles.artCaption}>
+              <Cell /> Fig. {number} / Real world. On chain.
+            </span>
+          </div>
+          <div className={styles.headCopy}>
             <div className={styles.eyebrow}>
-              <span>{number}</span>
-              <span>Claros / {active}</span>
+              <span>Explore {number}</span>
+              <span>{active}</span>
             </div>
             <h1>{title}</h1>
             <p>{description}</p>
           </div>
-          <div className={styles.headArt} aria-hidden="true">
-            <img src={image} alt="" width={320} height={200} />
-            <span className={styles.artCaption}>
-              <Cell /> Real world. On chain.
-            </span>
-          </div>
         </section>
         {children}
       </main>
-      <footer className={styles.footer}>
-        <a className={styles.brand} href="/">
-          <Cell />
-          <span>Claros</span>
-        </a>
-        <p>Real-world data. Verifiable on Casper.</p>
-        <nav aria-label="Footer">
-          <a href="/docs/">Docs</a>
-          <a
-            href="https://github.com/HoomanBuilds/claros"
-            target="_blank"
-            rel="noreferrer"
-          >
-            GitHub
-          </a>
-          <a
-            href="https://www.npmjs.com/package/claros-oracle"
-            target="_blank"
-            rel="noreferrer"
-          >
-            SDK
-          </a>
-          <a href="https://testnet.cspr.live" target="_blank" rel="noreferrer">
-            Explorer
-          </a>
-        </nav>
-      </footer>
+      <Footer />
     </div>
   );
 }

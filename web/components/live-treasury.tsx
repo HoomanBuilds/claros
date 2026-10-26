@@ -12,7 +12,10 @@ export function LiveTreasury() {
     120_000,
   );
   return (
-    <section className={styles.section} aria-label="Agent treasury">
+    <section
+      className={`${styles.section} ${styles.paper}`}
+      aria-label="Agent treasury"
+    >
       <SectionHeading
         label="Primary agent / TreasuryVault"
         title="The economics, on record."

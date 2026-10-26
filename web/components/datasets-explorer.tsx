@@ -59,7 +59,10 @@ export function DatasetsExplorer({ datasets }: { datasets: DatasetRow[] }) {
   };
 
   return (
-    <section aria-label="Dataset catalog">
+    <section
+      aria-label="Dataset catalog"
+      className={`${styles.workspace} ${styles.paper}`}
+    >
       <Metrics
         items={[
           {
@@ -171,12 +174,14 @@ export function DatasetsExplorer({ datasets }: { datasets: DatasetRow[] }) {
       </div>
       {visible.length ? (
         <div className={styles.datasetGrid}>
-          {visible.map((d) => {
+          {visible.map((d, index) => {
             const isLive = live.has(d.route);
             return (
               <article className={styles.datasetCard} key={d.route}>
                 <div className={styles.cardTop}>
-                  <span>{d.family}</span>
+                  <span className={styles.catalogIndex} aria-hidden="true">
+                    {String(current * PAGE_SIZE + index + 1).padStart(3, "0")}
+                  </span>
                   <span
                     className={styles.badge}
                     data-muted={!isLive || undefined}
@@ -190,6 +195,7 @@ export function DatasetsExplorer({ datasets }: { datasets: DatasetRow[] }) {
                           : "Status unknown"}
                   </span>
                 </div>
+                <span className={styles.kicker}>{d.family}</span>
                 <h3>{datasetName(d.name)}</h3>
                 <code className={styles.route}>{d.route}</code>
                 <div className={styles.tags}>

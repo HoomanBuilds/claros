@@ -26,20 +26,24 @@ import styles from "@/components/product/product.module.css";
 const ATTESTATION_PKG =
   "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc";
 const category = (id: string) => family(id) || "CIVIC REVENUE";
-const ELEMENTS: Record<string, string> = {
-  PET: "Pt",
-  NG: "Ng",
-  ELEC: "El",
-  COAL: "Co",
-  NUC: "Nu",
-  CO2: "C₂",
-  STEO: "St",
-  DBF: "Bm",
-  INTL: "In",
-  SEDS: "Se",
-  TOTAL: "Te",
+const ARTWORK: Record<string, string> = {
+  PET: "road",
+  NG: "vault",
+  ELEC: "walk",
+  COAL: "road",
+  NUC: "door",
+  CO2: "dunes",
+  STEO: "sun",
+  DBF: "road",
+  INTL: "door",
+  SEDS: "walk",
+  TOTAL: "dunes",
 };
-const element = (id: string) => ELEMENTS[id.split(".")[1]] || "Cv";
+const feedArtwork = (id: string) => {
+  if (id.includes("GEN_SUN")) return "sun";
+  if (id.includes("L48_WORKING")) return "van";
+  return ARTWORK[id.split(".")[1]] || "park";
+};
 
 export function FeedsExplorer() {
   const { feeds, stats, updatedAt, loading, error } = useLiveFeeds();
@@ -79,7 +83,7 @@ export function FeedsExplorer() {
   };
 
   return (
-    <section aria-label="Feed registry">
+    <section aria-label="Feed registry" className={styles.workspace}>
       <Metrics
         items={[
           {
@@ -217,9 +221,15 @@ export function FeedsExplorer() {
                 <tr key={f.feed_id}>
                   <td>
                     <div className={styles.feedCell}>
-                      <span className={styles.element} aria-hidden="true">
+                      <span className={styles.feedArt} aria-hidden="true">
+                        <img
+                          loading="lazy"
+                          src={`/landing/feed-thumbs/${feedArtwork(f.feed_id)}.webp`}
+                          width={80}
+                          height={64}
+                          alt=""
+                        />
                         <small>{String(i + 1).padStart(2, "0")}</small>
-                        {element(f.feed_id)}
                       </span>
                       <div className={styles.feedName}>
                         <strong>{ticker(f.feed_id)}</strong>

@@ -12,7 +12,14 @@ export function Metrics({
       {items.map((item) => (
         <div key={item.label}>
           <dt>{item.label}</dt>
-          <dd>{item.value}</dd>
+          <dd
+            data-text={
+              (typeof item.value === "string" && /[a-z]/i.test(item.value)) ||
+              undefined
+            }
+          >
+            {item.value}
+          </dd>
           <span>{item.detail}</span>
         </div>
       ))}
