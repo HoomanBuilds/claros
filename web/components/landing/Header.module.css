@@ -1,0 +1,200 @@
+.header {
+  --fg: var(--text);
+  --dot: rgba(255, 255, 255, 0.55);
+  --bg: 12, 11, 16;
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 60;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: var(--header-h);
+  padding-inline: var(--gutter);
+  color: var(--fg);
+  pointer-events: none;
+  transition: color 0.4s var(--ease-out);
+}
+
+.header > * {
+  pointer-events: auto;
+}
+
+.header::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 -28px;
+  z-index: -1;
+  background: linear-gradient(rgba(var(--bg), 0.92) 45%, rgba(var(--bg), 0));
+  opacity: 0;
+  transition:
+    opacity 0.4s,
+    background 0.4s;
+  pointer-events: none;
+}
+
+.header[data-scrolled]::before {
+  opacity: 1;
+}
+
+.header[data-hidden] {
+  visibility: hidden;
+}
+
+.header[data-tone="paper"],
+.header[data-tone="signal"] {
+  --fg: #000;
+  --dot: rgba(0, 0, 0, 0.45);
+  --bg: 243, 238, 230;
+}
+
+.header[data-tone="signal"] {
+  --bg: 42, 168, 255;
+}
+
+.header[data-tone="warm"] {
+  --fg: var(--cream);
+  --dot: rgba(219, 232, 243, 0.5);
+  --bg: 36, 32, 31;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: start;
+  font-family: var(--font-aeonik), sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.mark {
+  width: 22px;
+  height: 22px;
+  color: var(--signal);
+}
+
+.phases {
+  display: flex;
+  gap: 6px;
+}
+
+.dot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 32px;
+}
+
+.dot::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--dot);
+  transition:
+    transform 0.4s var(--ease-out),
+    background-color 0.4s,
+    box-shadow 0.4s;
+}
+
+.dot[aria-current]::before {
+  background: var(--signal);
+  box-shadow: 0 0 10px 2px rgba(42, 168, 255, 0.55);
+  transform: scale(1.6);
+}
+
+.header[data-tone="paper"] .dot[aria-current]::before,
+.header[data-tone="signal"] .dot[aria-current]::before {
+  background: #000;
+  box-shadow: none;
+}
+
+.tip {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  translate: -50% -4px;
+  font-size: 9px;
+  white-space: nowrap;
+  opacity: 0;
+  transition:
+    opacity 0.25s,
+    translate 0.25s var(--ease-out);
+  pointer-events: none;
+}
+
+.dot:hover .tip,
+.dot:focus-visible .tip {
+  opacity: 1;
+  translate: -50% 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: clamp(20px, 3vw, 40px);
+  justify-self: end;
+}
+
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  font-family: var(--font-aeonik), sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.menuButton {
+  position: relative;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.menuButton::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 3px;
+  height: 1px;
+  background: currentColor;
+  transition: transform 0.4s var(--ease-out);
+}
+
+.menuButton::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 1px;
+  width: 5px;
+  height: 5px;
+  border-top: 1px solid currentColor;
+  border-left: 1px solid currentColor;
+  transform: translateX(-50%) rotate(45deg);
+  transition: translate 0.4s var(--ease-out);
+}
+
+.menuButton:hover::after {
+  transform: scaleX(0.5);
+}
+
+.menuButton:hover::before {
+  translate: 0 -3px;
+}
+
+@media (max-width: 760px) {
+  .header {
+    --header-h: 68px;
+    grid-template-columns: 1fr auto;
+  }
+
+  .phases {
+    display: none;
+  }
+}

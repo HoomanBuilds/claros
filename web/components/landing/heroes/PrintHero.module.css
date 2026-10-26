@@ -1,0 +1,282 @@
+.hero {
+  position: relative;
+  height: 260svh;
+  background: var(--deep);
+}
+
+.stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  min-height: 600px;
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--text);
+}
+
+.picture {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 45%;
+}
+
+.painting {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: 50% 45%;
+}
+
+.shield {
+  position: absolute;
+  inset: 0;
+  background: var(--deep);
+  clip-path: inset(50% 0);
+}
+
+.wordmark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  color: var(--deep);
+  font-family: var(--font-aeonik), sans-serif;
+  font-size: 25vw;
+  font-weight: 400;
+  line-height: 0.8;
+  letter-spacing: -0.05em;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.edges {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.edges line {
+  stroke: var(--signal);
+  stroke-width: 1;
+}
+
+.edgeLabels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+.edgeLabels span {
+  position: absolute;
+  left: 0;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.edgeLabels span:first-child {
+  bottom: 8px;
+  padding: 3px 6px;
+  background: var(--text);
+  color: #000;
+}
+
+.edgeLabels span:last-child {
+  top: 8px;
+  padding: 3px 6px;
+  background: var(--signal);
+  color: #000;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom, rgba(7, 11, 20, 0.5), transparent 22%),
+    linear-gradient(
+      to top,
+      rgba(7, 11, 20, 0.9),
+      rgba(7, 11, 20, 0.45) 22%,
+      transparent 42%
+    );
+  pointer-events: none;
+}
+
+.content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-bottom: 4vh;
+  pointer-events: none;
+}
+
+.kicker {
+  align-self: flex-start;
+  overflow: hidden;
+  margin: 0 0 clamp(14px, 2vh, 24px);
+}
+
+.kicker span {
+  display: inline-block;
+  padding: 5px 9px;
+  background: var(--signal);
+  color: #000;
+  font-family: var(--font-triple), monospace;
+  font-size: clamp(12px, 1.1vw, 15px);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-aeonik), sans-serif;
+  font-size: clamp(54px, 9.6vw, 156px);
+  font-weight: 300;
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+  text-shadow: 0 2px 40px rgba(2, 10, 24, 0.4);
+}
+
+.title [data-line] {
+  display: block;
+  width: fit-content;
+  white-space: nowrap;
+}
+
+.bar {
+  position: absolute;
+  inset: auto 0 clamp(22px, 4vh, 44px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.intro p {
+  max-width: 440px;
+  margin: 0 0 22px;
+  color: rgba(238, 243, 248, 0.82);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 30px;
+}
+
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 220px;
+}
+
+.meterIcon {
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--signal);
+  background: var(--deep);
+}
+
+.meterIcon::before {
+  content: "";
+  position: absolute;
+  inset: 5px 6px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--signal) 0 2px,
+    transparent 2px 5px
+  );
+}
+
+.meterText {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px 12px;
+  flex: 1;
+}
+
+.meterText strong {
+  font-family: var(--font-bench), monospace;
+  font-size: 22px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.meterTrack {
+  height: 2px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.meterTrack i {
+  display: block;
+  height: 100%;
+  background: var(--signal);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.meterText :global(.label) {
+  grid-column: 1 / -1;
+  color: rgba(238, 243, 248, 0.65);
+  font-size: 10px;
+}
+
+@media (max-width: 760px) {
+  .hero {
+    height: 220svh;
+  }
+
+  .content {
+    justify-content: flex-start;
+    padding-top: 22vh;
+  }
+
+  .title {
+    font-size: clamp(44px, 14.4vw, 76px);
+  }
+
+  .wordmark {
+    font-size: 30vw;
+  }
+
+  .bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+    bottom: 80px;
+  }
+
+  .actions {
+    gap: 12px;
+  }
+
+  .meter {
+    min-width: 0;
+  }
+
+  .edgeLabels {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero {
+    height: auto;
+  }
+}

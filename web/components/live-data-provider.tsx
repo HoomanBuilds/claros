@@ -24,7 +24,7 @@ const LiveDataContext = createContext({
 
 export function LiveDataProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname().replace(/\/$/, "") || "/"
-  const enabled = ["/", "/feeds", "/datasets"].includes(pathname)
+  const enabled = ["/", "/b", "/feeds", "/datasets"].includes(pathname)
   const { data, error, loading } = useApiData<FeedsResponse>(enabled ? "/api/feeds" : null)
 
   return (

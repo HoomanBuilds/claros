@@ -1,0 +1,59 @@
+.cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 95;
+  display: none;
+  pointer-events: none;
+  mix-blend-mode: difference;
+  color: #fff;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cursor {
+    display: block;
+  }
+}
+
+.cursor[data-hidden],
+.cursor[data-mode="hidden"],
+.cursor:not([data-visible]) {
+  opacity: 0;
+}
+
+.ring {
+  position: absolute;
+  top: -18px;
+  left: -18px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  transition:
+    transform 0.45s var(--ease-out),
+    background-color 0.3s;
+}
+
+.cursor[data-mode="link"] .ring {
+  transform: scale(0.45);
+  background: currentColor;
+}
+
+.cursor[data-mode="label"] .ring {
+  transform: scale(2.2);
+}
+
+.caption {
+  position: absolute;
+  top: 0;
+  left: 0;
+  translate: -50% -50%;
+  font-size: 9px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.cursor[data-mode="label"] .caption {
+  opacity: 1;
+}

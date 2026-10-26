@@ -1,0 +1,111 @@
+.faq {
+  padding: clamp(96px, 11vw, 160px) 0;
+  background-color: #070b14;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='110'%3E%3Crect x='55' width='0.5' height='110' fill='%23808080' fill-opacity='.12'/%3E%3Crect y='55' width='110' height='0.5' fill='%23808080' fill-opacity='.12'/%3E%3C/svg%3E");
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+  gap: clamp(32px, 6vw, 96px);
+  align-items: start;
+}
+
+.intro {
+  position: sticky;
+  top: calc(var(--header-h) + 24px);
+}
+
+.title {
+  margin: 0 0 14px;
+  font-family: var(--font-aeonik), serif;
+  font-size: clamp(36px, 4vw, 56px);
+  font-weight: 300;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.intro p {
+  max-width: 340px;
+  margin: 0 0 28px;
+  color: var(--muted);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.item {
+  border-bottom: 1px solid var(--line);
+}
+
+.question {
+  display: grid;
+  grid-template-columns: 12px 1fr 16px;
+  gap: 18px;
+  align-items: center;
+  width: 100%;
+  padding: 24px 4px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-size: 17px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.question:hover {
+  color: var(--blue-soft);
+}
+
+.chevron {
+  width: 18px;
+  height: 18px;
+  transition: rotate 0.35s var(--ease-out);
+}
+
+.item[data-open] .chevron {
+  rotate: 45deg;
+}
+
+.cell {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--signal);
+}
+
+.answer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.45s var(--ease-out);
+}
+
+.item[data-open] .answer {
+  grid-template-rows: 1fr;
+}
+
+.answer > div {
+  overflow: hidden;
+}
+
+.answer p {
+  max-width: 620px;
+  margin: 0;
+  padding: 0 4px 26px 34px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .inner {
+    grid-template-columns: 1fr;
+  }
+
+  .intro {
+    position: static;
+  }
+}

@@ -1,0 +1,66 @@
+.diamond,
+.pin {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.diamond {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--signal);
+  background: repeating-linear-gradient(
+    90deg,
+    var(--signal) 0 1.5px,
+    transparent 1.5px 3px
+  );
+}
+
+.diamond.tl {
+  top: -4px;
+  left: -4px;
+}
+
+.diamond.tr {
+  top: -4px;
+  right: -4px;
+}
+
+.diamond.bl {
+  bottom: -4px;
+  left: -4px;
+}
+
+.diamond.br {
+  bottom: -4px;
+  right: -4px;
+}
+
+.pin {
+  width: 11px;
+  height: 11px;
+  color: var(--cream);
+}
+
+.pin.tl {
+  top: -3px;
+  left: -3px;
+}
+
+.pin.tr {
+  top: -3px;
+  right: -3px;
+  transform: scaleX(-1);
+}
+
+.pin.bl {
+  bottom: -3px;
+  left: -3px;
+  transform: scaleY(-1);
+}
+
+.pin.br {
+  bottom: -3px;
+  right: -3px;
+  transform: scale(-1);
+}

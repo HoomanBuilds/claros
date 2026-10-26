@@ -1,0 +1,262 @@
+.footer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding-top: clamp(80px, 9vw, 130px);
+  background: var(--ink);
+}
+
+.footer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url(/landing/zama/glow.jpg) center bottom / cover no-repeat;
+  filter: hue-rotate(175deg) saturate(1.2);
+  -webkit-mask-image: linear-gradient(transparent 35%, #000 80%);
+  mask-image: linear-gradient(transparent 35%, #000 80%);
+  opacity: 0.8;
+}
+
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: clamp(40px, 6vw, 96px);
+}
+
+.newsTitle {
+  margin: 0 0 24px;
+  font-family: var(--font-aeonik), serif;
+  font-size: clamp(30px, 3vw, 42px);
+  font-weight: 300;
+  line-height: 1.1;
+}
+
+.form {
+  display: flex;
+  max-width: 420px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  transition: border-color 0.3s;
+}
+
+.form:focus-within {
+  border-color: var(--signal);
+}
+
+.form input {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-size: 16px;
+  outline: none;
+}
+
+.form input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.form button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  border: 0;
+  background: none;
+}
+
+.form button svg {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s var(--ease-out);
+}
+
+.form button:hover svg {
+  transform: translateX(4px);
+}
+
+.formNote {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.columns :global(.label) {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.columns ul {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.columns a {
+  font-size: 15px;
+  transition: color 0.2s;
+}
+
+.columns a:hover {
+  color: var(--signal);
+}
+
+.wordmark {
+  position: relative;
+  margin-top: clamp(96px, 12vw, 180px);
+  padding-top: clamp(28px, 3vw, 44px);
+}
+
+.letters {
+  display: flex;
+  justify-content: space-between;
+  overflow: hidden;
+  font-family: var(--font-aeonik), sans-serif;
+  font-size: clamp(76px, 22.4vw, 330px);
+  font-weight: 500;
+  line-height: 0.78;
+  letter-spacing: -0.02em;
+}
+
+.letters span {
+  display: inline-block;
+  padding-top: 0.04em;
+}
+
+.annotation {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: rgba(238, 243, 248, 0.8);
+  pointer-events: none;
+}
+
+.annotation b {
+  font-family: var(--font-aeonik), serif;
+  font-size: clamp(13px, 1.2vw, 18px);
+  font-style: italic;
+  font-weight: 300;
+  white-space: nowrap;
+}
+
+.annotation i {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  transform-origin: center;
+}
+
+.annotation i::before,
+.annotation i::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  width: 1px;
+  height: 9px;
+  background: currentColor;
+}
+
+.annotation i::before {
+  left: 0;
+}
+
+.annotation i::after {
+  right: 0;
+}
+
+.private,
+.final {
+  top: -12px;
+  flex-direction: column-reverse;
+}
+
+.private {
+  left: var(--gutter);
+  width: 30%;
+}
+
+.final {
+  left: calc(var(--gutter) + 34%);
+  width: 30%;
+}
+
+.verifiable {
+  bottom: -40px;
+  right: var(--gutter);
+  width: 28%;
+}
+
+.onchain {
+  top: 50%;
+  right: calc(var(--gutter) - 42px);
+  width: 34%;
+  rotate: 90deg;
+  translate: 50% -40%;
+  transform-origin: center;
+}
+
+.legal {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: clamp(64px, 7vw, 100px);
+  padding-block: 24px 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(238, 243, 248, 0.6);
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .top {
+    grid-template-columns: 1fr;
+  }
+
+  .columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 36px;
+  }
+
+  .onchain {
+    display: none;
+  }
+
+  .legal {
+    flex-direction: column;
+  }
+}
+
+.built {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 28px;
+}
+
+.built :global(.label) {
+  color: rgba(238, 243, 248, 0.55);
+  font-size: 10px;
+}
+
+.casper {
+  height: 34px;
+}
+
+.x402 {
+  height: 16px;
+  filter: invert(1);
+}

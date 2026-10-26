@@ -1,0 +1,90 @@
+{
+  "sfx": {
+    "src": "/landing/hatom/audio/sfx.mp3",
+    "sprite": {
+      "ClickUI": [
+        0,
+        1017
+      ],
+      "Close_Window": [
+        3000,
+        316
+      ],
+      "DecodingUI": [
+        5000,
+        600
+      ],
+      "ExpSFX_In": [
+        7000,
+        4353
+      ],
+      "HoverCTA_In": [
+        13000,
+        896
+      ],
+      "HoverCTA_Out": [
+        15000,
+        896
+      ],
+      "HoverUI_In": [
+        17000,
+        67
+      ],
+      "HoverUI_Out": [
+        19000,
+        67
+      ],
+      "MenuSFX_In": [
+        21000,
+        1791
+      ],
+      "MenuSFX_Out": [
+        24000,
+        2233
+      ],
+      "Quick_Buildup": [
+        28000,
+        517
+      ],
+      "Release": [
+        30000,
+        2504
+      ]
+    }
+  },
+  "rollovers": {
+    "src": "/landing/hatom/audio/rollovers.mp3",
+    "sprite": {
+      "egg_rollover_1": [
+        0,
+        1781
+      ],
+      "egg_rollover_2": [
+        3000,
+        1434
+      ],
+      "egg_rollover_3": [
+        6000,
+        1955
+      ],
+      "egg_rollover_4": [
+        9000,
+        1960
+      ],
+      "egg_rollover_5": [
+        12000,
+        2146
+      ]
+    }
+  },
+  "themes": {
+    "egg": "/landing/hatom/audio/theme_1.mp3",
+    "griffin": "/landing/hatom/audio/theme_2.mp3"
+  },
+  "cues": {
+    "eggToGriffin": "/landing/hatom/audio/egg_to_griffin_transition.mp3",
+    "griffinArmor": "/landing/hatom/audio/griffin_armor_transition.mp3",
+    "planetReveal": "/landing/hatom/audio/planet_reveal.mp3",
+    "slowBuildup": "/landing/hatom/audio/slow_buildup.mp3"
+  }
+}

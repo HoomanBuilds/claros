@@ -1,0 +1,138 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  color: var(--paper);
+  cursor: progress;
+}
+
+.overlay[data-ready] {
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .overlay,
+  .overlay[data-ready],
+  .overlay button {
+    cursor: none;
+  }
+}
+
+.overlay[data-leaving] .edge,
+.overlay[data-leaving] .enter,
+.overlay[data-leaving] .soundCorner {
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+
+.soundCorner {
+  position: absolute;
+  top: 0;
+  right: var(--gutter);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  height: 72px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .overlay .soundCorner button {
+    cursor: pointer;
+  }
+
+  .overlay:has(.soundCorner:hover) .cursor {
+    opacity: 0;
+  }
+}
+
+.edge {
+  position: absolute;
+  left: 50%;
+  margin: 0;
+  color: var(--muted);
+  white-space: nowrap;
+  translate: -50% 0;
+}
+
+.top {
+  top: clamp(26px, 3.6vw, 52px);
+}
+
+.bottom {
+  bottom: clamp(26px, 3.6vw, 52px);
+}
+
+.enter {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(64px, 8vw, 110px);
+  padding: 8px 12px;
+  border: 0;
+  background: none;
+  color: var(--paper);
+  translate: -50% 0;
+}
+
+.enter:disabled {
+  color: var(--faint);
+}
+
+.enter:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .enter {
+    opacity: 0;
+  }
+
+  .enter:focus-visible {
+    opacity: 1;
+  }
+}
+
+.cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  display: none;
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cursor {
+    display: block;
+  }
+}
+
+.ring {
+  position: absolute;
+  top: -32px;
+  left: -32px;
+  width: 64px;
+  height: 64px;
+  overflow: visible;
+  rotate: -90deg;
+}
+
+.ring circle {
+  fill: none;
+  stroke: rgba(242, 241, 234, 0.35);
+  stroke-width: 1;
+}
+
+.ring .ringProgress {
+  stroke: var(--orange);
+  stroke-width: 2;
+}
+
+.cursorText {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  font-size: 10px;
+  white-space: nowrap;
+  translate: -50% 0;
+}

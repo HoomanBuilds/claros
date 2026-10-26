@@ -1,0 +1,251 @@
+.network {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(110px, 12vw, 180px) 0 clamp(96px, 10vw, 150px);
+  isolation: isolate;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--ink);
+}
+
+.backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      var(--ink) 0%,
+      rgba(7, 11, 20, 0.5) 30%,
+      rgba(6, 21, 40, 0.55) 70%,
+      var(--ink) 100%
+    ),
+    radial-gradient(
+      60% 50% at 80% 30%,
+      rgba(42, 168, 255, 0.08),
+      transparent 70%
+    );
+}
+
+.painting {
+  position: absolute;
+  inset: -12% 0;
+  width: 100%;
+  height: 124%;
+  object-fit: cover;
+  opacity: 0.55;
+  filter: saturate(1.1) contrast(1.05);
+}
+
+.inner {
+  position: relative;
+}
+
+.title {
+  max-width: 1000px;
+  margin: 30px 0 clamp(48px, 6vw, 80px);
+  font-family: var(--font-aeonik), serif;
+  font-size: clamp(44px, 6.6vw, 104px);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 190px;
+  padding: 24px;
+  border: 1px solid #000;
+  background: var(--signal);
+  color: #000;
+  text-align: center;
+}
+
+.stat + .stat {
+  margin-left: -1px;
+}
+
+.stat strong {
+  font-family: var(--font-aeonik), sans-serif;
+  font-size: clamp(44px, 5.2vw, 84px);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat :global(.label) {
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.lower {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: clamp(24px, 4vw, 64px);
+  align-items: end;
+  margin-top: clamp(64px, 7vw, 110px);
+}
+
+.clusters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cluster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.planet {
+  width: min(100%, 150px);
+  aspect-ratio: 1;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  object-fit: cover;
+  transition:
+    scale 0.6s var(--ease-out),
+    filter 0.6s,
+    border-color 0.6s;
+}
+
+.planet:hover {
+  scale: 1.05;
+  border-color: var(--signal);
+  filter: brightness(1.2);
+}
+
+.clusterName {
+  font-family: var(--font-aeonik), sans-serif;
+  font-size: 18px;
+}
+
+.clusterMeta {
+  max-width: 190px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.feedPanel {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--ink);
+}
+
+.feedHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.feed {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.feed li {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  height: 36px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.feed li span:last-child {
+  text-align: right;
+}
+
+.hash {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s;
+}
+
+.hash b {
+  margin-right: 8px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.hash:hover,
+.hash:hover b {
+  color: var(--signal);
+}
+
+.deployed {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.deployed img {
+  height: 26px;
+}
+
+.feed li span:last-child {
+  color: var(--signal);
+}
+
+@media (max-width: 1000px) {
+  .lower {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .stat {
+    min-height: 140px;
+  }
+
+  .stat + .stat {
+    margin: -1px 0 0;
+  }
+
+  .clusters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 32px;
+  }
+}

@@ -1,0 +1,170 @@
+@import "lenis/dist/lenis.css";
+
+:where(.claros-landing) {
+  --ink: #070b14;
+  --ink-2: #0c1220;
+  --ink-3: #131b2c;
+  --paper: #eef2f5;
+  --paper-2: #dde4ea;
+  --text: #eef3f8;
+  --muted: #93a0b4;
+  --line: #1d2638;
+  --ink-line: rgba(7, 11, 20, 0.16);
+  --signal: #2aa8ff;
+  --signal-2: #7cc8ff;
+  --ice: #c6ecff;
+  --deep: #061528;
+  --sun: #ffc53d;
+  --sun-2: #ffe08a;
+
+  --gutter: clamp(16px, 3.4vw, 48px);
+  --header-h: 88px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:where(.claros-landing) {
+  background: var(--ink);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+html.claros-locked,
+html.claros-locked body {
+  overflow: hidden;
+}
+
+:where(.claros-landing) {
+  margin: 0;
+  font-family: var(--font-aeonik), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  background: var(--ink);
+  overflow-x: clip;
+}
+:where(.claros-landing) .grain {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  background: url(/landing/penumbra/noise.gif);
+  opacity: 0.045;
+  will-change: transform;
+}
+
+:where(.claros-landing) ::selection {
+  background: var(--signal);
+  color: var(--ink);
+}
+
+:where(.claros-landing) a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:where(.claros-landing) button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:where(.claros-landing) img {
+  max-width: none;
+}
+
+:where(.claros-landing) :focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+}
+:where(.claros-landing) .label {
+  font-family: var(--font-triple), monospace;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+:where(.claros-landing) .figure {
+  font-family: var(--font-bench), monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+:where(.claros-landing) .container {
+  width: 100%;
+  max-width: 1440px;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+:where(.claros-landing) main > section[id] {
+  scroll-margin-top: 88px;
+}
+
+:where(.claros-landing) .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:where(.claros-landing) .live {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: var(--signal);
+  animation: claros-live 1.4s steps(2) infinite;
+}
+
+@keyframes claros-live {
+  50% {
+    opacity: 0.25;
+  }
+}
+:where(.claros-landing) [data-reveal]:not([data-revealed]) {
+  opacity: 0;
+  filter: blur(8px);
+  transform: translateY(16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.claros-landing) [data-reveal]:not([data-revealed]) {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+
+  :where(.claros-landing) *,
+  :where(.claros-landing) *::before,
+  :where(.claros-landing) *::after {
+    animation-play-state: paused !important;
+  }
+}
+:where(.claros-landing) {
+  --blue: var(--signal);
+  --blue-deep: #0a2a4d;
+  --blue-soft: var(--ice);
+  --warm: #0b1322;
+  --warm-line: #1f2d45;
+  --cream: #dbe8f3;
+  --violet: #0a2a4d;
+}
+:where(.claros-landing) .mono {
+  font-family: var(--font-triple), ui-monospace, monospace;
+}
+:where(.claros-landing) {
+  --orange: var(--signal);
+  --faint: rgba(238, 243, 248, 0.42);
+}
+
+:where(.claros-landing) {
+  isolation: isolate;
+  overflow-x: clip;
+  min-height: 100vh;
+}

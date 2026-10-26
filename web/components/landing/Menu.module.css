@@ -1,0 +1,148 @@
+.menu {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+  align-items: end;
+  gap: var(--gutter);
+  padding: calc(var(--header-h) + 40px) var(--gutter) clamp(32px, 6vh, 64px);
+  background:
+    radial-gradient(
+      120% 80% at 70% 110%,
+      rgba(42, 168, 255, 0.28),
+      transparent 60%
+    ),
+    linear-gradient(180deg, var(--ink) 0%, var(--violet) 100%);
+  color: var(--text);
+  visibility: hidden;
+  clip-path: circle(0);
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.22;
+  mix-blend-mode: luminosity;
+  filter: grayscale(1) contrast(1.15);
+  pointer-events: none;
+}
+
+.close {
+  position: absolute;
+  top: 0;
+  right: var(--gutter);
+  height: var(--header-h);
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.links {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  overflow: hidden;
+}
+
+.link {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(12px, 2vw, 28px);
+  padding: 0.04em 0;
+  font-family: var(--font-aeonik), sans-serif;
+  font-size: clamp(40px, 7vw, 104px);
+  font-weight: 300;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  transition:
+    opacity 0.3s,
+    color 0.3s;
+}
+
+.links:hover .link {
+  opacity: 0.35;
+}
+
+.links .link:hover,
+.links .link:focus-visible {
+  opacity: 1;
+  color: var(--signal);
+}
+
+.index {
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.text {
+  transition: transform 0.5s var(--ease-out);
+}
+
+.link:hover .text {
+  transform: translateX(0.18em);
+}
+
+.arrow {
+  font-size: 0.5em;
+  opacity: 0;
+  transform: translateX(-0.6em);
+  transition:
+    opacity 0.3s,
+    transform 0.5s var(--ease-out);
+}
+
+.link:hover .arrow {
+  opacity: 1;
+  transform: none;
+}
+
+.aside {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 12px;
+}
+
+.mail {
+  margin: 0;
+  font-family: var(--font-aeonik), serif;
+  font-style: italic;
+  font-size: 24px;
+}
+
+.socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.socials a {
+  display: inline-block;
+  transition: color 0.2s;
+}
+
+.socials a:hover {
+  color: var(--signal);
+}
+
+@media (max-width: 760px) {
+  .menu {
+    grid-template-columns: 1fr;
+    align-content: end;
+  }
+}
