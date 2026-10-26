@@ -115,6 +115,7 @@ app.use(
   paymentMiddleware(
     {
       "GET /oracle/feed": {
+        resource: process.env.ORACLE_PUBLIC_URL ?? "https://15-135-178-84.sslip.io/claros-oracle/oracle/feed",
         accepts: [{ scheme: "exact", price: "$0.001", network: chainID, payTo: cfg.payeeAddress }],
         description: "Claros: latest on-chain attested reading for an asset",
         mimeType: "application/json",
