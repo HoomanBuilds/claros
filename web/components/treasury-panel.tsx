@@ -1,162 +1,192 @@
-import { Wallet, Coins, TrendingUp, ExternalLink } from "lucide-react"
-import type { TreasurySnapshot } from "@/lib/format"
-import { timeAgo } from "@/lib/format"
+"use client";
 
-const VAULT_PKG = "a90b082d863c5977c6e54654fec10e523a38760529e664a87e9e8a8e887ffd7b"
-const WISELENDING_PKG = "baa50d1500aa5361c497c06b40f2822ebb0b5fce5b1c3a037ea628cb68d920f3"
-const VALIDATOR = "0106ca7c39cd272dbf21a86eeb3b36b7c26e2e9b94af64292419f7862936bca2ca"
-const cspr = (path: string) => `https://testnet.cspr.live/${path}`
+import { useState } from "react";
+import { Coins, ExternalLink, TrendingUp } from "lucide-react";
+import type { TreasurySnapshot } from "@/lib/format";
+import {
+  formatCount,
+  formatCspr,
+  formatLedgerAmount,
+  formatTimestamp,
+  timeAgo,
+} from "@/lib/format";
+import { EmptyState, Metrics, SectionHeading } from "@/components/product/ui";
+import styles from "@/components/product/product.module.css";
 
-const fmt = (n: number, d = 0) => new Intl.NumberFormat("en-US", { maximumFractionDigits: d, minimumFractionDigits: d > 0 ? d : 0 }).format(n)
-
-function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="flex flex-col gap-1 border-r-2 border-b-2 border-foreground px-5 py-4">
-      <span className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-mono">{label}</span>
-      <span className="text-2xl lg:text-3xl font-mono font-bold tracking-tight tabular-nums">{value}</span>
-      {sub && <span className="text-[10px] font-mono text-muted-foreground">{sub}</span>}
-    </div>
-  )
-}
+const VENUES = [
+  {
+    key: "wiselending",
+    label: "WiseLending",
+    token: "sCSPR",
+    icon: Coins,
+    role: "Liquid staking converts CSPR into yield-bearing sCSPR. Selection is recorded in the decision ledger.",
+    href: "https://testnet.cspr.live/contract-package/baa50d1500aa5361c497c06b40f2822ebb0b5fce5b1c3a037ea628cb68d920f3",
+  },
+  {
+    key: "native_delegation",
+    label: "Native delegation",
+    token: "CSPR",
+    icon: TrendingUp,
+    role: "Delegating CSPR to a validator can earn protocol staking rewards across eras.",
+    href: "https://testnet.cspr.live/validator/0106ca7c39cd272dbf21a86eeb3b36b7c26e2e9b94af64292419f7862936bca2ca",
+  },
+  {
+    key: "cspr_trade",
+    label: "CSPR.trade",
+    token: "DEX",
+    icon: TrendingUp,
+    role: "A swap venue available to evaluate alongside staking. An evaluated venue is not a confirmed allocation.",
+    href: "https://www.cspr.trade",
+  },
+];
 
 export function TreasuryPanel({ snapshot }: { snapshot: TreasurySnapshot }) {
-  const venueKeys = new Set(snapshot.venues.map((v) => v.key))
-  const VENUES = [
-    {
-      key: "wiselending",
-      label: "WiseLending",
-      token: "sCSPR",
-      icon: Coins,
-      role: "Liquid staking: stake CSPR and hold yield-bearing sCSPR that compounds over time.",
-      href: cspr(`contract-package/${WISELENDING_PKG}`),
-    },
-    {
-      key: "native_delegation",
-      label: "Native Delegation",
-      token: "AUCTION",
-      icon: TrendingUp,
-      role: "Delegate to a validator and earn protocol staking rewards each era.",
-      href: cspr(`validator/${VALIDATOR}`),
-    },
-    {
-      key: "cspr_trade",
-      label: "CSPR.trade",
-      token: "DEX",
-      icon: TrendingUp,
-      role: "DEX swap rates are evaluated every cycle, but staking currently wins, so the agent stakes.",
-      href: "https://www.cspr.trade",
-    },
-  ]
-
+  const [expanded, setExpanded] = useState(false);
+  const ledger = expanded ? snapshot.ledger : snapshot.ledger.slice(0, 5);
+  const chosen = new Set(
+    snapshot.venues.filter((v) => v.amount > 0).map((v) => v.key.toLowerCase()),
+  );
+  const last = snapshot.ledger[0];
   return (
-    <section className="w-full px-6 py-8 lg:px-12">
-      <div className="flex items-center gap-4 mb-6">
-        <span className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-mono">
-          {"// AGENT_TREASURY_AND_EARNINGS"}
-        </span>
-        <div className="flex-1 border-t border-border" />
-        <span className="inline-block h-2 w-2 bg-[#ea580c] animate-blink" />
-        <span className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-mono">003</span>
-      </div>
-
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
-        <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl">
-          Read live from the <span className="text-foreground">TreasuryVault</span> on Casper. The agent
-          earns x402 read fees and evaluates idle treasury for on-chain yield. Every decision, with
-          its reasoning, is recorded on-chain.
+    <>
+      {snapshot.liquidCspr === 0 && (
+        <p className={styles.notice}>
+          The primary agent has no liquid CSPR for gas. This does not indicate
+          whether independent operators are running.
         </p>
-        <a
-          href={cspr(`contract-package/${VAULT_PKG}`)}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center gap-2 text-[10px] tracking-widest uppercase font-mono text-muted-foreground hover:text-[#ea580c] transition-colors"
-        >
-          <Wallet size={12} strokeWidth={2} /> verify treasury on-chain
-        </a>
-      </div>
-
-      {/* Headline stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 border-l-2 border-t-2 border-foreground mb-8">
-        <StatCard label="Agent Liquid" value={`${fmt(snapshot.liquidCspr, 2)}`} sub="CSPR · live balance" />
-        <StatCard label="Reinvest Cycles" value={String(snapshot.reinvestCount)} sub="logged on-chain" />
-        <StatCard label="Most Selected" value={snapshot.primaryVenue.split(" ")[0]} sub="decision ledger" />
-        <StatCard label="Strategy" value="AUTONOMOUS" sub="DeepSeek heartbeat" />
-      </div>
-
-      {/* Venue cards */}
-      <div className="flex items-center gap-4 mb-4">
-        <span className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-mono">
-          {"// YIELD_VENUES"}
-        </span>
-        <div className="flex-1 border-t border-border" />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 border-l-2 border-t-2 border-foreground mb-8">
-        {VENUES.map((v) => {
-          const active = venueKeys.has(v.key)
-          const Icon = v.icon
+      )}
+      <Metrics
+        items={[
+          {
+            label: "Agent liquid",
+            value: (
+              <>
+                {formatCspr(snapshot.liquidCspr)}
+                <small>CSPR</small>
+              </>
+            ),
+            detail: "Primary account balance",
+          },
+          {
+            label: "Recorded decisions",
+            value: formatCount(snapshot.reinvestCount),
+            detail: "On-chain ledger entries",
+          },
+          {
+            label: "Most selected",
+            value: snapshot.reinvestCount
+              ? snapshot.primaryVenue.split(" (")[0]
+              : "-",
+            detail: "By recorded input, not settled yield",
+          },
+          {
+            label: "Last decision",
+            value: last ? timeAgo(last.timestamp) : "-",
+            detail: last
+              ? formatTimestamp(last.timestamp)
+              : "No decisions recorded",
+          },
+        ]}
+      />
+      <SectionHeading
+        label="Yield venues"
+        title="Considered, not blindly allocated."
+      />
+      <div className={styles.venueGrid}>
+        {VENUES.map((venue) => {
+          const Icon = venue.icon;
+          const active = Array.from(chosen).some(
+            (key) => key === venue.key || key.startsWith(venue.key + "_"),
+          );
           return (
-            <a
-              key={v.key}
-              href={v.href}
-              target="_blank"
-              rel="noreferrer"
-              className="group flex flex-col gap-3 border-r-2 border-b-2 border-foreground px-5 py-5 hover:bg-foreground hover:text-background transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Icon size={15} strokeWidth={1.75} className="text-[#ea580c]" />
-                  <span className="text-sm font-mono font-bold tracking-tight uppercase">{v.label}</span>
-                </div>
-                <span className={`text-[9px] tracking-[0.15em] uppercase font-mono px-2 py-0.5 ${active ? "bg-[#ea580c] text-background" : "text-muted-foreground group-hover:text-background/60 border border-border group-hover:border-background/30"}`}>
-                  {active ? "selected" : "evaluated"}
+            <article className={styles.venue} key={venue.key}>
+              <div className={styles.cardTop}>
+                <Icon size={22} />
+                <span
+                  className={styles.badge}
+                  data-muted={!active || undefined}
+                >
+                  {active ? "Recorded selection" : "Available venue"}
                 </span>
               </div>
-              <span className="text-[10px] tracking-[0.15em] uppercase font-mono text-muted-foreground group-hover:text-background/60">
-                {v.token}
-              </span>
-              <span className="text-xs font-mono text-muted-foreground group-hover:text-background/70 leading-relaxed">{v.role}</span>
-              <span className="mt-auto flex items-center gap-1.5 text-[10px] tracking-widest uppercase font-mono text-muted-foreground group-hover:text-[#ea580c]">
-                on-chain <ExternalLink size={10} strokeWidth={2} />
-              </span>
-            </a>
-          )
+              <h3>{venue.label}</h3>
+              <span className={styles.kicker}>{venue.token}</span>
+              <p>{venue.role}</p>
+              <a
+                className={styles.inlineLink}
+                href={venue.href}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Inspect venue <ExternalLink size={13} />
+              </a>
+            </article>
+          );
         })}
       </div>
-
-      {/* Reinvest ledger */}
-      <div className="flex items-center gap-4 mb-4">
-        <span className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-mono">
-          {"// REINVEST_LEDGER · on-chain"}
+      <SectionHeading
+        label="Decision ledger"
+        title="The reasoning stays with the record."
+      >
+        <span className={styles.status}>
+          {formatCount(snapshot.reinvestCount)} entries
         </span>
-        <div className="flex-1 border-t border-border" />
-        <span className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-mono">
-          {snapshot.reinvestCount} entries
-        </span>
-      </div>
-      <div className="border-2 border-foreground">
-        {snapshot.ledger.length === 0 && (
-          <div className="px-4 py-8 text-center text-xs font-mono text-muted-foreground">no reinvest decisions recorded yet.</div>
-        )}
-        {snapshot.ledger.map((e, i) => (
-          <div key={e.index} className={`flex flex-col gap-2 px-4 py-4 ${i > 0 ? "border-t-2 border-foreground" : ""}`}>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="bg-[#ea580c] text-background text-[9px] tracking-[0.15em] uppercase px-2 py-0.5 font-mono">
-                {e.venue}
-              </span>
-              <span className="text-[10px] font-mono text-muted-foreground tabular-nums">
-                plan {e.amount_in} -&gt; {e.amount_out}
-              </span>
-              <span className="text-[10px] font-mono text-muted-foreground ml-auto">
-                #{e.index} · {timeAgo(e.timestamp)}
-              </span>
-            </div>
-            <p className="text-xs font-mono text-foreground leading-relaxed">{e.reasoning}</p>
-          </div>
-        ))}
-      </div>
-      <p className="mt-4 text-[10px] tracking-[0.15em] uppercase text-muted-foreground font-mono">
-        * testnet figures. entries prove the agent decision, not historical venue settlement. new entries are recorded only after transaction finality.
+      </SectionHeading>
+      <p className={styles.sectionIntro}>
+        These entries record the agent's decisions. They do not, by themselves,
+        prove a completed venue deposit or realized yield.
       </p>
-    </section>
-  )
+      {ledger.length ? (
+        <div className={styles.ledger}>
+          {ledger.map((entry) => (
+            <article className={styles.ledgerEntry} key={entry.index}>
+              <div className={styles.cardTop}>
+                <span className={styles.badge}>
+                  {entry.venue.replace(/_/g, " ")}
+                </span>
+                <time title={formatTimestamp(entry.timestamp)}>
+                  #{entry.index} · {timeAgo(entry.timestamp)}
+                </time>
+              </div>
+              <p>{entry.reasoning}</p>
+              <details className={styles.schema}>
+                <summary>Inspect recorded amounts</summary>
+                <p>
+                  Input: {formatLedgerAmount(entry.amount_in)} contract units.
+                  Output: {formatLedgerAmount(entry.amount_out)} contract units.
+                </p>
+                <p>
+                  Recorded {formatTimestamp(entry.timestamp)}. Amounts are
+                  unscaled ledger integers; this record does not specify token
+                  decimals.
+                </p>
+              </details>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyState title="No treasury decisions yet">
+          Recorded decisions and their reasoning will appear here.
+        </EmptyState>
+      )}
+      {snapshot.ledger.length > 5 && (
+        <div className={styles.pagination}>
+          <span>
+            Showing {ledger.length} of {snapshot.ledger.length} records
+          </span>
+          <button
+            type="button"
+            className={styles.secondaryButton}
+            onClick={() => setExpanded((value) => !value)}
+          >
+            {expanded ? "Show latest five" : "Show all decisions"}
+          </button>
+        </div>
+      )}
+      <p className={styles.footnote}>
+        Testnet figures. A zero balance is shown as zero, not as missing data.
+        Newly finalized decisions appear on the next treasury refresh.
+      </p>
+    </>
+  );
 }
