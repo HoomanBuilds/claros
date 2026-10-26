@@ -3,18 +3,14 @@ import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { DatasetsExplorer } from "@/components/datasets-explorer"
 import { getDatasets } from "@/lib/datasets"
-import { getAllReadings } from "@/lib/claros"
-
-export const revalidate = 300
 
 export const metadata: Metadata = {
   title: "Datasets: Claros Oracle Coverage",
   description: "The full EIA dataset universe Claros can attest on-chain: 232 datasets across petroleum, natural gas, electricity, coal, nuclear, emissions and more. Search, filter, and see what's already live.",
 }
 
-export default async function DatasetsPage() {
-  const [datasets, readings] = await Promise.all([Promise.resolve(getDatasets()), getAllReadings()])
-  const liveRoutes = Array.from(new Set(readings.map((r) => r.route).filter(Boolean)))
+export default function DatasetsPage() {
+  const datasets = getDatasets()
 
   return (
     <div className="min-h-screen dot-grid-bg">
@@ -39,7 +35,7 @@ export default async function DatasetsPage() {
           </p>
         </section>
 
-        <DatasetsExplorer datasets={datasets} liveRoutes={liveRoutes} />
+        <DatasetsExplorer datasets={datasets} />
       </main>
       <Footer />
     </div>

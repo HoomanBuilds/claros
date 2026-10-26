@@ -4,11 +4,13 @@ import { useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import { Search } from "lucide-react"
 import type { DatasetRow } from "@/lib/datasets"
+import { useLiveFeeds } from "@/lib/use-live-feeds"
 
 const ease = [0.22, 1, 0.36, 1] as const
 
-export function DatasetsExplorer({ datasets, liveRoutes }: { datasets: DatasetRow[]; liveRoutes: string[] }) {
-  const live = useMemo(() => new Set(liveRoutes), [liveRoutes])
+export function DatasetsExplorer({ datasets }: { datasets: DatasetRow[] }) {
+  const { feeds } = useLiveFeeds()
+  const live = useMemo(() => new Set(feeds.map(feed => feed.route)), [feeds])
   const [query, setQuery] = useState("")
   const [fam, setFam] = useState("ALL")
   const [liveOnly, setLiveOnly] = useState(false)

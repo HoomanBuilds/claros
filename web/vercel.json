@@ -1,0 +1,46 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "npm run build",
+  "outputDirectory": "out",
+  "redirects": [
+    {
+      "source": "/api/feeds",
+      "destination": "https://15-135-178-84.sslip.io/claros-api/api/feeds",
+      "permanent": true
+    },
+    {
+      "source": "/health",
+      "destination": "https://15-135-178-84.sslip.io/claros-api/health",
+      "permanent": true
+    },
+    {
+      "source": "/v1/:path*",
+      "destination": "https://15-135-178-84.sslip.io/claros-api/v1/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/oracle/feed",
+      "destination": "https://15-135-178-84.sslip.io/claros-oracle/oracle/feed",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/:path*",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, s-maxage=86400" }]
+    },
+    {
+      "source": "/_next/static/:path*",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/_pagefind/:path*",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }]
+    },
+    {
+      "source": "/images/:path*",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
+    }
+  ]
+}

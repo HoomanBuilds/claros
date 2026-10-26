@@ -4,11 +4,7 @@ import Image from "next/image"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { TopologyGraph } from "@/components/topology-graph"
-import { TreasuryPanel } from "@/components/treasury-panel"
-import { getStats } from "@/lib/claros"
-import { getTreasury } from "@/lib/treasury"
-
-export const revalidate = 300
+import { LiveTreasury } from "@/components/live-treasury"
 
 export const metadata: Metadata = {
   title: "Network: Claros On-Chain & Autonomous Agent",
@@ -47,9 +43,7 @@ const PILLARS = [
   },
 ]
 
-export default async function NetworkPage() {
-  const [stats, treasury] = await Promise.all([getStats(), getTreasury()])
-
+export default function NetworkPage() {
   return (
     <div className="min-h-screen dot-grid-bg">
       <Navbar />
@@ -68,7 +62,7 @@ export default async function NetworkPage() {
             THE NETWORK
           </h1>
           <p className="text-xs lg:text-sm font-mono text-muted-foreground leading-relaxed max-w-2xl">
-            Claros is an autonomous oracle on Casper {stats.network}. Four upgradable contracts, an agent
+            Claros is an autonomous oracle on Casper testnet. Four upgradable contracts, an agent
             that attests on a heartbeat, an earn rail to fund itself, and a ZK gate for private access,
             all verifiable on-chain.
           </p>
@@ -131,7 +125,7 @@ export default async function NetworkPage() {
         </section>
 
         {/* Treasury + earnings (live on-chain) */}
-        <TreasuryPanel snapshot={treasury} />
+        <LiveTreasury />
 
         {/* Contracts */}
         <section className="w-full px-6 py-8 lg:px-12">
@@ -164,7 +158,7 @@ export default async function NetworkPage() {
             ))}
           </div>
           <div className="flex items-center gap-3 mt-8">
-            <Link href="/docs" className="bg-foreground text-background px-4 py-2 text-xs font-mono tracking-widest uppercase hover:opacity-90">
+            <Link href="/docs" prefetch={false} className="bg-foreground text-background px-4 py-2 text-xs font-mono tracking-widest uppercase hover:opacity-90">
               Read Integration Docs -&gt;
             </Link>
             <div className="flex-1 border-t border-border" />

@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev --turbo",
     "build": "next build",
-    "postbuild": "pagefind --site .next/server/app --output-path public/_pagefind",
-    "start": "next start",
+    "postbuild": "pagefind --site out --output-path out/_pagefind && node scripts/check-static-export.mjs",
+    "start": "node scripts/serve-static.mjs",
     "lint": "next lint"
   },
   "dependencies": {

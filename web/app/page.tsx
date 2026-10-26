@@ -7,23 +7,15 @@ import { PricingSection } from "@/components/pricing-section"
 import { JoinNetwork } from "@/components/join-network"
 import { GlitchMarquee } from "@/components/glitch-marquee"
 import { Footer } from "@/components/footer"
-import { getAllReadings, getStats } from "@/lib/claros"
-import { flagshipFirst } from "@/lib/format"
-
-export const revalidate = 60
-
-export default async function Page() {
-  const [all, stats] = await Promise.all([getAllReadings(), getStats()])
-  const flagship = flagshipFirst(all)
-
+export default function Page() {
   return (
     <div className="min-h-screen dot-grid-bg">
       <Navbar />
       <main>
         <HeroSection />
-        <LiveFeeds initialFeeds={all} initialStats={stats} />
-        <FeatureGrid feeds={flagship} stats={stats} />
-        <AboutSection stats={stats} />
+        <LiveFeeds />
+        <FeatureGrid />
+        <AboutSection />
         <PricingSection />
         <JoinNetwork />
         <GlitchMarquee />

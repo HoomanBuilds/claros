@@ -1,5 +1,4 @@
-// Client-safe types + formatters (no server-only imports). The /api/feeds route
-// returns this exact shape (amount serialized as string for U512 safety).
+// Amounts are serialized as strings for U512 safety.
 
 export interface FeedReading {
   feed_id: string
@@ -23,6 +22,14 @@ export interface OracleStats {
   attestations: number
   datasets: number
   network: string
+}
+
+export interface TreasurySnapshot {
+  liquidCspr: number
+  reinvestCount: number
+  ledger: { index: number; venue: string; amount_in: string; amount_out: string; reasoning: string; timestamp: number }[]
+  venues: { key: string; label: string; amount: number }[]
+  primaryVenue: string
 }
 
 // Curated flagship feeds for the landing ticker + cards (order = display order).

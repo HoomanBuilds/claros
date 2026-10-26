@@ -3,15 +3,14 @@
 import { useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import { Search, ExternalLink } from "lucide-react"
-import type { FeedReading, OracleStats } from "@/lib/format"
 import { family, flagshipFirst, formatPeriod, formatValue, shortHash, shortUnit, ticker, timeAgo } from "@/lib/format"
 import { useLiveFeeds } from "@/lib/use-live-feeds"
 
 const ease = [0.22, 1, 0.36, 1] as const
 const ATTESTATION_PKG = "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc"
 
-export function FeedsExplorer({ initialFeeds, initialStats }: { initialFeeds: FeedReading[]; initialStats: OracleStats }) {
-  const { feeds, stats, updatedAt } = useLiveFeeds(initialFeeds, initialStats)
+export function FeedsExplorer() {
+  const { feeds, stats, updatedAt, loading, error } = useLiveFeeds()
   const [query, setQuery] = useState("")
   const [fam, setFam] = useState<string>("ALL")
 
@@ -48,7 +47,7 @@ export function FeedsExplorer({ initialFeeds, initialStats }: { initialFeeds: Fe
             <span>
               {rows.length}/{stats.feedsLive} feeds · {stats.network}
             </span>
-            <span className="text-foreground">{updatedAt ? `· synced ${timeAgo(updatedAt)}` : "· live"}</span>
+            <span className="text-foreground" role="status">{error ? "· data unavailable" : loading ? "· loading" : updatedAt ? `· synced ${timeAgo(updatedAt)}` : ""}</span>
           </div>
         </div>
 
@@ -124,7 +123,9 @@ export function FeedsExplorer({ initialFeeds, initialStats }: { initialFeeds: Fe
           </motion.a>
         ))}
         {rows.length === 0 && (
-          <div className="px-4 py-10 text-center text-xs font-mono text-muted-foreground">no feeds match “{query}”.</div>
+          <div className="px-4 py-10 text-center text-xs font-mono text-muted-foreground">
+            {loading ? "Loading on-chain feeds..." : error ? "Feed service unavailable. Retrying shortly." : `No feeds match "${query}".`}
+          </div>
         )}
       </div>
 

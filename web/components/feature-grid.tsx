@@ -5,7 +5,8 @@ import { DitherCard } from "@/components/bento/dither-card"
 import { MetricsCard } from "@/components/bento/metrics-card"
 import { StatusCard } from "@/components/bento/status-card"
 import { motion } from "framer-motion"
-import type { FeedReading, OracleStats } from "@/lib/format"
+import { flagshipFirst } from "@/lib/format"
+import { useLiveFeeds } from "@/lib/use-live-feeds"
 
 const ease = [0.22, 1, 0.36, 1] as const
 
@@ -18,7 +19,8 @@ const cardVariants = {
   }),
 }
 
-export function FeatureGrid({ feeds, stats }: { feeds: FeedReading[]; stats: OracleStats }) {
+export function FeatureGrid() {
+  const { feeds, stats } = useLiveFeeds()
   return (
     <section className="w-full px-6 py-20 lg:px-12">
       {/* Section label */}
@@ -49,7 +51,7 @@ export function FeatureGrid({ feeds, stats }: { feeds: FeedReading[]; stats: Ora
           variants={cardVariants}
           className="border-b-2 md:border-b-0 md:border-r-2 border-foreground min-h-[320px]"
         >
-          <TerminalCard feeds={feeds} />
+          <TerminalCard feeds={flagshipFirst(feeds)} />
         </motion.div>
 
         {/* Dither */}

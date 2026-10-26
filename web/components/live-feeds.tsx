@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { ArrowRight } from "lucide-react"
-import type { FeedReading, OracleStats } from "@/lib/format"
+import type { FeedReading } from "@/lib/format"
 import { family, flagshipFirst, formatPeriod, formatValue, shortUnit, ticker, timeAgo } from "@/lib/format"
 import { useLiveFeeds } from "@/lib/use-live-feeds"
 
@@ -71,8 +71,8 @@ function FeedCard({ f, index }: { f: FeedReading; index: number }) {
   )
 }
 
-export function LiveFeeds({ initialFeeds, initialStats }: { initialFeeds: FeedReading[]; initialStats: OracleStats }) {
-  const { feeds, stats, updatedAt } = useLiveFeeds(initialFeeds, initialStats)
+export function LiveFeeds() {
+  const { feeds, stats, updatedAt, loading, error } = useLiveFeeds()
   const cards = flagshipFirst(feeds).slice(0, 8)
 
   return (
@@ -113,7 +113,7 @@ export function LiveFeeds({ initialFeeds, initialStats }: { initialFeeds: FeedRe
         <div className="flex items-center gap-2 text-[10px] tracking-widest text-muted-foreground uppercase font-mono">
           <span className="h-1.5 w-1.5 bg-[#ea580c]" />
           <span>{stats.feedsLive} feeds · {stats.network}</span>
-          <span className="text-foreground">{updatedAt ? `· synced ${timeAgo(updatedAt)}` : "· live"}</span>
+          <span className="text-foreground" role="status">{error ? "· data unavailable" : loading ? "· loading" : updatedAt ? `· synced ${timeAgo(updatedAt)}` : ""}</span>
         </div>
       </motion.div>
 

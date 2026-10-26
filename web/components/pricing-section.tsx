@@ -189,7 +189,7 @@ function PricingCard({ tier, index }: { tier: Tier; index: number }) {
 
       {/* CTA */}
       <div className="px-5 pb-5 pt-3">
-        <Link href={tier.href} target={isExternal ? "_blank" : undefined} rel={isExternal ? "noreferrer" : undefined}>
+        <Link href={tier.href} prefetch={false} target={isExternal ? "_blank" : undefined} rel={isExternal ? "noreferrer" : undefined}>
           <motion.div
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.97 }}

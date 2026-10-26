@@ -147,7 +147,7 @@ const wti = await new ClarosOracle()
             The full operator path, keys to first WCSPR, is documented step by step.
           </p>
           <div className="flex flex-wrap items-center gap-4">
-            <Link href="/docs/network/run-an-agent">
+            <Link href="/docs/network/run-an-agent" prefetch={false}>
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}

@@ -25,7 +25,7 @@ export function Footer() {
     >
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex flex-col gap-1">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" prefetch={false} className="flex items-center gap-2">
             <ClarosMark size={16} />
             <span className="text-xs font-mono tracking-[0.2em] uppercase font-bold text-foreground">CLAROS</span>
           </Link>

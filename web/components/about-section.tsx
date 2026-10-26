@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { motion, useInView } from "framer-motion"
 import Image from "next/image"
-import type { OracleStats } from "@/lib/format"
+import { useLiveFeeds } from "@/lib/use-live-feeds"
 
 const ease = [0.22, 1, 0.36, 1] as const
 
@@ -92,7 +92,8 @@ function StatBlock({ label, value, index }: { label: string; value: string; inde
   )
 }
 
-export function AboutSection({ stats }: { stats: OracleStats }) {
+export function AboutSection() {
+  const { stats } = useLiveFeeds()
   const STATS = [
     { label: "FEEDS_LIVE", value: String(stats.feedsLive) },
     { label: "EIA_DATASETS", value: String(stats.datasets) },

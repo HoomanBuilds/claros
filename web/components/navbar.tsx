@@ -13,7 +13,7 @@ const LINKS = [
 ]
 
 export function Navbar() {
-  const pathname = usePathname()
+  const pathname = usePathname().replace(/\/$/, "") || "/"
 
   return (
     <motion.div
@@ -25,7 +25,7 @@ export function Navbar() {
       <nav className="w-full border border-foreground/20 bg-background/80 backdrop-blur-sm px-6 py-3 lg:px-8">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link href="/">
+          <Link href="/" prefetch={false}>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -70,7 +70,7 @@ export function Navbar() {
             className="flex items-center gap-4"
           >
             <ThemeToggle />
-            <Link href="/docs">
+            <Link href="/docs" prefetch={false}>
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}

@@ -1,5 +1,5 @@
 import { Wallet, Coins, TrendingUp, ExternalLink } from "lucide-react"
-import type { TreasurySnapshot } from "@/lib/treasury"
+import type { TreasurySnapshot } from "@/lib/format"
 import { timeAgo } from "@/lib/format"
 
 const VAULT_PKG = "a90b082d863c5977c6e54654fec10e523a38760529e664a87e9e8a8e887ffd7b"
