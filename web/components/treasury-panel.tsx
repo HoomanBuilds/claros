@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Coins, ExternalLink, TrendingUp } from "lucide-react";
+import { Coins, ExternalLink, TrendingUp, TriangleAlert } from "lucide-react";
 import type { TreasurySnapshot } from "@/lib/format";
 import {
   formatCount,
@@ -12,6 +12,7 @@ import {
 } from "@/lib/format";
 import { EmptyState, Metrics, SectionHeading } from "@/components/product/ui";
 import styles from "@/components/product/product.module.css";
+import network from "@/components/product/network.module.css";
 
 const VENUES = [
   {
@@ -49,68 +50,69 @@ export function TreasuryPanel({ snapshot }: { snapshot: TreasurySnapshot }) {
   const last = snapshot.ledger[0];
   return (
     <>
+      <div className={network.overview}>
+        <Metrics
+          items={[
+            {
+              label: "Agent liquid",
+              value: (
+                <>
+                  {formatCspr(snapshot.liquidCspr)}
+                  <small>CSPR</small>
+                </>
+              ),
+              detail: "Primary account balance",
+            },
+            {
+              label: "Recorded decisions",
+              value: formatCount(snapshot.reinvestCount),
+              detail: "On-chain ledger entries",
+            },
+            {
+              label: "Most selected",
+              value: snapshot.reinvestCount
+                ? snapshot.primaryVenue.split(" (")[0]
+                : "-",
+              detail: "By recorded input, not settled yield",
+            },
+            {
+              label: "Last decision",
+              value: last ? timeAgo(last.timestamp) : "-",
+              detail: last
+                ? formatTimestamp(last.timestamp)
+                : "No decisions recorded",
+            },
+          ]}
+        />
+      </div>
       {snapshot.liquidCspr === 0 && (
-        <p className={styles.notice}>
-          The primary agent has no liquid CSPR for gas. This does not indicate
-          whether independent operators are running.
+        <p className={network.gasNotice}>
+          <TriangleAlert size={17} aria-hidden="true" />
+          No liquid CSPR available for the primary agent's gas.
         </p>
       )}
-      <Metrics
-        items={[
-          {
-            label: "Agent liquid",
-            value: (
-              <>
-                {formatCspr(snapshot.liquidCspr)}
-                <small>CSPR</small>
-              </>
-            ),
-            detail: "Primary account balance",
-          },
-          {
-            label: "Recorded decisions",
-            value: formatCount(snapshot.reinvestCount),
-            detail: "On-chain ledger entries",
-          },
-          {
-            label: "Most selected",
-            value: snapshot.reinvestCount
-              ? snapshot.primaryVenue.split(" (")[0]
-              : "-",
-            detail: "By recorded input, not settled yield",
-          },
-          {
-            label: "Last decision",
-            value: last ? timeAgo(last.timestamp) : "-",
-            detail: last
-              ? formatTimestamp(last.timestamp)
-              : "No decisions recorded",
-          },
-        ]}
-      />
-      <SectionHeading
-        label="Yield venues"
-        title="Considered, not blindly allocated."
-      />
-      <div className={styles.venueGrid}>
+      <div className={network.subheading}>
+        <h3>Venues considered</h3>
+        <span>Expand a venue for details</span>
+      </div>
+      <div className={network.venues}>
         {VENUES.map((venue) => {
           const Icon = venue.icon;
           const active = Array.from(chosen).some(
             (key) => key === venue.key || key.startsWith(venue.key + "_"),
           );
           return (
-            <article className={styles.venue} key={venue.key}>
-              <div className={styles.cardTop}>
-                <Icon size={22} />
-                <span
-                  className={styles.badge}
-                  data-muted={!active || undefined}
-                >
-                  {active ? "Recorded selection" : "Available venue"}
+            <details className={network.venue} key={venue.key}>
+              <summary>
+                <Icon size={22} aria-hidden="true" />
+                <span>
+                  <strong>{venue.label}</strong>
+                  <small>
+                    {venue.token} ·{" "}
+                    {active ? "Recorded selection" : "Available venue"}
+                  </small>
                 </span>
-              </div>
-              <h3>{venue.label}</h3>
-              <span className={styles.kicker}>{venue.token}</span>
+              </summary>
               <p>{venue.role}</p>
               <a
                 className={styles.inlineLink}
@@ -120,48 +122,64 @@ export function TreasuryPanel({ snapshot }: { snapshot: TreasurySnapshot }) {
               >
                 Inspect venue <ExternalLink size={13} />
               </a>
-            </article>
+            </details>
           );
         })}
       </div>
       <SectionHeading
         label="Decision ledger"
-        title="The reasoning stays with the record."
+        title="Every decision leaves a trail."
       >
         <span className={styles.status}>
           {formatCount(snapshot.reinvestCount)} entries
         </span>
       </SectionHeading>
       <p className={styles.sectionIntro}>
-        These entries record the agent's decisions. They do not, by themselves,
-        prove a completed venue deposit or realized yield.
+        Decision records are not proof of completed deposits or realized yield.
       </p>
       {ledger.length ? (
-        <div className={styles.ledger}>
+        <div className={network.ledger}>
           {ledger.map((entry) => (
-            <article className={styles.ledgerEntry} key={entry.index}>
-              <div className={styles.cardTop}>
-                <span className={styles.badge}>
-                  {entry.venue.replace(/_/g, " ")}
+            <details
+              className={network.entry}
+              name="treasury-decisions"
+              key={entry.index}
+            >
+              <summary>
+                <span className={network.entryIndex}>
+                  #{formatCount(entry.index)}
+                </span>
+                <span className={network.entryName}>
+                  <strong>{entry.venue.replace(/_/g, " ")}</strong>
+                  <small>View reasoning and recorded amounts</small>
                 </span>
                 <time title={formatTimestamp(entry.timestamp)}>
-                  #{entry.index} · {timeAgo(entry.timestamp)}
+                  {timeAgo(entry.timestamp)}
                 </time>
-              </div>
-              <p>{entry.reasoning}</p>
-              <details className={styles.schema}>
-                <summary>Inspect recorded amounts</summary>
-                <p>
-                  Input: {formatLedgerAmount(entry.amount_in)} contract units.
-                  Output: {formatLedgerAmount(entry.amount_out)} contract units.
-                </p>
-                <p>
+              </summary>
+              <div className={network.entryBody}>
+                <p>{entry.reasoning}</p>
+                <dl className={network.amounts}>
+                  <div>
+                    <dt>Recorded input</dt>
+                    <dd>
+                      {formatLedgerAmount(entry.amount_in)} contract units
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Recorded output</dt>
+                    <dd>
+                      {formatLedgerAmount(entry.amount_out)} contract units
+                    </dd>
+                  </div>
+                </dl>
+                <small>
                   Recorded {formatTimestamp(entry.timestamp)}. Amounts are
                   unscaled ledger integers; this record does not specify token
                   decimals.
-                </p>
-              </details>
-            </article>
+                </small>
+              </div>
+            </details>
           ))}
         </div>
       ) : (
@@ -184,8 +202,7 @@ export function TreasuryPanel({ snapshot }: { snapshot: TreasurySnapshot }) {
         </div>
       )}
       <p className={styles.footnote}>
-        Testnet figures. A zero balance is shown as zero, not as missing data.
-        Newly finalized decisions appear on the next treasury refresh.
+        Testnet records. New decisions appear after the next treasury refresh.
       </p>
     </>
   );

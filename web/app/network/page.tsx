@@ -1,10 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { ExternalLink } from "lucide-react";
+import {
+  ExternalLink,
+  FileCheck2,
+  Tags,
+  Landmark,
+  ShieldCheck,
+} from "lucide-react";
 import { PageShell } from "@/components/product/page-shell";
 import { SectionHeading } from "@/components/product/ui";
 import { TopologyGraph } from "@/components/topology-graph";
 import { LiveTreasury } from "@/components/live-treasury";
 import styles from "@/components/product/product.module.css";
+import network from "@/components/product/network.module.css";
 
 export const metadata: Metadata = {
   title: "Network: Claros On-Chain & Autonomous Agent",
@@ -15,46 +22,32 @@ export const viewport: Viewport = { themeColor: "#070b14" };
 
 const CONTRACTS = [
   {
+    title: "The readings",
     name: "AttestationRegistry",
-    role: "Feed values and provenance, keyed by feed_id",
+    role: "Feed values and their source hashes.",
+    icon: FileCheck2,
     pkg: "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc",
   },
   {
+    title: "The context",
     name: "FeedRegistry",
-    role: "Self-describing decimals, units, and source metadata",
+    role: "Units, decimals, and source metadata.",
+    icon: Tags,
     pkg: "741cc223c14c2c00c9f06d7bb5c4be2f824fbf0c8b09a147bf1835570bddf5b6",
   },
   {
+    title: "The decisions",
     name: "TreasuryVault",
-    role: "The agent's on-chain reinvestment decision ledger",
+    role: "Recorded treasury actions and reasoning.",
+    icon: Landmark,
     pkg: "a90b082d863c5977c6e54654fec10e523a38760529e664a87e9e8a8e887ffd7b",
   },
   {
+    title: "The access",
     name: "EligibilityGate",
-    role: "Groth16 eligibility verification for operators",
+    role: "Private eligibility proofs for operators.",
+    icon: ShieldCheck,
     pkg: "7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227",
-  },
-];
-const ROLES = [
-  {
-    title: "Autonomous agents",
-    text: "Fetch source data, normalize its value, hash its provenance, and sign attestations onto Casper.",
-    art: "orb",
-  },
-  {
-    title: "An earn rail",
-    text: "Paid x402 reads settle WCSPR to the attester. That income can help cover the next attestation's gas.",
-    art: "chevron",
-  },
-  {
-    title: "Private eligibility",
-    text: "Operators prove allowlist membership through the ZK gate, without publishing their membership secret.",
-    art: "arc",
-  },
-  {
-    title: "On-chain decisions",
-    text: "Treasury decisions and their reasoning are recorded in the vault, with the results available for inspection.",
-    art: "cone",
   },
 ];
 
@@ -63,85 +56,76 @@ export default function NetworkPage() {
     <PageShell
       active="Network"
       number="03"
-      title={
-        <>
-          Trust has
-          <br />a structure.
-        </>
-      }
-      description="Agents carry the data. Contracts keep the record. Follow the attestation pipeline and inspect the system behind every reading."
+      compact
+      title="The network, connected."
+      description="See how a reading reaches Casper, and how paid reads can help fund the next one."
       image="/landing/aztec/city.webp"
     >
-      <section className={styles.section} aria-label="Attestation pipeline">
-        <SectionHeading
-          label="03 / Attestation pipeline"
-          title="From source to shared state."
-        >
-          <span className={styles.networkBadge}>
-            Deployed on Casper testnet
-          </span>
-        </SectionHeading>
+      <nav className={network.sectionNav} aria-label="On this page">
+        <a href="#architecture">
+          <span>01</span> Architecture
+        </a>
+        <a href="#treasury">
+          <span>02</span> Treasury
+        </a>
+        <a href="#contracts">
+          <span>03</span> Contracts
+        </a>
+      </nav>
+      <section
+        id="architecture"
+        className={network.mapSection}
+        aria-label="Network architecture"
+      >
         <TopologyGraph />
-        <p className={styles.footnote}>
-          A source reading and its provenance meet in the attestation registry.
-          Any contract, app, or agent can read the result.
-        </p>
-      </section>
-      <section className={styles.section} aria-label="Network roles">
-        <SectionHeading
-          label="The moving parts"
-          title="A system with clear boundaries."
-        />
-        <div className={styles.roleGrid}>
-          {ROLES.map((role) => (
-            <article className={styles.roleCard} key={role.title}>
-              <img
-                loading="lazy"
-                src={"/landing/penumbra/" + role.art + ".webp"}
-                width={200}
-                height={200}
-                alt=""
-              />
-              <h3>{role.title}</h3>
-              <p>{role.text}</p>
-            </article>
-          ))}
-        </div>
       </section>
       <LiveTreasury />
-      <section className={styles.section} aria-label="Deployed contracts">
+      <section
+        id="contracts"
+        className={styles.section}
+        aria-label="Deployed contracts"
+      >
         <SectionHeading
-          label="On-chain footprint"
-          title="Nothing hidden behind the interface."
+          label="The on-chain footprint"
+          title="Four contracts. Clear boundaries."
         >
           <a href="/docs/network/contracts/" className={styles.inlineLink}>
             Contract reference <ExternalLink size={13} />
           </a>
         </SectionHeading>
-        <div className={styles.contractList}>
-          {CONTRACTS.map((contract, index) => (
-            <a
-              key={contract.name}
-              className={styles.contract}
-              href={
-                "https://testnet.cspr.live/contract-package/" + contract.pkg
-              }
-              target="_blank"
-              rel="noreferrer"
-            >
-              <span>0{index + 1}</span>
-              <div>
-                <strong>{contract.name}</strong>
-                <span className={styles.meta}>{contract.role}</span>
-              </div>
-              <code>{contract.pkg}</code>
-              <ExternalLink size={15} aria-label="Open on Casper explorer" />
-            </a>
-          ))}
+        <div className={network.contracts}>
+          {CONTRACTS.map((contract, index) => {
+            const Icon = contract.icon;
+            return (
+              <article className={network.contractCard} key={contract.name}>
+                <div className={network.contractTop}>
+                  <span>0{index + 1}</span>
+                  <Icon size={24} strokeWidth={1.4} aria-hidden="true" />
+                </div>
+                <h3>{contract.title}</h3>
+                <span className={network.contractName}>{contract.name}</span>
+                <p>{contract.role}</p>
+                <a
+                  href={
+                    "https://testnet.cspr.live/contract-package/" + contract.pkg
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={"Open " + contract.name + " on Casper explorer"}
+                >
+                  Open on Casper <ExternalLink size={14} aria-hidden="true" />
+                </a>
+                <details className={network.packageHash}>
+                  <summary>Package hash</summary>
+                  <code>{contract.pkg}</code>
+                </details>
+              </article>
+            );
+          })}
         </div>
         <p className={styles.footnote}>
-          These are Casper testnet contract package hashes. Explorer links open
-          the deployed packages, not a simulated deployment.
+          Casper testnet deployments. Open a package to inspect its on-chain
+          record.
         </p>
       </section>
     </PageShell>

@@ -19,6 +19,7 @@ export function PageShell({
   title,
   description,
   image,
+  compact = false,
   children,
 }: {
   active: string;
@@ -26,6 +27,7 @@ export function PageShell({
   title: ReactNode;
   description: string;
   image: string;
+  compact?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -56,7 +58,7 @@ export function PageShell({
       </header>
       <main id="main-content" className={styles.main}>
         <section
-          className={styles.pageHead}
+          className={`${styles.pageHead} ${compact ? styles.compactHead : ""}`}
           aria-label={`${active} introduction`}
         >
           <div className={styles.headArt} aria-hidden="true">

@@ -13,12 +13,13 @@ export function LiveTreasury() {
   );
   return (
     <section
+      id="treasury"
       className={`${styles.section} ${styles.paper}`}
       aria-label="Agent treasury"
     >
       <SectionHeading
         label="Primary agent / TreasuryVault"
-        title="The economics, on record."
+        title="What keeps it running."
       >
         <a
           className={styles.inlineLink}
@@ -30,9 +31,8 @@ export function LiveTreasury() {
         </a>
       </SectionHeading>
       <p className={styles.sectionIntro}>
-        The primary agent's liquid balance and recorded treasury decisions, read
-        from Casper through AWS. This is not a status check for every operator
-        in the network.
+        Primary agent only. On-chain balances and decisions, not network-wide
+        health.
       </p>
       {error && (
         <p className={styles.notice} role="alert">

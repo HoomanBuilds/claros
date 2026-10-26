@@ -90,6 +90,9 @@
 .main {
   width: 100%;
 }
+.shell main > section[id] {
+  scroll-margin-top: var(--header-h);
+}
 .pageHead {
   position: relative;
   isolation: isolate;
@@ -104,6 +107,18 @@
   position: relative;
   z-index: 1;
   width: 62%;
+}
+.compactHead {
+  min-height: 0;
+  padding-block: 32px;
+}
+.pageHead.compactHead h1 {
+  font-size: clamp(44px, 4.6vw, 80px);
+  margin-block: 20px 16px;
+}
+.pageHead.compactHead p {
+  max-width: 60ch;
+  font-size: 16px;
 }
 .eyebrow {
   display: flex;
@@ -768,178 +783,12 @@
   display: flex;
   gap: 8px;
 }
-.pipeline {
-  margin-top: 56px;
-}
-.pipelineSteps {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.pipelineSteps li {
-  position: relative;
-  padding: 32px 32px 24px 0;
-  border-top: 1px solid var(--signal);
-}
-.pipelineSteps li::before {
-  content: "";
-  position: absolute;
-  top: -4px;
-  left: 0;
-  width: 7px;
-  height: 7px;
-  background: var(--signal);
-}
-.pipelineSteps li > span {
-  font:
-    48px/1 var(--font-bench),
-    monospace;
-  color: var(--signal);
-}
-.pipelineSteps h3 {
-  margin: 28px 0 12px;
-  font-size: clamp(24px, 2.6vw, 40px);
-  font-weight: 300;
-  letter-spacing: -0.03em;
-}
-.pipelineSteps p {
-  max-width: 30ch;
-  font-size: 15px;
-  color: var(--muted);
-  line-height: 1.6;
-}
-.roleGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(24px, 4vw, 64px);
-}
-.roleCard {
-  padding: 16px 0 0;
-}
-.roleCard img {
-  width: 100%;
-  max-width: 200px;
-  height: auto;
-  aspect-ratio: 1;
-  object-fit: contain;
-  margin-bottom: 32px;
-}
-.roleCard h3 {
-  font-size: clamp(24px, 2.4vw, 36px);
-  font-weight: 400;
-  line-height: 1.1;
-  margin-bottom: 16px;
-  letter-spacing: -0.03em;
-}
-.roleCard p,
 .sectionIntro {
   color: var(--muted);
   font-size: 16px;
   line-height: 1.6;
-}
-.sectionIntro {
   max-width: 65ch;
   margin: 0 0 32px;
-}
-.section > .metrics {
-  margin: 32px 0 64px;
-}
-.section > .metrics dd {
-  font-size: clamp(28px, 2.8vw, 48px);
-}
-.section > .metrics dd[data-text] {
-  font-size: clamp(20px, 2.4vw, 40px);
-}
-.contractList {
-  border-top: 1px solid var(--line);
-}
-.contract {
-  padding: 28px 0;
-  display: grid;
-  grid-template-columns: 64px 1fr 1.3fr auto;
-  align-items: center;
-  gap: 32px;
-  border-bottom: 1px solid var(--line);
-  transition: background 0.18s;
-}
-.contract:hover {
-  background: rgba(42, 168, 255, 0.04);
-}
-.contract > span:first-child {
-  font:
-    32px var(--font-bench),
-    monospace;
-  color: var(--signal);
-}
-.contract strong {
-  display: block;
-  font-weight: 400;
-  font-size: 24px;
-  margin-bottom: 8px;
-  letter-spacing: -0.02em;
-}
-.contract code {
-  color: var(--muted);
-  font:
-    12px/1.7 var(--font-triple),
-    monospace;
-  overflow-wrap: anywhere;
-}
-.venueGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  border: 1px solid var(--line);
-  margin-bottom: 64px;
-}
-.venue {
-  display: flex;
-  flex-direction: column;
-  padding: 32px;
-  border-right: 1px solid var(--line);
-  gap: 16px;
-}
-.venue:last-child {
-  border-right: 0;
-}
-.venue h3 {
-  font-size: 30px;
-  font-weight: 400;
-  letter-spacing: -0.03em;
-}
-.venue p {
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--muted);
-}
-.venue .inlineLink {
-  margin-top: auto;
-}
-.ledger {
-  border-top: 1px solid var(--line);
-}
-.ledgerEntry {
-  padding: 32px 0;
-  border-bottom: 1px solid var(--line);
-}
-.ledgerEntry p {
-  max-width: 100ch;
-  font-size: 16px;
-  line-height: 1.7;
-  color: var(--text);
-}
-.ledgerEntry .schema {
-  margin-top: 20px;
-}
-.ledgerEntry time {
-  font:
-    11px var(--font-triple),
-    monospace;
-  color: var(--muted);
-}
-.ledgerEntry .cardTop {
-  margin-bottom: 16px;
 }
 .srOnly {
   position: absolute;
@@ -972,14 +821,6 @@
   .datasetGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .contract {
-    grid-template-columns: 48px 1fr auto;
-    gap: 24px;
-  }
-  .contract code {
-    grid-column: 2 / -1;
-    grid-row: 2;
-  }
   .header .networkBadge {
     font-size: 8px;
   }
@@ -988,9 +829,6 @@
   }
   .metrics dt {
     font-size: 9px;
-  }
-  .venue {
-    padding: 24px;
   }
 }
 @media (max-width: 760px) {
@@ -1140,8 +978,7 @@
     white-space: normal;
     font-size: 11px;
   }
-  .datasetGrid,
-  .venueGrid {
+  .datasetGrid {
     grid-template-columns: 1fr;
   }
   .datasetCard {
@@ -1153,58 +990,6 @@
   .pagination {
     align-items: flex-start;
     flex-direction: column;
-  }
-  .pipeline {
-    margin-top: 32px;
-  }
-  .pipelineSteps {
-    grid-template-columns: 1fr;
-  }
-  .pipelineSteps li {
-    padding: 0 0 36px 32px;
-    border-top: 0;
-    border-left: 1px solid var(--signal);
-  }
-  .pipelineSteps li::before {
-    top: 0;
-    left: -4px;
-  }
-  .pipelineSteps h3 {
-    margin-top: 16px;
-  }
-  .pipelineSteps p {
-    max-width: none;
-  }
-  .roleGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 32px 24px;
-  }
-  .roleCard img {
-    margin-bottom: 20px;
-  }
-  .roleCard h3 {
-    font-size: 24px;
-  }
-  .roleCard p {
-    font-size: 14px;
-  }
-  .contract {
-    gap: 16px;
-    grid-template-columns: 32px 1fr auto;
-  }
-  .contract strong {
-    font-size: 18px;
-    overflow-wrap: anywhere;
-  }
-  .contract code {
-    font-size: 11px;
-  }
-  .venue {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
-  .venue:last-child {
-    border-bottom: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
