@@ -23,8 +23,9 @@ export default function HeroSwitcher({ current }: { current: HeroName }) {
   useEffect(() => {
     const hero = document.getElementById("top");
     if (!hero) return;
-    const observer = new IntersectionObserver(([entry]) =>
-      setVisible(entry.isIntersecting),
+    const observer = new IntersectionObserver(
+      ([entry]) => setVisible(entry.isIntersecting),
+      { rootMargin: "-88px 0px 0px 0px" },
     );
     observer.observe(hero);
     return () => observer.disconnect();
