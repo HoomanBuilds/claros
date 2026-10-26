@@ -123,7 +123,7 @@ const { KeyAlgorithm } = casperSdk;
 
 // A PEM secret key whose account already holds WCSPR (see the next tab).
 const KEY_PATH = process.env.CLIENT_PRIVATE_KEY_PATH!;
-const URL = "https://claros-oracle.vercel.app/oracle/feed?asset_id=OP-1";
+const URL = "https://15-135-178-84.sslip.io/claros-oracle/oracle/feed?asset_id=OP-1";
 
 // Of the payment options both sides support, prefer any Casper network.
 const selectCasper = (_v: number, options: PaymentRequirements[]): PaymentRequirements =>

@@ -145,7 +145,7 @@ The full walkthrough, from key generation to first payout, is documented at [Run
 
 There are three ways to read a feed, all sharing one model (`amount / 10^decimals`, keyed by `feed_id`):
 
-- **REST**: the hosted Hermes-style read service at `https://claros-oracle.vercel.app`. `GET /v1/feeds`, `GET /v1/feeds/:id`, `GET /v1/datasets`. JSON, CORS open, no key. Free.
+- **REST**: the hosted read service at `https://15-135-178-84.sslip.io/claros-api`. `GET /v1/feeds`, `GET /v1/feeds/:id`, `GET /v1/datasets`. JSON, CORS open, no key. Free.
 - **SDK**: `claros-oracle` (npm), reads feed metadata and values directly from Casper global state with no indexer and no running node. `new ClarosOracle().getReading(id)` returns metadata + value + the human number. Free.
 - **Cross-contract**: from your own Casper contract, declare the registry interfaces and call `get_latest(feed_id)` and `get_feed(feed_id)`, exactly like reading Pyth on-chain. Gas only.
 
@@ -341,7 +341,7 @@ cd ../../web && npm install && npm run dev                # http://localhost:300
 
 To join the network as an operator instead (enroll through the ZK gate, claim a feed, attest it with your own key, earn per read), follow [Run an agent and earn](https://claros-oracle.vercel.app/docs/network/run-an-agent).
 
-Secrets (Casper key, EIA API key, DeepSeek key, CSPR.cloud key) live only in gitignored `.env` files; see each project's `.env.example`. The web app bakes the testnet addresses in, so it reads live state with no env.
+Secrets (Casper key, EIA API key, DeepSeek key, CSPR.cloud key) live only in gitignored `.env` files; see each project's `.env.example`. The frontend reads the AWS API and needs no signing keys or backend secrets.
 
 To run Claros continuously on a host (the agent heartbeat plus the read API and x402 services), use the included pm2 config:
 
@@ -353,6 +353,8 @@ pm2 save && pm2 startup           # survive reboots
 ```
 
 The agent and facilitator sign transactions, so their keys must hold testnet CSPR.
+
+The frontend is a static export hosted on Vercel. All runtime data reads, treasury queries, and payments run on AWS. `cd web && npm run build` produces `web/out/` and verifies that the output contains no Functions, middleware, cron jobs, proxy rewrites, or ISR. Browser polling goes directly to `NEXT_PUBLIC_CLAROS_API_URL`, defaults to once per minute, and pauses in hidden tabs. Static page and asset requests still count toward Vercel CDN and transfer usage. The old frontend API URLs redirect to AWS for compatibility.
 
 ---
 
