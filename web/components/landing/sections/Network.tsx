@@ -30,34 +30,6 @@ const ROLES = [
   },
 ];
 
-const CONTRACTS = [
-  {
-    name: "AttestationRegistry",
-    hash: "236b510436c60b6a797d175c72c6014de367d43f1de1ca45f580d112f98116cc",
-    role: "Values",
-  },
-  {
-    name: "FeedRegistry",
-    hash: "741cc223c14c2c00c9f06d7bb5c4be2f824fbf0c8b09a147bf1835570bddf5b6",
-    role: "Metadata",
-  },
-  {
-    name: "EligibilityGate",
-    hash: "7be33b056c8804e0886cd6f20a75109a0fe92deab505754b97a49fde15aa5227",
-    role: "ZK gate",
-  },
-  {
-    name: "TreasuryVault",
-    hash: "a90b082d863c5977c6e54654fec10e523a38760529e664a87e9e8a8e887ffd7b",
-    role: "Decisions",
-  },
-  {
-    name: "WCSPR",
-    hash: "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e",
-    role: "x402 asset",
-  },
-];
-
 export default function Network() {
   const root = useRef<HTMLElement>(null);
   const { stats, loading, error } = useLandingFeeds();
@@ -193,38 +165,6 @@ export default function Network() {
               </li>
             ))}
           </ul>
-
-          <div className={styles.feedPanel} data-reveal>
-            <div className={styles.feedHead}>
-              <span className="label">Contracts</span>
-              <span className={styles.deployed}>
-                <img
-                  loading="lazy"
-                  src="/landing/partners/casper.svg"
-                  alt="Casper"
-                />
-                <span className={styles.live}>casper-test</span>
-              </span>
-            </div>
-            <ol className={`mono ${styles.feed}`}>
-              {CONTRACTS.map(({ name, hash, role }, index) => (
-                <li key={name}>
-                  <span>{index + 1}</span>
-                  <a
-                    className={styles.hash}
-                    href={`https://testnet.cspr.live/contract-package/${hash}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    data-cursor="Explorer"
-                    data-sfx="ui"
-                  >
-                    <b>{name}</b> {hash.slice(0, 8)}…{hash.slice(-6)}
-                  </a>
-                  <span>{role}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
         </div>
       </div>
     </section>

@@ -94,17 +94,14 @@
 }
 
 .lower {
-  display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  gap: clamp(24px, 4vw, 64px);
-  align-items: end;
   margin-top: clamp(64px, 7vw, 110px);
 }
 
 .clusters {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 220px));
+  justify-content: center;
+  gap: clamp(24px, 4vw, 64px);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -148,89 +145,6 @@
   line-height: 1.4;
 }
 
-.feedPanel {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: var(--ink);
-}
-
-.feedHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.live {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.feed {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 12px;
-}
-
-.feed li {
-  display: grid;
-  grid-template-columns: 28px 1fr auto;
-  gap: 12px;
-  align-items: center;
-  height: 36px;
-  padding: 0 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  color: var(--muted);
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.feed li span:last-child {
-  text-align: right;
-}
-
-.hash {
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: color 0.2s;
-}
-
-.hash b {
-  margin-right: 8px;
-  color: var(--text);
-  font-weight: 500;
-}
-
-.hash:hover,
-.hash:hover b {
-  color: var(--signal);
-}
-
-.deployed {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.deployed img {
-  height: 26px;
-}
-
-.feed li span:last-child {
-  color: var(--signal);
-}
-
-@media (max-width: 1000px) {
-  .lower {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 720px) {
   .stats {
     grid-template-columns: 1fr;
@@ -245,7 +159,7 @@
   }
 
   .clusters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 220px));
     row-gap: 32px;
   }
 }
