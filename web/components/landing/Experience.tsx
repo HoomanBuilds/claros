@@ -46,7 +46,7 @@ export default function Experience({ children }: { children: ReactNode }) {
     window.scrollTo(0, 0);
     const instance = new Lenis({
       autoRaf: false,
-      anchors: { offset: -88 },
+      anchors: true,
       lerp: 0.1,
     });
     lenis = instance;
