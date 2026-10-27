@@ -1,0 +1,277 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import { useExperience } from "@/components/landing/Experience";
+import Button from "@/components/landing/ui/Button";
+import { DECODE_CHARS, gsap, SplitText, useGSAP } from "@/lib/landing/gsap";
+import { print } from "@/lib/landing/print";
+import { sound } from "@/lib/landing/sound";
+import styles from "./SourceHero.module.css";
+
+const LEAN = 0.14;
+const PAINTING = "/landing/aztec/square.webp";
+
+export default function SourceHero() {
+  const { stage } = useExperience();
+  const root = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const scene = root.current!.querySelector<HTMLElement>(`.${styles.stage}`)!;
+    const canvas = root.current!.querySelector<HTMLCanvasElement>("canvas")!;
+    let pending = 0;
+    const render = () => {
+      void print(canvas, PAINTING, {
+        cell: scene.clientWidth <= 760 ? 9 : 12,
+        ink: "#c6ecff",
+        ground: "#061528",
+        tint: "#2aa8ff",
+        tintAmount: 0.5,
+        gamma: 1.05,
+        focus: [0.5, 0.62],
+      }).catch(() => canvas.style.setProperty("visibility", "hidden"));
+    };
+    const observer = new ResizeObserver(() => {
+      clearTimeout(pending);
+      pending = window.setTimeout(render, 160);
+    });
+    observer.observe(scene);
+    render();
+    return () => {
+      observer.disconnect();
+      clearTimeout(pending);
+    };
+  }, []);
+
+  useGSAP(
+    () => {
+      if (stage === "intro") return;
+      const media = gsap.matchMedia();
+      media.add("(prefers-reduced-motion: no-preference)", () => {
+        const q = gsap.utils.selector(root);
+        const scene = q<HTMLElement>(`.${styles.stage}`)[0];
+        const attested = q<HTMLElement>(`.${styles.attested}`)[0];
+        const line = q<SVGLineElement>(`.${styles.split} line`)[0];
+        const frame = q<HTMLElement>(`.${styles.frame}`)[0];
+        const divider = { reveal: 0, scroll: 0 };
+        const draw = () => {
+          const { clientWidth: width, clientHeight: height } = scene;
+          const position =
+            divider.reveal + (-LEAN - divider.reveal) * divider.scroll;
+          const lean = height * LEAN;
+          const top = (position * width + lean / 2).toFixed(1);
+          const bottom = (position * width - lean / 2).toFixed(1);
+          attested.style.clipPath = `polygon(${top}px 0, ${width + lean}px 0, ${width + lean}px ${height}px, ${bottom}px ${height}px)`;
+          line.setAttribute("x1", top);
+          line.setAttribute("x2", bottom);
+          line.setAttribute("y2", String(height));
+        };
+        const observer = new ResizeObserver(draw);
+        observer.observe(scene);
+        draw();
+
+        const split = SplitText.create(q("[data-line]"), {
+          type: "words",
+          mask: "words",
+          wordsClass: "split-word",
+        });
+        const gutter = () =>
+          parseFloat(getComputedStyle(q(`.${styles.top}`)[0]).paddingLeft);
+        const cardTop = () =>
+          scene.clientHeight * (scene.clientWidth <= 760 ? 0.62 : 0.56);
+
+        gsap
+          .timeline({
+            defaults: { ease: "none" },
+            scrollTrigger: {
+              trigger: root.current,
+              start: "top top",
+              end: "bottom bottom",
+              scrub: 1,
+              invalidateOnRefresh: true,
+            },
+          })
+          .fromTo(
+            q(`.${styles.window}`),
+            {
+              clipPath: () =>
+                `inset(${cardTop()}px ${gutter()}px 0px ${gutter()}px round 22px 22px 0px 0px)`,
+            },
+            {
+              clipPath: "inset(0px 0px 0px 0px round 0px 0px 0px 0px)",
+              duration: 0.6,
+            },
+            0,
+          )
+          .fromTo(
+            frame,
+            { top: cardTop, left: gutter, right: gutter },
+            { top: 0, left: 0, right: 0, duration: 0.6 },
+            0,
+          )
+          .to(
+            q(`.${styles.top}`),
+            { yPercent: -40, opacity: 0, duration: 0.45 },
+            0,
+          )
+          .fromTo(
+            q(`.${styles.painting}`),
+            { scale: 1.1 },
+            { scale: 1, duration: 1 },
+            0,
+          )
+          .to(
+            divider,
+            { scroll: 1, duration: 0.6, ease: "power1.inOut", onUpdate: draw },
+            0.3,
+          )
+          .fromTo(
+            q(`.${styles.closing}`),
+            { opacity: 0, y: 30 },
+            { opacity: 1, y: 0, duration: 0.2 },
+            0.78,
+          );
+
+        const intro = gsap.timeline({
+          delay: 0.3,
+          defaults: { ease: "power3.out" },
+        });
+        intro
+          .from(
+            split.words,
+            { yPercent: 140, duration: 1.1, stagger: 0.07 },
+            0.2,
+          )
+          .call(() => sound.play("DecodingUI"), [], 0.3)
+          .from(
+            q("[data-hero-fade]"),
+            {
+              opacity: 0,
+              y: 16,
+              filter: "blur(8px)",
+              duration: 1,
+              stagger: 0.1,
+            },
+            1,
+          )
+          .fromTo(
+            q(`.${styles.window}`),
+            { yPercent: 60, opacity: 0 },
+            { yPercent: 0, opacity: 1, duration: 1.6, ease: "expo.out" },
+            1.1,
+          )
+          .to(
+            divider,
+            { reveal: 0.5, duration: 1.6, ease: "expo.inOut", onUpdate: draw },
+            1.6,
+          );
+        for (const label of q<HTMLElement>("[data-scramble]")) {
+          intro.to(
+            label,
+            {
+              duration: 0.9,
+              scrambleText: {
+                text: label.textContent!,
+                chars: DECODE_CHARS,
+                speed: 0.5,
+              },
+            },
+            0.3,
+          );
+        }
+
+        return () => {
+          observer.disconnect();
+          split.revert();
+          attested.style.removeProperty("clip-path");
+          line.setAttribute("x1", "55%");
+          line.setAttribute("x2", "45%");
+          line.setAttribute("y2", "100%");
+        };
+      });
+      return () => media.revert();
+    },
+    { dependencies: [stage === "intro"], scope: root, revertOnUpdate: true },
+  );
+
+  return (
+    <section
+      ref={root}
+      id="top"
+      className={styles.hero}
+      data-theme="paper"
+      data-phase="0"
+    >
+      <div className={styles.stage}>
+        <div className={`container ${styles.top}`}>
+          <div className={styles.labels}>
+            <span className="label">
+              <span data-scramble>Real-world data oracle</span>
+            </span>
+            <span className={`label ${styles.chain}`}>
+              <img
+                src="/landing/partners/casper.svg"
+                width={20}
+                height={20}
+                alt=""
+              />
+              <span data-scramble>On Casper testnet</span>
+            </span>
+          </div>
+          <div className={styles.headline}>
+            <h1 className={styles.title}>
+              <span data-line>Real-world data</span>
+              <span data-line>on Casper.</span>
+            </h1>
+            <div className={styles.side} data-hero-fade>
+              <p>
+                Energy prices, grid activity, civic revenue. Claros agents bring
+                real-world readings to Casper, with a source hash any contract,
+                app or agent can check.
+              </p>
+              <div className={styles.actions}>
+                <Button href="#feeds">See the feeds</Button>
+                <Button href="#gap" variant="outline">
+                  Why an oracle
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.window}>
+          <img
+            className={styles.painting}
+            src={PAINTING}
+            alt=""
+            width={1600}
+            height={900}
+            draggable={false}
+            fetchPriority="high"
+          />
+          <div className={styles.attested}>
+            <img
+              className={`${styles.painting} ${styles.fallback}`}
+              src={PAINTING}
+              alt=""
+              width={1600}
+              height={900}
+              draggable={false}
+            />
+            <canvas className={styles.painting} aria-hidden="true" />
+          </div>
+          <svg className={styles.split} aria-hidden="true">
+            <line x1="55%" x2="45%" y1="0" y2="100%" />
+          </svg>
+          <p className={styles.closing}>Source. Hash. Signer.</p>
+        </div>
+
+        <div className={styles.frame} aria-hidden="true">
+          <span className={`label ${styles.tag}`}>Source data</span>
+          <span className={`label ${styles.tag} ${styles.tagAttested}`}>
+            Attested on Casper
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}

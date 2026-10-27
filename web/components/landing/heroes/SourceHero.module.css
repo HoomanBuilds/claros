@@ -1,0 +1,239 @@
+.hero {
+  position: relative;
+  height: 230svh;
+  background: var(--paper);
+}
+
+.stage {
+  --card-top: 56%;
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  min-height: 620px;
+  overflow: hidden;
+  color: #000;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='110'%3E%3Crect x='55' width='0.5' height='110' fill='%23000' fill-opacity='.07'/%3E%3Crect y='55' width='110' height='0.5' fill='%23000' fill-opacity='.07'/%3E%3C/svg%3E");
+}
+
+.hero .top {
+  position: absolute;
+  inset: calc(var(--header-h) + 2vh) 0 auto;
+  max-width: none;
+}
+
+.labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: clamp(18px, 3vh, 30px);
+}
+
+.labels > span {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid #000;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.labels > span:first-child {
+  background: var(--signal);
+}
+
+.labels > .chain {
+  gap: 10px;
+  padding-left: 0;
+}
+
+.chain img {
+  box-sizing: content-box;
+  width: 20px;
+  height: 20px;
+  padding: 4px;
+  border-right: 1px solid #000;
+  background: var(--ink);
+}
+
+.headline {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 40px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-aeonik), sans-serif;
+  font-size: clamp(54px, 9.2vw, 150px);
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+}
+
+.title [data-line] {
+  display: block;
+  white-space: nowrap;
+}
+
+.title :global(.split-word-mask) {
+  padding-bottom: 0.18em;
+  margin-bottom: -0.18em;
+}
+
+.side {
+  flex: none;
+  width: min(320px, 25vw);
+  padding-bottom: 0.6vw;
+}
+
+.side p {
+  margin: 0 0 18px;
+  font-size: clamp(14px, 1vw, 16px);
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.window {
+  position: absolute;
+  inset: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  clip-path: inset(
+    var(--card-top) var(--gutter) 0 var(--gutter) round 22px 22px 0 0
+  );
+  background: var(--deep);
+}
+
+.painting {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-user-drag: none;
+  pointer-events: none;
+  object-fit: cover;
+  object-position: 50% 62%;
+}
+
+.attested {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(55% 0, 100% 0, 100% 100%, 45% 100%);
+}
+
+.fallback {
+  filter: grayscale(1) brightness(0.6) sepia(1) hue-rotate(160deg) saturate(3);
+}
+
+.split {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.split line {
+  stroke: var(--signal);
+  stroke-width: 2;
+}
+
+.closing {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  margin: 0;
+  translate: -50% -50%;
+  color: var(--text);
+  font-size: clamp(34px, 5vw, 76px);
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+  text-align: center;
+  opacity: 0;
+  text-shadow: 0 2px 30px rgba(2, 10, 24, 0.6);
+}
+
+.frame {
+  position: absolute;
+  top: var(--card-top);
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px;
+  pointer-events: none;
+}
+
+.tag {
+  padding: 6px 8px;
+  background: var(--text);
+  font-size: 9px;
+}
+
+.tagAttested {
+  background: var(--signal);
+}
+
+@media (max-width: 760px) {
+  .hero {
+    height: 200svh;
+  }
+
+  .stage {
+    --card-top: 62%;
+  }
+
+  .headline {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .title {
+    font-size: clamp(36px, 11vw, 72px);
+  }
+
+  .side {
+    width: 100%;
+  }
+
+  .side p {
+    display: none;
+  }
+
+  .closing {
+    font-size: 8.4vw;
+  }
+
+  .frame {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .tag {
+    font-size: 8px;
+    letter-spacing: 0.08em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero {
+    height: auto;
+  }
+
+  .stage {
+    position: relative;
+  }
+}
