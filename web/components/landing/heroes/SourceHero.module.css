@@ -21,39 +21,8 @@
   max-width: none;
 }
 
-.labels {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: clamp(18px, 3vh, 30px);
-}
-
-.labels > span {
-  display: inline-flex;
-  align-items: center;
-  height: 30px;
-  padding: 0 12px;
-  border: 1px solid #000;
-  font-size: 10px;
-  font-weight: 500;
-}
-
-.labels > span:first-child {
-  background: var(--signal);
-}
-
-.labels > .chain {
-  gap: 10px;
-  padding-left: 0;
-}
-
-.chain img {
-  box-sizing: content-box;
-  width: 20px;
-  height: 20px;
-  padding: 4px;
-  border-right: 1px solid #000;
-  background: var(--ink);
+.kicker {
+  margin: 0 0 clamp(18px, 3vh, 30px);
 }
 
 .headline {
@@ -67,7 +36,7 @@
   margin: 0;
   font-family: var(--font-aeonik), sans-serif;
   font-size: clamp(54px, 9.2vw, 150px);
-  font-weight: 400;
+  font-weight: 300;
   line-height: 0.92;
   letter-spacing: -0.05em;
 }
@@ -163,29 +132,6 @@
   text-shadow: 0 2px 30px rgba(2, 10, 24, 0.6);
 }
 
-.frame {
-  position: absolute;
-  top: var(--card-top);
-  left: var(--gutter);
-  right: var(--gutter);
-  bottom: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 16px;
-  pointer-events: none;
-}
-
-.tag {
-  padding: 6px 8px;
-  background: var(--text);
-  font-size: 9px;
-}
-
-.tagAttested {
-  background: var(--signal);
-}
-
 @media (max-width: 760px) {
   .hero {
     height: 200svh;
@@ -215,16 +161,6 @@
 
   .closing {
     font-size: 8.4vw;
-  }
-
-  .frame {
-    gap: 8px;
-    padding: 12px;
-  }
-
-  .tag {
-    font-size: 8px;
-    letter-spacing: 0.08em;
   }
 }
 

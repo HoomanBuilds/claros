@@ -51,7 +51,6 @@ export default function SourceHero() {
         const scene = q<HTMLElement>(`.${styles.stage}`)[0];
         const attested = q<HTMLElement>(`.${styles.attested}`)[0];
         const line = q<SVGLineElement>(`.${styles.split} line`)[0];
-        const frame = q<HTMLElement>(`.${styles.frame}`)[0];
         const divider = { reveal: 0, scroll: 0 };
         const draw = () => {
           const { clientWidth: width, clientHeight: height } = scene;
@@ -100,12 +99,6 @@ export default function SourceHero() {
               clipPath: "inset(0px 0px 0px 0px round 0px 0px 0px 0px)",
               duration: 0.6,
             },
-            0,
-          )
-          .fromTo(
-            frame,
-            { top: cardTop, left: gutter, right: gutter },
-            { top: 0, left: 0, right: 0, duration: 0.6 },
             0,
           )
           .to(
@@ -203,30 +196,19 @@ export default function SourceHero() {
     >
       <div className={styles.stage}>
         <div className={`container ${styles.top}`}>
-          <div className={styles.labels}>
-            <span className="label">
-              <span data-scramble>Real-world data oracle</span>
-            </span>
-            <span className={`label ${styles.chain}`}>
-              <img
-                src="/landing/partners/casper.svg"
-                width={20}
-                height={20}
-                alt=""
-              />
-              <span data-scramble>On Casper testnet</span>
-            </span>
-          </div>
+          <p className={`label ${styles.kicker}`} data-scramble>
+            Oracle on Casper
+          </p>
           <div className={styles.headline}>
             <h1 className={styles.title}>
-              <span data-line>Real-world data</span>
-              <span data-line>on Casper.</span>
+              <span data-line>The real world,</span>
+              <span data-line>on chain</span>
             </h1>
             <div className={styles.side} data-hero-fade>
               <p>
-                Energy prices, grid activity, civic revenue. Claros agents bring
-                real-world readings to Casper, with a source hash any contract,
-                app or agent can check.
+                Claros reads energy prices, the grid and civic revenue, and
+                writes every value onto Casper as a feed that any contract, app
+                or agent can read, with proof of where it came from.
               </p>
               <div className={styles.actions}>
                 <Button href="#feeds">See the feeds</Button>
@@ -263,13 +245,6 @@ export default function SourceHero() {
             <line x1="55%" x2="45%" y1="0" y2="100%" />
           </svg>
           <p className={styles.closing}>Source. Hash. Signer.</p>
-        </div>
-
-        <div className={styles.frame} aria-hidden="true">
-          <span className={`label ${styles.tag}`}>Source data</span>
-          <span className={`label ${styles.tag} ${styles.tagAttested}`}>
-            Attested on Casper
-          </span>
         </div>
       </div>
     </section>
