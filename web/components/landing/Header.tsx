@@ -5,7 +5,7 @@ import { useExperience } from "@/components/landing/Experience";
 import Menu from "@/components/landing/Menu";
 import { gsap, ScrollTrigger, useGSAP } from "@/lib/landing/gsap";
 import { PHASES } from "@/lib/landing/phases";
-import Cell from "@/components/landing/ui/Cell";
+import { ClarosMark } from "@/components/claros-mark";
 import SoundToggle from "@/components/landing/ui/SoundToggle";
 import styles from "./Header.module.css";
 
@@ -86,7 +86,7 @@ export default function Header() {
           aria-label="Claros, back to top"
           data-sfx="ui"
         >
-          <Cell className={styles.mark} />
+          <ClarosMark size={22} className={styles.mark} />
           <span>Claros</span>
         </a>
 

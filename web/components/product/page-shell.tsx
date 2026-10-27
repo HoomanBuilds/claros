@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ClarosMark } from "@/components/claros-mark";
 import Cell from "@/components/landing/ui/Cell";
 import Footer from "@/components/landing/sections/Footer";
 import { fontVariables } from "@/components/landing/fonts";
@@ -38,7 +39,7 @@ export function PageShell({
       </a>
       <header className={styles.header}>
         <a href="/" className={headerStyles.brand} aria-label="Claros home">
-          <Cell className={headerStyles.mark} />
+          <ClarosMark size={22} className={headerStyles.mark} />
           <span>Claros</span>
         </a>
         <nav aria-label="Main navigation" className={styles.nav}>
