@@ -5,7 +5,6 @@ import { useExperience } from "@/components/landing/Experience";
 import Button from "@/components/landing/ui/Button";
 import { DECODE_CHARS, gsap, SplitText, useGSAP } from "@/lib/landing/gsap";
 import { print } from "@/lib/landing/print";
-import { sound } from "@/lib/landing/sound";
 import styles from "./SourceHero.module.css";
 
 const LEAN = 0.14;
@@ -134,7 +133,6 @@ export default function SourceHero() {
             { yPercent: 140, duration: 1.1, stagger: 0.07 },
             0.2,
           )
-          .call(() => sound.play("DecodingUI"), [], 0.3)
           .from(
             q("[data-hero-fade]"),
             {

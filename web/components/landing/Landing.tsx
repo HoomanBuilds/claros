@@ -2,8 +2,6 @@ import Cursor from "@/components/landing/Cursor";
 import Experience from "@/components/landing/Experience";
 import Header from "@/components/landing/Header";
 import ScrollRail from "@/components/landing/ScrollRail";
-import Stage from "@/components/landing/Stage";
-import Welcome from "@/components/landing/Welcome";
 import SourceHero from "@/components/landing/heroes/SourceHero";
 import Build from "@/components/landing/sections/Build";
 import Cta from "@/components/landing/sections/Cta";
@@ -21,8 +19,6 @@ export default function Landing() {
   return (
     <div className={`claros-landing ${fontVariables}`}>
       <Experience>
-        <Stage />
-        <Welcome />
         <Header />
         <ScrollRail />
         <Cursor />

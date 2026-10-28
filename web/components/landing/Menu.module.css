@@ -17,6 +17,8 @@
   color: var(--text);
   visibility: hidden;
   clip-path: circle(0);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .backdrop {
@@ -50,7 +52,8 @@
 }
 
 .row {
-  overflow: hidden;
+  padding: 5px;
+  margin: -5px;
 }
 
 .link {
@@ -59,7 +62,7 @@
   gap: clamp(12px, 2vw, 28px);
   padding: 0.04em 0;
   font-family: var(--font-aeonik), sans-serif;
-  font-size: clamp(40px, 7vw, 104px);
+  font-size: clamp(40px, min(7vw, 10svh), 104px);
   font-weight: 300;
   line-height: 1.02;
   letter-spacing: -0.03em;
@@ -132,7 +135,9 @@
 }
 
 .socials a {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   transition: color 0.2s;
 }
 
@@ -143,6 +148,19 @@
 @media (max-width: 760px) {
   .menu {
     grid-template-columns: 1fr;
-    align-content: end;
+    align-content: start;
+    gap: 40px;
+    padding-top: calc(var(--header-h) + 24px);
+  }
+
+  .link {
+    min-height: 56px;
+    font-size: clamp(40px, 10vw, 72px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu * {
+    transition: none;
   }
 }

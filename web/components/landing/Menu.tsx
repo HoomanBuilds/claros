@@ -4,15 +4,20 @@ import { useEffect, useRef } from "react";
 import { getLenis } from "@/components/landing/Experience";
 import { gsap, useGSAP } from "@/lib/landing/gsap";
 import { cellDisc } from "@/lib/landing/cells";
-import { PHASES } from "@/lib/landing/phases";
-import { sound } from "@/lib/landing/sound";
 import styles from "./Menu.module.css";
 
 const LINKS = [
-  ["Docs", "/docs"],
   ["GitHub", "https://github.com/HoomanBuilds/claros"],
   ["SDK on npm", "https://www.npmjs.com/package/claros-oracle"],
   ["Explorer", "https://testnet.cspr.live"],
+];
+
+const PAGES = [
+  { label: "Home", href: "/" },
+  { label: "Feeds", href: "/feeds/" },
+  { label: "Datasets", href: "/datasets/" },
+  { label: "Network", href: "/network/" },
+  { label: "Docs", href: "/docs/" },
 ];
 
 export default function Menu({
@@ -24,13 +29,14 @@ export default function Menu({
 }) {
   const root = useRef<HTMLDivElement>(null);
   const wasOpen = useRef(false);
-  const pending = useRef<string | null>(null);
 
   useGSAP(
     () => {
       const menu = root.current!;
-      if (open === wasOpen.current) return;
-      wasOpen.current = open;
+      if (!open && !wasOpen.current) return;
+      wasOpen.current = true;
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      gsap.set(menu, { visibility: "visible" });
 
       const origin = document
         .querySelector<HTMLElement>("[aria-controls='site-menu']")!
@@ -49,17 +55,16 @@ export default function Menu({
         menu.style.clipPath = `path("${cellDisc(x, y, ink.radius, cell) || "M0 0Z"}")`;
       };
 
-      sound.play(open ? "MenuSFX_In" : "MenuSFX_Out");
       if (open) {
-        getLenis()?.stop();
-        gsap.set(menu, { visibility: "visible" });
+        menu.scrollTop = 0;
         draw();
         gsap.to(ink, {
           radius: farthest * 1.3,
           time: 1,
-          duration: 1.1,
+          duration: reduced ? 0 : 0.45,
           ease: "power3.inOut",
           onUpdate: draw,
+          onComplete: () => gsap.set(menu, { clipPath: "none" }),
         });
         gsap.fromTo(
           menu.querySelectorAll("[data-menu-item]"),
@@ -67,41 +72,34 @@ export default function Menu({
           {
             yPercent: 0,
             opacity: 1,
-            duration: 0.9,
+            duration: reduced ? 0 : 0.3,
             ease: "power3.out",
-            stagger: 0.05,
-            delay: 0.35,
+            stagger: reduced ? 0 : 0.025,
+            delay: reduced ? 0 : 0.1,
           },
         );
-        menu.querySelector<HTMLElement>("a")?.focus({ preventScroll: true });
       } else {
         gsap.to(ink, {
           radius: 0,
           time: 1,
-          duration: 0.8,
+          duration: reduced ? 0 : 0.25,
           ease: "power3.inOut",
           onUpdate: draw,
           onComplete: () => {
             gsap.set(menu, { visibility: "hidden" });
-            getLenis()?.start();
-            if (pending.current)
-              getLenis()?.scrollTo(pending.current, {
-                duration: 1.6,
-                offset: -88,
-              });
-            pending.current = null;
           },
         });
-        document
-          .querySelector<HTMLElement>("[aria-controls='site-menu']")
-          ?.focus({ preventScroll: true });
       }
     },
-    { dependencies: [open], scope: root },
+    { dependencies: [open], scope: root, revertOnUpdate: true },
   );
 
   useEffect(() => {
     if (!open) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    getLenis()?.stop();
+    document.documentElement.classList.add("claros-locked");
+    root.current?.querySelector("button")?.focus({ preventScroll: true });
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
       if (event.key !== "Tab") return;
@@ -120,7 +118,12 @@ export default function Menu({
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.documentElement.classList.remove("claros-locked");
+      getLenis()?.start();
+      previousFocus?.focus({ preventScroll: true });
+    };
   }, [open, onClose]);
 
   return (
@@ -133,30 +136,25 @@ export default function Menu({
       aria-label="Menu"
       aria-hidden={!open}
       inert={!open}
+      data-lenis-prevent
     >
       <img className={styles.backdrop} src="/landing/aztec/city.webp" alt="" />
       <button
         type="button"
         className={styles.close}
         onClick={onClose}
-        data-sfx="ui"
       >
         Close
       </button>
 
-      <nav className={styles.links} aria-label="Sections">
-        {PHASES.map(({ id, label }, index) => (
-          <div key={id} className={styles.row}>
+      <nav className={styles.links} aria-label="Explore Claros">
+        {PAGES.map(({ href, label }, index) => (
+          <div key={href} className={styles.row}>
             <a
-              href={`#${id}`}
+              href={href}
               className={styles.link}
-              onClick={(event) => {
-                event.preventDefault();
-                pending.current = `#${id}`;
-                onClose();
-              }}
+              onClick={onClose}
               data-menu-item
-              data-sfx="ui"
             >
               <span className={`figure ${styles.index}`}>0{index + 1}</span>
               <span className={styles.text}>{label}</span>
@@ -187,7 +185,6 @@ export default function Menu({
                 target="_blank"
                 rel="noreferrer"
                 data-menu-item
-                data-sfx="ui"
               >
                 {name} +
               </a>

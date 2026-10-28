@@ -1,22 +1,20 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useExperience } from "@/components/landing/Experience";
+import { useCallback, useRef, useState } from "react";
 import Menu from "@/components/landing/Menu";
-import { gsap, ScrollTrigger, useGSAP } from "@/lib/landing/gsap";
+import { ScrollTrigger, useGSAP } from "@/lib/landing/gsap";
 import { PHASES } from "@/lib/landing/phases";
 import { ClarosMark } from "@/components/claros-mark";
-import SoundToggle from "@/components/landing/ui/SoundToggle";
 import styles from "./Header.module.css";
 
 const HEADER_LINE = 44;
 
 export default function Header() {
-  const { stage } = useExperience();
   const root = useRef<HTMLElement>(null);
   const [phase, setPhase] = useState(0);
-  const [tone, setTone] = useState("dark");
+  const [tone, setTone] = useState("paper");
   const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
   const [scrolled, setScrolled] = useState(false);
 
   useGSAP(() => {
@@ -52,25 +50,6 @@ export default function Header() {
     return () => removeEventListener("claros:tone", onTone);
   });
 
-  useGSAP(
-    () => {
-      if (stage === "intro") return;
-      gsap.fromTo(
-        root.current!.children,
-        { opacity: 0, y: -12 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 1,
-          ease: "power3.out",
-          stagger: 0.08,
-          delay: 0.9,
-        },
-      );
-    },
-    { dependencies: [stage === "intro"], scope: root },
-  );
-
   return (
     <>
       <header
@@ -78,13 +57,11 @@ export default function Header() {
         className={styles.header}
         data-tone={tone}
         data-scrolled={scrolled || undefined}
-        data-hidden={stage === "intro" || undefined}
       >
         <a
           href="#top"
           className={styles.brand}
           aria-label="Claros, back to top"
-          data-sfx="ui"
         >
           <ClarosMark size={22} className={styles.mark} />
           <span>Claros</span>
@@ -98,7 +75,6 @@ export default function Header() {
               className={styles.dot}
               aria-current={index === phase ? "step" : undefined}
               aria-label={`Part ${index + 1}: ${label}`}
-              data-sfx="ui"
             >
               <span className={`label ${styles.tip}`} aria-hidden="true">
                 0{index + 1} {label}
@@ -108,20 +84,18 @@ export default function Header() {
         </nav>
 
         <div className={styles.actions}>
-          <SoundToggle />
           <button
             type="button"
             className={styles.menuButton}
             onClick={() => setMenuOpen(true)}
             aria-expanded={menuOpen}
             aria-controls="site-menu"
-            data-sfx="ui"
           >
             Menu
           </button>
         </div>
       </header>
-      <Menu open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <Menu open={menuOpen} onClose={closeMenu} />
     </>
   );
 }

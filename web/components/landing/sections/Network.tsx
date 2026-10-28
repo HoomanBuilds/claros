@@ -4,7 +4,6 @@ import { useRef } from "react";
 import PhaseTag from "@/components/landing/ui/PhaseTag";
 import { gsap, ScrollTrigger, useGSAP } from "@/lib/landing/gsap";
 import { useLandingFeeds } from "@/lib/landing/feeds";
-import { sound } from "@/lib/landing/sound";
 import styles from "./Network.module.css";
 
 const ROLES = [
@@ -80,7 +79,6 @@ export default function Network() {
         start: "top 85%",
         once: true,
         onEnter: () => {
-          sound.play("DecodingUI");
           counters.forEach((element) => {
             const decimals = Number(element.dataset.decimals);
             const counter = { value: 0 };
@@ -149,7 +147,7 @@ export default function Network() {
         </div>
 
         <div className={styles.lower}>
-          <ul className={styles.clusters} data-sound-cue="planetReveal">
+          <ul className={styles.clusters}>
             {ROLES.map(({ name, job, art }) => (
               <li key={name} className={styles.cluster} data-reveal>
                 <img
@@ -157,8 +155,6 @@ export default function Network() {
                   src={art}
                   alt=""
                   className={styles.planet}
-                  data-cursor="Listen"
-                  onPointerEnter={() => sound.chime()}
                 />
                 <span className={styles.clusterName}>{name}</span>
                 <span className={styles.clusterMeta}>{job}</span>
