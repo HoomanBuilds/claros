@@ -39,6 +39,7 @@ contracts/.builder*
 
 # autonomous heartbeat runtime state
 **/.cycle-state.json
+**/.stake-recovery.json*
 
 # zk-gate: large/regeneratable ZK artifacts (keep final zkey + vk + witness wasm + proof)
 zk-gate/circuits/node_modules/
