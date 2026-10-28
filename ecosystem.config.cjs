@@ -29,7 +29,7 @@ module.exports = {
       max_restarts: 10,
       restart_delay: 10000,
       max_memory_restart: "1G",
-      env: { NODE_OPTIONS: "--max-old-space-size=768" },
+      env: { NODE_OPTIONS: "--max-old-space-size=768", TREASURY: "off" },
       time: true,
     },
     {
